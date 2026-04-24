@@ -1,0 +1,2 @@
+bun run build
+bunx eslint --config ./eslint.commit.js --cache
