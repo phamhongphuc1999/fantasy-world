@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   title: { default: APP_NAME, template: '%s' },
 };
 
-interface Props {
+interface TProps {
   children: ReactNode;
 }
 
-export default function RootLayout({ children }: Props) {
+export default function RootLayout({ children }: TProps) {
   return (
     <html lang="en">
       <MetadataHead />

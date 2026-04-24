@@ -1,9 +1,9 @@
-import { PageMetadataType } from 'src/types/global';
+import { TPageMetadata } from 'src/types/global';
 import { ImageAsset } from './ImageAssets';
 
 export const APP_NAME = 'Fantasy World';
 
-export const siteMetadata: PageMetadataType = {
+export const siteMetadata: TPageMetadata = {
   title: APP_NAME,
   description: '',
   url: 'https://fantasy.peter-present.xyz/',

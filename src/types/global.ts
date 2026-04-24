@@ -1,4 +1,4 @@
-export type PageMetadataType = Partial<{
+export type TPageMetadata = Partial<{
   title: string;
   description: string;
   url: string;
@@ -8,3 +8,18 @@ export type PageMetadataType = Partial<{
   image: string;
   keywords: string;
 }>;
+
+export type TPoint = [number, number];
+
+export interface TMapCell {
+  id: number;
+  site: TPoint;
+  polygon: TPoint[];
+  neighbors: number[];
+}
+
+export interface TMapMesh {
+  width: number;
+  height: number;
+  cells: TMapCell[];
+}
