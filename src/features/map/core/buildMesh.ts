@@ -1,6 +1,6 @@
 import { Delaunay } from 'd3-delaunay';
 import { createSeededRandom } from 'src/features/map/core/seededRandom';
-import { TMapCell, TMapMesh, TPoint } from 'src/types/global';
+import { TMapCell, TMapEdge, TMapMesh, TMapVertex, TPoint } from 'src/types/global';
 
 interface TBuildMeshOptions {
   width: number;
@@ -59,19 +59,90 @@ function normalizePolygon(polygon: Iterable<[number, number]> | null | undefined
   return points;
 }
 
+function createPointKey([x, y]: TPoint) {
+  return `${x.toFixed(4)}:${y.toFixed(4)}`;
+}
+
+function createEdgeKey(vertexAId: number, vertexBId: number) {
+  return vertexAId < vertexBId ? `${vertexAId}:${vertexBId}` : `${vertexBId}:${vertexAId}`;
+}
+
 export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions): TMapMesh & {
   delaunay: Delaunay<TPoint>;
 } {
   const points = generateJitteredGridPoints(width, height, cellCount, seed);
   const delaunay = Delaunay.from(points);
   const voronoi = delaunay.voronoi([0, 0, width, height]);
+  const vertexIdByKey = new Map<string, number>();
+  const vertices: TMapVertex[] = [];
+  const edgeIdByKey = new Map<string, number>();
+  const edges: TMapEdge[] = [];
 
-  const cells: TMapCell[] = points.map((point, index) => ({
-    id: index,
-    site: point,
-    polygon: normalizePolygon(voronoi.cellPolygon(index)),
-    neighbors: Array.from(delaunay.neighbors(index)),
-  }));
+  const cells: TMapCell[] = points.map((point, index) => {
+    const polygon = normalizePolygon(voronoi.cellPolygon(index));
+    const vertexIds = polygon.map((polygonPoint) => {
+      const pointKey = createPointKey(polygonPoint);
+      const existingVertexId = vertexIdByKey.get(pointKey);
 
-  return { width, height, cells, delaunay };
+      if (existingVertexId !== undefined) {
+        return existingVertexId;
+      }
+
+      const nextVertexId = vertices.length;
+      vertexIdByKey.set(pointKey, nextVertexId);
+      vertices.push({ id: nextVertexId, point: polygonPoint });
+
+      return nextVertexId;
+    });
+
+    const edgeIds: number[] = [];
+
+    for (let vertexIndex = 0; vertexIndex < vertexIds.length; vertexIndex += 1) {
+      const startVertexId = vertexIds[vertexIndex];
+      const endVertexId = vertexIds[(vertexIndex + 1) % vertexIds.length];
+      const edgeKey = createEdgeKey(startVertexId, endVertexId);
+      const existingEdgeId = edgeIdByKey.get(edgeKey);
+
+      if (existingEdgeId !== undefined) {
+        const existingEdge = edges[existingEdgeId];
+
+        if (!existingEdge.cellIds.includes(index)) {
+          existingEdge.cellIds.push(index);
+          existingEdge.isBoundary = existingEdge.cellIds.length === 1;
+        }
+
+        edgeIds.push(existingEdgeId);
+        continue;
+      }
+
+      const nextEdgeId = edges.length;
+      edgeIdByKey.set(edgeKey, nextEdgeId);
+      edges.push({
+        id: nextEdgeId,
+        vertexIds: [startVertexId, endVertexId],
+        cellIds: [index],
+        isBoundary: true,
+      });
+      edgeIds.push(nextEdgeId);
+    }
+
+    return {
+      id: index,
+      site: point,
+      polygon,
+      vertexIds,
+      edgeIds,
+      neighbors: Array.from(delaunay.neighbors(index)),
+      elevation: 0,
+      isWater: false,
+      terrain: 'plains',
+      flow: 0,
+      downstreamId: null,
+      erosion: 0,
+      isRiver: false,
+      isLake: false,
+    };
+  });
+
+  return { width, height, cells, edges, vertices, delaunay };
 }
