@@ -36,9 +36,7 @@ export function buildHydrology({
   }
 
   for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
-    if (mesh.cells[cellIndex].isWater) {
-      continue;
-    }
+    if (mesh.cells[cellIndex].isWater) continue;
 
     let nextCellId = -1;
     let nextElevation = elevations[cellIndex];
@@ -57,10 +55,7 @@ export function buildHydrology({
 
   for (const cellIndex of sortedIndices) {
     const downstreamId = downstream[cellIndex];
-
-    if (downstreamId >= 0) {
-      flow[downstreamId] += flow[cellIndex];
-    }
+    if (downstreamId >= 0) flow[downstreamId] += flow[cellIndex];
   }
 
   for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
@@ -75,13 +70,8 @@ export function buildHydrology({
 
     erosion[cellIndex] = erosionAmount;
 
-    if (downstreamId >= 0) {
-      deposit[downstreamId] += erosionAmount * 0.42;
-    }
-
-    if (isSink && localFlow > 3.5) {
-      isLake[cellIndex] = 1;
-    }
+    if (downstreamId >= 0) deposit[downstreamId] += erosionAmount * 0.42;
+    if (isSink && localFlow > 3.5) isLake[cellIndex] = 1;
   }
 
   for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
@@ -122,8 +112,5 @@ export function buildHydrology({
     };
   });
 
-  return {
-    ...mesh,
-    cells,
-  };
+  return { ...mesh, cells };
 }

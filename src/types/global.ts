@@ -18,6 +18,8 @@ export type TTerrainBand =
   | 'mountains'
   | 'peaks';
 
+export type TTerrainPreset = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
+
 export interface TTopographyCellData {
   elevation: number;
   isWater: boolean;

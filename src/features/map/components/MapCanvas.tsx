@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { getTerrainColor } from 'src/features/map/core/getTerrainColor';
+import { type MouseEvent, useEffect, useRef } from 'react';
+import { getTerrainColor } from 'src/services';
 import { TMapCell } from 'src/types/global';
 
 type TProps = {
@@ -14,6 +14,8 @@ type TProps = {
   onPointerLeave: () => void;
   onCellSelect: (x: number, y: number) => void;
 };
+
+const T_SITE_MARKER_LIMIT = 4000;
 
 function drawPolygon(context: CanvasRenderingContext2D, polygon: TMapCell['polygon']) {
   if (polygon.length === 0) {
@@ -30,6 +32,64 @@ function drawPolygon(context: CanvasRenderingContext2D, polygon: TMapCell['polyg
   context.closePath();
 }
 
+function getCanvasPoint(event: MouseEvent<HTMLCanvasElement>, width: number, height: number) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const scaleX = width / rect.width;
+  const scaleY = height / rect.height;
+
+  return {
+    x: (event.clientX - rect.left) * scaleX,
+    y: (event.clientY - rect.top) * scaleY,
+  };
+}
+
+function setupCanvas(canvas: HTMLCanvasElement, width: number, height: number, pixelRatio: number) {
+  canvas.width = width * pixelRatio;
+  canvas.height = height * pixelRatio;
+
+  const context = canvas.getContext('2d');
+
+  if (!context) {
+    return null;
+  }
+
+  context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  return context;
+}
+
+function drawCellShape(
+  context: CanvasRenderingContext2D,
+  cell: TMapCell,
+  fillStyle: string,
+  fillOpacity: number,
+  strokeStyle: string,
+  strokeWidth: number
+) {
+  drawPolygon(context, cell.polygon);
+  context.fillStyle = fillStyle;
+  context.globalAlpha = fillOpacity;
+  context.fill();
+  context.globalAlpha = 1;
+  context.strokeStyle = strokeStyle;
+  context.lineWidth = strokeWidth;
+  context.stroke();
+}
+
+function drawSiteMarker(
+  context: CanvasRenderingContext2D,
+  cell: TMapCell,
+  radius: number,
+  fillStyle: string,
+  opacity: number
+) {
+  context.beginPath();
+  context.arc(cell.site[0], cell.site[1], radius, 0, Math.PI * 2);
+  context.fillStyle = fillStyle;
+  context.globalAlpha = opacity;
+  context.fill();
+  context.globalAlpha = 1;
+}
+
 export default function MapCanvas({
   cells,
   width,
@@ -40,45 +100,28 @@ export default function MapCanvas({
   onPointerLeave,
   onCellSelect,
 }: TProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = baseCanvasRef.current;
 
     if (!canvas) {
       return;
     }
 
-    const context = canvas.getContext('2d');
-
+    const pixelRatio = window.devicePixelRatio || 1;
+    const context = setupCanvas(canvas, width, height, pixelRatio);
     if (!context) {
       return;
     }
 
-    const pixelRatio = window.devicePixelRatio || 1;
-    canvas.width = width * pixelRatio;
-    canvas.height = height * pixelRatio;
-    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     context.clearRect(0, 0, width, height);
     context.fillStyle = '#09131f';
     context.fillRect(0, 0, width, height);
 
     for (const cell of cells) {
-      const isHovered = hoverIndex === cell.id;
-      const isSelected = selectedIndex === cell.id;
-
-      drawPolygon(context, cell.polygon);
-      context.fillStyle = isSelected
-        ? '#f59e0b'
-        : isHovered
-          ? '#38bdf8'
-          : getTerrainColor(cell.terrain);
-      context.globalAlpha = isSelected ? 0.9 : isHovered ? 0.84 : 0.92;
-      context.fill();
-      context.globalAlpha = 1;
-      context.strokeStyle = isSelected ? '#fef3c7' : isHovered ? '#e0f2fe' : '#16283c';
-      context.lineWidth = isSelected ? 2.25 : isHovered ? 1.5 : 1;
-      context.stroke();
+      drawCellShape(context, cell, getTerrainColor(cell.terrain), 0.92, '#16283c', 1);
     }
 
     for (const cell of cells) {
@@ -98,38 +141,61 @@ export default function MapCanvas({
       context.globalAlpha = 1;
     }
 
-    for (const cell of cells) {
-      context.beginPath();
-      context.arc(
-        cell.site[0],
-        cell.site[1],
-        selectedIndex === cell.id ? 3.5 : hoverIndex === cell.id ? 2.75 : 1.8,
-        0,
-        Math.PI * 2
-      );
-      context.fillStyle =
-        selectedIndex === cell.id ? '#fff7ed' : cell.isWater ? '#dbeafe' : '#fef3c7';
-      context.globalAlpha = selectedIndex === cell.id || hoverIndex === cell.id ? 0.95 : 0.65;
-      context.fill();
-      context.globalAlpha = 1;
+    if (cells.length <= T_SITE_MARKER_LIMIT) {
+      for (const cell of cells) {
+        drawSiteMarker(context, cell, 1.8, cell.isWater ? '#dbeafe' : '#fef3c7', 0.45);
+      }
+    }
+  }, [cells, height, width]);
+
+  useEffect(() => {
+    const canvas = overlayCanvasRef.current;
+
+    if (!canvas) {
+      return;
+    }
+
+    const pixelRatio = window.devicePixelRatio || 1;
+    const context = setupCanvas(canvas, width, height, pixelRatio);
+
+    if (!context) {
+      return;
+    }
+
+    context.clearRect(0, 0, width, height);
+
+    const hoveredCell = hoverIndex !== null ? cells[hoverIndex] : null;
+    const selectedCell = selectedIndex !== null ? cells[selectedIndex] : null;
+
+    if (hoveredCell && hoveredCell.id !== selectedCell?.id) {
+      drawCellShape(context, hoveredCell, '#38bdf8', 0.84, '#e0f2fe', 1.5);
+      drawSiteMarker(context, hoveredCell, 2.75, hoveredCell.isWater ? '#dbeafe' : '#fef3c7', 0.95);
+    }
+
+    if (selectedCell) {
+      drawCellShape(context, selectedCell, '#f59e0b', 0.9, '#fef3c7', 2.25);
+      drawSiteMarker(context, selectedCell, 3.5, '#fff7ed', 0.95);
     }
   }, [cells, height, hoverIndex, selectedIndex, width]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={width}
-      height={height}
-      className="h-auto w-full cursor-pointer"
-      onMouseMove={(event) => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        onPointerMove(event.clientX - rect.left, event.clientY - rect.top);
-      }}
-      onMouseLeave={onPointerLeave}
-      onClick={(event) => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        onCellSelect(event.clientX - rect.left, event.clientY - rect.top);
-      }}
-    />
+    <div className="relative">
+      <canvas ref={baseCanvasRef} width={width} height={height} className="block h-auto w-full" />
+      <canvas
+        ref={overlayCanvasRef}
+        width={width}
+        height={height}
+        className="absolute inset-0 h-full w-full cursor-pointer"
+        onMouseMove={(event) => {
+          const point = getCanvasPoint(event, width, height);
+          onPointerMove(point.x, point.y);
+        }}
+        onMouseLeave={onPointerLeave}
+        onClick={(event) => {
+          const point = getCanvasPoint(event, width, height);
+          onCellSelect(point.x, point.y);
+        }}
+      />
+    </div>
   );
 }

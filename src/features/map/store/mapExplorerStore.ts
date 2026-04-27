@@ -1,12 +1,14 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { TTerrainPreset } from 'src/types/global';
 
 export interface TMapExplorerState {
   seed: string;
   seedDraft: string;
   cellCount: number;
   seaLevel: number;
+  terrainPreset: TTerrainPreset;
   hoverIndex: number | null;
   selectedIndex: number | null;
 }
@@ -18,6 +20,7 @@ const DEFAULT_STATE: TMapExplorerState = {
   seedDraft: 'world-001',
   cellCount: 420,
   seaLevel: 0.46,
+  terrainPreset: 'balanced',
   hoverIndex: null,
   selectedIndex: null,
 };
@@ -68,7 +71,14 @@ export function useMapExplorerStore() {
     setSeaLevel(seaLevel: number) {
       setState({ seaLevel, hoverIndex: null, selectedIndex: null });
     },
+    setTerrainPreset(terrainPreset: TTerrainPreset) {
+      setState({ terrainPreset, hoverIndex: null, selectedIndex: null });
+    },
     setHoverIndex(hoverIndex: number | null) {
+      if (state.hoverIndex === hoverIndex) {
+        return;
+      }
+
       setState({ hoverIndex });
     },
     toggleSelectedIndex(selectedIndex: number) {

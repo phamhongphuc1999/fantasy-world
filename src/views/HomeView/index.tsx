@@ -12,7 +12,7 @@ const T_VIEWPORT = {
   width: 1200,
   height: 760,
   minCells: 100,
-  maxCells: 1800,
+  maxCells: 10000,
 };
 
 export default function HomeView() {
@@ -21,12 +21,14 @@ export default function HomeView() {
     seedDraft,
     cellCount,
     seaLevel,
+    terrainPreset,
     hoverIndex,
     selectedIndex,
     setSeed,
     setSeedDraft,
     setCellCount,
     setSeaLevel,
+    setTerrainPreset,
     setHoverIndex,
     toggleSelectedIndex,
   } = useMapExplorerStore();
@@ -38,9 +40,9 @@ export default function HomeView() {
       seed,
       cellCount,
     });
-    const topographyMesh = buildTopography({ mesh: baseMesh, seed, seaLevel });
+    const topographyMesh = buildTopography({ mesh: baseMesh, seed, seaLevel, terrainPreset });
     return buildHydrology({ mesh: topographyMesh, seaLevel });
-  }, [cellCount, seaLevel, seed]);
+  }, [cellCount, seaLevel, seed, terrainPreset]);
 
   const hoveredCell = hoverIndex !== null ? mesh.cells[hoverIndex] : null;
   const selectedCell = selectedIndex !== null ? mesh.cells[selectedIndex] : null;
@@ -78,6 +80,7 @@ export default function HomeView() {
             seedDraft={seedDraft}
             cellCount={cellCount}
             seaLevel={seaLevel}
+            terrainPreset={terrainPreset}
             minCells={T_VIEWPORT.minCells}
             maxCells={T_VIEWPORT.maxCells}
             hoveredCell={hoveredCell}
@@ -88,6 +91,7 @@ export default function HomeView() {
             onRandomizeSeed={handleRandomizeSeed}
             onCellCountChange={handleCellCountChange}
             onSeaLevelChange={handleSeaLevelChange}
+            onTerrainPresetChange={setTerrainPreset}
           />
           <MapCanvasPanel
             mesh={mesh}

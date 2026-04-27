@@ -1,10 +1,12 @@
 import MapInfoCard from 'src/features/map/components/MapInfoCard';
-import { TMapCell, TMapMesh } from 'src/types/global';
+import TerrainPresetSelect from 'src/features/map/components/TerrainPresetSelect';
+import { TMapCell, TMapMesh, TTerrainPreset } from 'src/types/global';
 
 type TProps = {
   seedDraft: string;
   cellCount: number;
   seaLevel: number;
+  terrainPreset: TTerrainPreset;
   minCells: number;
   maxCells: number;
   hoveredCell: TMapCell | null;
@@ -15,12 +17,14 @@ type TProps = {
   onRandomizeSeed: () => void;
   onCellCountChange: (value: number) => void;
   onSeaLevelChange: (value: number) => void;
+  onTerrainPresetChange: (value: TTerrainPreset) => void;
 };
 
 export default function MapSidebar({
   seedDraft,
   cellCount,
   seaLevel,
+  terrainPreset,
   minCells,
   maxCells,
   hoveredCell,
@@ -31,6 +35,7 @@ export default function MapSidebar({
   onRandomizeSeed,
   onCellCountChange,
   onSeaLevelChange,
+  onTerrainPresetChange,
 }: TProps) {
   return (
     <div className="space-y-5">
@@ -131,6 +136,11 @@ export default function MapSidebar({
           className="w-full accent-sky-400"
         />
       </div>
+
+      <TerrainPresetSelect
+        terrainPreset={terrainPreset}
+        onTerrainPresetChange={onTerrainPresetChange}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
         <MapInfoCard

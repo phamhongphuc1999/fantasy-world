@@ -84,9 +84,7 @@ export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions)
       const pointKey = createPointKey(polygonPoint);
       const existingVertexId = vertexIdByKey.get(pointKey);
 
-      if (existingVertexId !== undefined) {
-        return existingVertexId;
-      }
+      if (existingVertexId !== undefined) return existingVertexId;
 
       const nextVertexId = vertices.length;
       vertexIdByKey.set(pointKey, nextVertexId);

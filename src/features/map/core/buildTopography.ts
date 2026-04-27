@@ -1,12 +1,14 @@
 import { Delaunay } from 'd3-delaunay';
+import { applyTerrainPreset } from 'src/features/map/core/applyTerrainPreset';
 import { classifyTerrain } from 'src/features/map/core/classifyTerrain';
 import { hashSeed } from 'src/features/map/core/seededRandom';
-import { TMapCell, TMapMesh, TPoint, TTopographyCellData } from 'src/types/global';
+import { TMapMesh, TPoint, TTerrainPreset, TTopographyCellData } from 'src/types/global';
 
 interface TBuildTopographyOptions {
   mesh: TMapMesh & { delaunay: Delaunay<TPoint> };
   seed: string;
   seaLevel: number;
+  terrainPreset: TTerrainPreset;
 }
 
 function smoothStep(value: number) {
@@ -49,46 +51,52 @@ function sampleFractalNoise(x: number, y: number, seedHash: number) {
   return octaveA + octaveB * 0.5 + octaveC * 0.25;
 }
 
-function buildCellTopography(
-  cell: TMapCell,
-  width: number,
-  height: number,
-  seedHash: number,
-  seaLevel: number
-): TTopographyCellData {
-  const normalizedX = cell.site[0] / width;
-  const normalizedY = cell.site[1] / height;
-  const centeredX = normalizedX * 2 - 1;
-  const centeredY = normalizedY * 2 - 1;
-  const distanceFromCenter = Math.sqrt(centeredX * centeredX + centeredY * centeredY);
-  const continentFalloff = Math.max(0, 1 - distanceFromCenter * 0.9);
-  const noise = sampleFractalNoise(normalizedX, normalizedY, seedHash) / 1.75;
-  const ridgeNoise =
-    Math.abs(sampleValueNoise(normalizedX * 8.5, normalizedY * 8.5, seedHash ^ 0x27d4eb2d) - 0.5) *
-    0.28;
-  const elevation = Math.min(1, Math.max(0, noise * 0.72 + continentFalloff * 0.42 + ridgeNoise));
+function buildCellTopography(elevation: number, seaLevel: number): TTopographyCellData {
   const terrain = classifyTerrain(elevation, seaLevel);
 
-  return {
-    elevation,
-    isWater: elevation < seaLevel,
-    terrain,
-  };
+  return { elevation, isWater: elevation < seaLevel, terrain };
 }
 
 export function buildTopography({
   mesh,
   seed,
   seaLevel,
+  terrainPreset,
 }: TBuildTopographyOptions): TMapMesh & { delaunay: Delaunay<TPoint> } {
   const seedHash = hashSeed(`${seed}:topography`);
+  const baseElevations = new Float32Array(mesh.cells.length);
+
+  for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+    const cell = mesh.cells[cellIndex];
+    const normalizedX = cell.site[0] / mesh.width;
+    const normalizedY = cell.site[1] / mesh.height;
+    const centeredX = normalizedX * 2 - 1;
+    const centeredY = normalizedY * 2 - 1;
+    const distanceFromCenter = Math.sqrt(centeredX * centeredX + centeredY * centeredY);
+    const continentFalloff = Math.max(0, 1 - distanceFromCenter * 0.9);
+    const noise = sampleFractalNoise(normalizedX, normalizedY, seedHash) / 1.75;
+    const ridgeNoise =
+      Math.abs(
+        sampleValueNoise(normalizedX * 8.5, normalizedY * 8.5, seedHash ^ 0x27d4eb2d) - 0.5
+      ) * 0.28;
+
+    baseElevations[cellIndex] = Math.min(
+      1,
+      Math.max(0, noise * 0.72 + continentFalloff * 0.42 + ridgeNoise)
+    );
+  }
+
+  const elevations = applyTerrainPreset({
+    mesh,
+    seed,
+    preset: terrainPreset,
+    elevations: baseElevations,
+  });
+
   const cells = mesh.cells.map((cell) => ({
     ...cell,
-    ...buildCellTopography(cell, mesh.width, mesh.height, seedHash, seaLevel),
+    ...buildCellTopography(elevations[cell.id], seaLevel),
   }));
 
-  return {
-    ...mesh,
-    cells,
-  };
+  return { ...mesh, cells };
 }
