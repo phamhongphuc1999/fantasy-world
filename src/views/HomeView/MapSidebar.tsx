@@ -1,13 +1,15 @@
 import MapInfoCard from 'src/views/HomeView/MapInfoCard';
 import MapCellInspector from 'src/views/HomeView/MapCellInspector';
 import TerrainPresetSelect from 'src/views/HomeView/TerrainPresetSelect';
-import { TMapCell, TMapMesh, TTerrainPreset } from 'src/types/global';
+import { TMapCell, TMapMesh, TMapRenderMode, TTerrainPreset } from 'src/types/global';
 
 type TProps = {
   seedDraft: string;
   cellCount: number;
   seaLevel: number;
+  seaLevelDraft: number;
   terrainPreset: TTerrainPreset;
+  renderMode: TMapRenderMode;
   minCells: number;
   maxCells: number;
   hoveredCell: TMapCell | null;
@@ -17,15 +19,19 @@ type TProps = {
   onApplySeed: () => void;
   onRandomizeSeed: () => void;
   onCellCountChange: (value: number) => void;
-  onSeaLevelChange: (value: number) => void;
+  onSeaLevelDraftChange: (value: number) => void;
+  onSeaLevelApply: () => void;
   onTerrainPresetChange: (value: TTerrainPreset) => void;
+  onRenderModeChange: (value: TMapRenderMode) => void;
 };
 
 export default function MapSidebar({
   seedDraft,
   cellCount,
   seaLevel,
+  seaLevelDraft,
   terrainPreset,
+  renderMode,
   minCells,
   maxCells,
   hoveredCell,
@@ -35,8 +41,10 @@ export default function MapSidebar({
   onApplySeed,
   onRandomizeSeed,
   onCellCountChange,
-  onSeaLevelChange,
+  onSeaLevelDraftChange,
+  onSeaLevelApply,
   onTerrainPresetChange,
+  onRenderModeChange,
 }: TProps) {
   return (
     <div className="space-y-5">
@@ -123,7 +131,7 @@ export default function MapSidebar({
             Sea Level
           </span>
           <span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-sm font-medium text-sky-100">
-            {seaLevel.toFixed(2)}
+            {seaLevelDraft.toFixed(2)}
           </span>
         </div>
 
@@ -132,16 +140,40 @@ export default function MapSidebar({
           min={0.2}
           max={0.7}
           step={0.01}
-          value={seaLevel}
-          onChange={(event) => onSeaLevelChange(Number(event.target.value))}
+          value={seaLevelDraft}
+          onChange={(event) => onSeaLevelDraftChange(Number(event.target.value))}
           className="w-full accent-sky-400"
         />
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-slate-300">Applied: {seaLevel.toFixed(2)}</p>
+          <button
+            type="button"
+            onClick={onSeaLevelApply}
+            className="rounded-xl bg-sky-400 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-sky-300"
+          >
+            Confirm
+          </button>
+        </div>
       </div>
 
       <TerrainPresetSelect
         terrainPreset={terrainPreset}
         onTerrainPresetChange={onTerrainPresetChange}
       />
+      <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+        <span className="block text-xs font-medium tracking-[0.18em] text-slate-300 uppercase">
+          Display Mode
+        </span>
+        <select
+          value={renderMode}
+          onChange={(event) => onRenderModeChange(event.target.value as TMapRenderMode)}
+          className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none"
+        >
+          <option value="cells">Cell mode (có biên)</option>
+          <option value="seamless">Seamless mode (liền mạch)</option>
+          <option value="rivers">River mode (chỉ hiện sông)</option>
+        </select>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
         <MapCellInspector

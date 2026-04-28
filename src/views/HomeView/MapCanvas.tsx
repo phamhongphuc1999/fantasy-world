@@ -2,12 +2,13 @@
 
 import { type MouseEvent, useEffect, useRef } from 'react';
 import { getTerrainColor } from 'src/services';
-import { TMapCell } from 'src/types/global';
+import { TMapCell, TMapRenderMode } from 'src/types/global';
 
 type TProps = {
   cells: TMapCell[];
   width: number;
   height: number;
+  renderMode: TMapRenderMode;
   hoverIndex: number | null;
   selectedIndex: number | null;
   onPointerMove: (x: number, y: number) => void;
@@ -80,10 +81,31 @@ function drawSiteMarker(
   context.globalAlpha = 1;
 }
 
+function drawCurvedRiverSegment(context: CanvasRenderingContext2D, from: TMapCell, to: TMapCell) {
+  const dx = to.site[0] - from.site[0];
+  const dy = to.site[1] - from.site[1];
+  const length = Math.hypot(dx, dy);
+  if (length < 0.0001) return;
+
+  const nx = -dy / length;
+  const ny = dx / length;
+  const idHash = ((from.id * 73856093) ^ (to.id * 19349663)) >>> 0;
+  const sign = (idHash & 1) === 0 ? 1 : -1;
+  const bend = Math.min(14, Math.max(3, length * 0.22)) * sign;
+
+  const cx = (from.site[0] + to.site[0]) * 0.5 + nx * bend;
+  const cy = (from.site[1] + to.site[1]) * 0.5 + ny * bend;
+
+  context.beginPath();
+  context.moveTo(from.site[0], from.site[1]);
+  context.quadraticCurveTo(cx, cy, to.site[0], to.site[1]);
+}
+
 export default function MapCanvas({
   cells,
   width,
   height,
+  renderMode,
   hoverIndex,
   selectedIndex,
   onPointerMove,
@@ -105,32 +127,47 @@ export default function MapCanvas({
     context.fillStyle = '#09131f';
     context.fillRect(0, 0, width, height);
 
-    for (const cell of cells) {
-      drawCellShape(context, cell, getTerrainColor(cell.terrain), 0.92, '#16283c', 1);
-    }
+    const hasCellBorders = renderMode === 'cells';
+    const isRiverMode = renderMode === 'rivers';
+    const strokeStyle = hasCellBorders ? '#16283c' : 'transparent';
+    const strokeWidth = hasCellBorders ? 1 : 0;
 
     for (const cell of cells) {
-      if (!cell.isRiver || cell.downstreamId === null) continue;
-
-      const downstreamCell = cells[cell.downstreamId];
-      if (!downstreamCell || downstreamCell.isWater) continue;
-      context.beginPath();
-      context.moveTo(cell.site[0], cell.site[1]);
-      context.lineTo(downstreamCell.site[0], downstreamCell.site[1]);
-      context.strokeStyle = '#7dd3fc';
-      context.lineWidth = Math.min(4, 0.8 + Math.log2(cell.flow + 1) * 0.45);
-      context.lineCap = 'round';
-      context.globalAlpha = 0.88;
-      context.stroke();
-      context.globalAlpha = 1;
+      drawCellShape(
+        context,
+        cell,
+        getTerrainColor(cell.terrain),
+        isRiverMode ? 0.55 : 0.95,
+        strokeStyle,
+        strokeWidth
+      );
     }
 
-    if (cells.length <= T_SITE_MARKER_LIMIT) {
+    if (isRiverMode) {
+      for (const cell of cells) {
+        if (!cell.isRiver || cell.downstreamId === null) continue;
+
+        const downstreamCell = cells[cell.downstreamId];
+        if (!downstreamCell || downstreamCell.isWater) continue;
+        drawCurvedRiverSegment(context, cell, downstreamCell);
+        context.strokeStyle = '#38bdf8';
+        context.lineWidth = Math.min(5, 1.3 + Math.log2(cell.flow + 1) * 0.55);
+        context.lineCap = 'round';
+        context.globalAlpha = 0.98;
+        context.shadowColor = '#7dd3fc';
+        context.shadowBlur = 6;
+        context.stroke();
+        context.shadowBlur = 0;
+        context.globalAlpha = 1;
+      }
+    }
+
+    if (renderMode === 'cells' && cells.length <= T_SITE_MARKER_LIMIT) {
       for (const cell of cells) {
         drawSiteMarker(context, cell, 1.8, cell.isWater ? '#dbeafe' : '#fef3c7', 0.45);
       }
     }
-  }, [cells, height, width]);
+  }, [cells, height, renderMode, width]);
 
   useEffect(() => {
     const canvas = overlayCanvasRef.current;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef } from 'react';
+import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
 import { buildHydrology } from 'src/services/map/buildHydrology';
 import { buildMesh } from 'src/services/map/buildMesh';
 import { buildTopography } from 'src/services/map/buildTopography';
@@ -9,13 +10,6 @@ import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import MapCanvasPanel from 'src/views/HomeView/MapCanvasPanel';
 import MapSidebar from 'src/views/HomeView/MapSidebar';
 
-const T_VIEWPORT = {
-  width: 1200,
-  height: 760,
-  minCells: 100,
-  maxCells: 10000,
-};
-
 export default function HomeView() {
   const randomizeCountRef = useRef(0);
   const {
@@ -23,22 +17,26 @@ export default function HomeView() {
     seedDraft,
     cellCount,
     seaLevel,
+    seaLevelDraft,
     terrainPreset,
+    renderMode,
     hoverIndex,
     selectedIndex,
     setSeed,
     setSeedDraft,
     setCellCount,
-    setSeaLevel,
+    setSeaLevelDraft,
+    applySeaLevel,
     setTerrainPreset,
+    setRenderMode,
     setHoverIndex,
     toggleSelectedIndex,
   } = useMapExplorerStore();
 
   const mesh = useMemo(() => {
     const baseMesh = buildMesh({
-      width: T_VIEWPORT.width,
-      height: T_VIEWPORT.height,
+      width: MAP_VIEWPORT_CONFIG.width,
+      height: MAP_VIEWPORT_CONFIG.height,
       seed,
       cellCount,
     });
@@ -69,11 +67,13 @@ export default function HomeView() {
   }
 
   function handleCellCountChange(nextValue: number) {
-    setCellCount(Math.min(T_VIEWPORT.maxCells, Math.max(T_VIEWPORT.minCells, nextValue)));
+    setCellCount(
+      Math.min(MAP_VIEWPORT_CONFIG.maxCells, Math.max(MAP_VIEWPORT_CONFIG.minCells, nextValue))
+    );
   }
 
-  function handleSeaLevelChange(nextValue: number) {
-    setSeaLevel(nextValue);
+  function handleSeaLevelDraftChange(nextValue: number) {
+    setSeaLevelDraft(nextValue);
   }
 
   return (
@@ -84,9 +84,11 @@ export default function HomeView() {
             seedDraft={seedDraft}
             cellCount={cellCount}
             seaLevel={seaLevel}
+            seaLevelDraft={seaLevelDraft}
             terrainPreset={terrainPreset}
-            minCells={T_VIEWPORT.minCells}
-            maxCells={T_VIEWPORT.maxCells}
+            renderMode={renderMode}
+            minCells={MAP_VIEWPORT_CONFIG.minCells}
+            maxCells={MAP_VIEWPORT_CONFIG.maxCells}
             hoveredCell={hoveredCell}
             selectedCell={selectedCell}
             mesh={mesh}
@@ -94,12 +96,15 @@ export default function HomeView() {
             onApplySeed={handleApplySeed}
             onRandomizeSeed={handleRandomizeSeed}
             onCellCountChange={handleCellCountChange}
-            onSeaLevelChange={handleSeaLevelChange}
+            onSeaLevelDraftChange={handleSeaLevelDraftChange}
+            onSeaLevelApply={applySeaLevel}
             onTerrainPresetChange={setTerrainPreset}
+            onRenderModeChange={setRenderMode}
           />
           <MapCanvasPanel
             mesh={mesh}
             seed={seed}
+            renderMode={renderMode}
             hoverIndex={hoverIndex}
             selectedIndex={selectedIndex}
             onPointerMove={handlePointerMove}

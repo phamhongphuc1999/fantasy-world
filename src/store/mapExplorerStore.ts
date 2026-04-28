@@ -1,16 +1,19 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { TMapExplorerState, TTerrainPreset } from 'src/types/global';
+import { MAP_EXPLORER_DEFAULT_CONFIG } from 'src/configs/mapConfig';
+import { TMapExplorerState, TMapRenderMode, TTerrainPreset } from 'src/types/global';
 
 type TMapExplorerListener = () => void;
 
 const DEFAULT_STATE: TMapExplorerState = {
-  seed: 'world-001',
-  seedDraft: 'world-001',
-  cellCount: 420,
-  seaLevel: 0.46,
-  terrainPreset: 'balanced',
+  seed: MAP_EXPLORER_DEFAULT_CONFIG.seed,
+  seedDraft: MAP_EXPLORER_DEFAULT_CONFIG.seed,
+  cellCount: MAP_EXPLORER_DEFAULT_CONFIG.cellCount,
+  seaLevel: MAP_EXPLORER_DEFAULT_CONFIG.seaLevel,
+  seaLevelDraft: MAP_EXPLORER_DEFAULT_CONFIG.seaLevel,
+  terrainPreset: MAP_EXPLORER_DEFAULT_CONFIG.terrainPreset,
+  renderMode: MAP_EXPLORER_DEFAULT_CONFIG.renderMode,
   hoverIndex: null,
   selectedIndex: null,
 };
@@ -59,10 +62,23 @@ export function useMapExplorerStore() {
       setState({ cellCount, hoverIndex: null, selectedIndex: null });
     },
     setSeaLevel(seaLevel: number) {
-      setState({ seaLevel, hoverIndex: null, selectedIndex: null });
+      setState({ seaLevel, seaLevelDraft: seaLevel, hoverIndex: null, selectedIndex: null });
+    },
+    setSeaLevelDraft(seaLevelDraft: number) {
+      setState({ seaLevelDraft });
+    },
+    applySeaLevel() {
+      if (state.seaLevel === state.seaLevelDraft) {
+        return;
+      }
+
+      setState({ seaLevel: state.seaLevelDraft, hoverIndex: null, selectedIndex: null });
     },
     setTerrainPreset(terrainPreset: TTerrainPreset) {
       setState({ terrainPreset, hoverIndex: null, selectedIndex: null });
+    },
+    setRenderMode(renderMode: TMapRenderMode) {
+      setState({ renderMode });
     },
     setHoverIndex(hoverIndex: number | null) {
       if (state.hoverIndex === hoverIndex) {

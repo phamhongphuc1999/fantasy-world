@@ -1,10 +1,11 @@
 import MapCanvas from 'src/views/HomeView/MapCanvas';
 import MapMetricCard from 'src/views/HomeView/MapMetricCard';
-import { TMapMesh } from 'src/types/global';
+import { TMapMesh, TMapRenderMode } from 'src/types/global';
 
 type TProps = {
   mesh: TMapMesh;
   seed: string;
+  renderMode: TMapRenderMode;
   hoverIndex: number | null;
   selectedIndex: number | null;
   onPointerMove: (x: number, y: number) => void;
@@ -15,6 +16,7 @@ type TProps = {
 export default function MapCanvasPanel({
   mesh,
   seed,
+  renderMode,
   hoverIndex,
   selectedIndex,
   onPointerMove,
@@ -28,6 +30,7 @@ export default function MapCanvasPanel({
           cells={mesh.cells}
           width={mesh.width}
           height={mesh.height}
+          renderMode={renderMode}
           hoverIndex={hoverIndex}
           selectedIndex={selectedIndex}
           onPointerMove={onPointerMove}

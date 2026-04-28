@@ -137,6 +137,54 @@ export function applyRangeBands(
   }
 }
 
+export function applyRangeChains(
+  mesh: TMapMesh,
+  random: () => number,
+  elevations: Float32Array,
+  { count, amplitude, width }: TRangeBandOptions
+) {
+  const diagonal = Math.sqrt(mesh.width ** 2 + mesh.height ** 2);
+  const chainCount = Math.max(4, Math.floor(count * 0.75));
+
+  for (let chainIndex = 0; chainIndex < chainCount; chainIndex += 1) {
+    const centerX = random() * mesh.width;
+    const centerY = random() * mesh.height;
+    const theta = random() * Math.PI * 2;
+    const segments = 2 + Math.floor(random() * 3);
+    const stepLength = diagonal * (0.085 + random() * 0.05);
+    const ridgeWidth = width * (0.8 + random() * 0.35);
+
+    let px = centerX;
+    let py = centerY;
+
+    for (let segmentIndex = 0; segmentIndex < segments; segmentIndex += 1) {
+      const localTheta = theta + (random() - 0.5) * 0.65;
+      const nx = clamp(px + Math.cos(localTheta) * stepLength, 0, mesh.width);
+      const ny = clamp(py + Math.sin(localTheta) * stepLength, 0, mesh.height);
+      const segmentAmplitude = amplitude * (0.78 + random() * 0.45);
+
+      for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+        const [x, y] = mesh.cells[cellIndex].site;
+        const distance = distanceToSegment(x, y, px, py, nx, ny) / diagonal;
+        const influence = clamp(1 - distance / ridgeWidth, 0, 1);
+        if (influence === 0) continue;
+
+        const ridgeVariation =
+          0.72 +
+          sampleDeterministicDetail(x * 0.017, y * 0.017, chainIndex * 97 + segmentIndex) * 0.55;
+        elevations[cellIndex] = clamp(
+          elevations[cellIndex] + segmentAmplitude * influence * influence * ridgeVariation,
+          0,
+          1
+        );
+      }
+
+      px = nx;
+      py = ny;
+    }
+  }
+}
+
 export function applyValleyBands(
   mesh: TMapMesh,
   random: () => number,

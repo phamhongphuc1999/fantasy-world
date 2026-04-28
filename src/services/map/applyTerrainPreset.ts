@@ -1,7 +1,9 @@
+import { MAP_PRESET_CONFIG } from 'src/configs/mapConfig';
 import {
   applyArchipelagoSeeds,
   applyEdgeShelf,
   applyRangeBands,
+  applyRangeChains,
   applyValleyBands,
   smoothElevations,
 } from 'src/services/map/terrainShapeUtils';
@@ -30,39 +32,85 @@ export function applyTerrainPreset({ mesh, seed, preset, elevations }: TApplyTer
   const nextElevations = Float32Array.from(elevations);
 
   if (preset === 'balanced') {
-    applyRangeBands(mesh, random, nextElevations, { count: 7, amplitude: 0.2, width: 0.11 });
-    applyValleyBands(mesh, random, nextElevations, { count: 5, depth: 0.12, width: 0.12 });
-    applyEdgeShelf(mesh, nextElevations, 0.24, hashSeed(`${seed}:${preset}:shelf`));
-    smoothElevations(mesh, nextElevations, 0.2);
+    applyRangeBands(mesh, random, nextElevations, MAP_PRESET_CONFIG.balanced.rangeBands);
+    applyValleyBands(mesh, random, nextElevations, MAP_PRESET_CONFIG.balanced.valleyBands);
+    applyEdgeShelf(
+      mesh,
+      nextElevations,
+      MAP_PRESET_CONFIG.balanced.edgeShelfStrength,
+      hashSeed(`${seed}:${preset}:shelf`)
+    );
+    smoothElevations(mesh, nextElevations, MAP_PRESET_CONFIG.balanced.smoothFactor);
     return nextElevations;
   }
 
   if (preset === 'ranges') {
-    applyRangeBands(mesh, random, nextElevations, { count: 10, amplitude: 0.24, width: 0.09 });
-    applyValleyBands(mesh, random, nextElevations, { count: 4, depth: 0.1, width: 0.1 });
-    applyEdgeShelf(mesh, nextElevations, 0.2, hashSeed(`${seed}:${preset}:shelf`));
-    smoothElevations(mesh, nextElevations, 0.16);
+    applyRangeChains(mesh, random, nextElevations, MAP_PRESET_CONFIG.ranges.rangeBands);
+    applyRangeBands(mesh, random, nextElevations, {
+      ...MAP_PRESET_CONFIG.ranges.rangeBands,
+      count: Math.max(4, Math.floor(MAP_PRESET_CONFIG.ranges.rangeBands.count * 0.45)),
+      amplitude: MAP_PRESET_CONFIG.ranges.rangeBands.amplitude * 0.62,
+      width: MAP_PRESET_CONFIG.ranges.rangeBands.width * 0.82,
+    });
+    applyValleyBands(mesh, random, nextElevations, {
+      ...MAP_PRESET_CONFIG.ranges.valleyBands,
+      count: MAP_PRESET_CONFIG.ranges.valleyBands.count + 4,
+      depth: MAP_PRESET_CONFIG.ranges.valleyBands.depth * 1.28,
+      width: MAP_PRESET_CONFIG.ranges.valleyBands.width * 0.84,
+    });
+    applyEdgeShelf(
+      mesh,
+      nextElevations,
+      MAP_PRESET_CONFIG.ranges.edgeShelfStrength,
+      hashSeed(`${seed}:${preset}:shelf`)
+    );
+    smoothElevations(mesh, nextElevations, MAP_PRESET_CONFIG.ranges.smoothFactor);
     return nextElevations;
   }
 
   if (preset === 'rifted') {
-    applyRangeBands(mesh, random, nextElevations, { count: 8, amplitude: 0.17, width: 0.1 });
-    applyValleyBands(mesh, random, nextElevations, { count: 8, depth: 0.16, width: 0.08 });
-    applyGlobalScale(nextElevations, -0.02, 0.98);
-    applyEdgeShelf(mesh, nextElevations, 0.22, hashSeed(`${seed}:${preset}:shelf`));
-    smoothElevations(mesh, nextElevations, 0.18);
+    applyRangeBands(mesh, random, nextElevations, MAP_PRESET_CONFIG.rifted.rangeBands);
+    applyValleyBands(mesh, random, nextElevations, MAP_PRESET_CONFIG.rifted.valleyBands);
+    applyGlobalScale(
+      nextElevations,
+      MAP_PRESET_CONFIG.rifted.globalScale.offset,
+      MAP_PRESET_CONFIG.rifted.globalScale.scale
+    );
+    applyEdgeShelf(
+      mesh,
+      nextElevations,
+      MAP_PRESET_CONFIG.rifted.edgeShelfStrength,
+      hashSeed(`${seed}:${preset}:shelf`)
+    );
+    smoothElevations(mesh, nextElevations, MAP_PRESET_CONFIG.rifted.smoothFactor);
     return nextElevations;
   }
 
   // Archipelago / island chain preset: many separated islands with varied sizes.
   applyArchipelagoSeeds(mesh, random, nextElevations, {
-    majorIslandCount: random() > 0.35 ? 1 : 2,
-    mediumIslandCount: 4 + Math.floor(random() * 3),
-    smallIslandCount: 16 + Math.floor(random() * 8),
+    majorIslandCount:
+      MAP_PRESET_CONFIG.archipelago.majorIslandMin +
+      Math.floor(
+        random() *
+          (MAP_PRESET_CONFIG.archipelago.majorIslandMax -
+            MAP_PRESET_CONFIG.archipelago.majorIslandMin +
+            1)
+      ),
+    mediumIslandCount:
+      MAP_PRESET_CONFIG.archipelago.mediumIslandBase +
+      Math.floor(random() * MAP_PRESET_CONFIG.archipelago.mediumIslandExtra),
+    smallIslandCount:
+      MAP_PRESET_CONFIG.archipelago.smallIslandBase +
+      Math.floor(random() * MAP_PRESET_CONFIG.archipelago.smallIslandExtra),
   });
-  applyValleyBands(mesh, random, nextElevations, { count: 7, depth: 0.1, width: 0.1 });
-  applyEdgeShelf(mesh, nextElevations, 0.3, hashSeed(`${seed}:${preset}:shelf`));
-  smoothElevations(mesh, nextElevations, 0.14);
+  applyValleyBands(mesh, random, nextElevations, MAP_PRESET_CONFIG.archipelago.valleyBands);
+  applyEdgeShelf(
+    mesh,
+    nextElevations,
+    MAP_PRESET_CONFIG.archipelago.edgeShelfStrength,
+    hashSeed(`${seed}:${preset}:shelf`)
+  );
+  smoothElevations(mesh, nextElevations, MAP_PRESET_CONFIG.archipelago.smoothFactor);
 
   return nextElevations;
 }

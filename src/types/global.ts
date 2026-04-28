@@ -26,6 +26,7 @@ export type TTerrainBand =
   | 'tundra';
 
 export type TTerrainPreset = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
+export type TMapRenderMode = 'cells' | 'seamless' | 'rivers';
 
 export type TTerrainPresetOption = {
   label: string;
@@ -104,7 +105,9 @@ export interface TMapExplorerState {
   seedDraft: string;
   cellCount: number;
   seaLevel: number;
+  seaLevelDraft: number;
   terrainPreset: TTerrainPreset;
+  renderMode: TMapRenderMode;
   hoverIndex: number | null;
   selectedIndex: number | null;
 }
