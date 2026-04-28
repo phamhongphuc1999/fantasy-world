@@ -1,0 +1,237 @@
+import { TMapMesh } from 'src/types/global';
+
+type TRangeBandOptions = {
+  count: number;
+  amplitude: number;
+  width: number;
+};
+
+type TValleyBandOptions = {
+  count: number;
+  depth: number;
+  width: number;
+};
+
+type TArchipelagoOptions = {
+  majorIslandCount: number;
+  mediumIslandCount: number;
+  smallIslandCount: number;
+};
+
+type TIslandSeed = {
+  x: number;
+  y: number;
+  radius: number;
+  amplitude: number;
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function smoothStep(value: number) {
+  const clamped = clamp(value, 0, 1);
+  return clamped * clamped * (3 - 2 * clamped);
+}
+
+function distanceToSegment(
+  x: number,
+  y: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const denominator = dx * dx + dy * dy;
+
+  if (denominator === 0) {
+    return Math.sqrt((x - x1) ** 2 + (y - y1) ** 2);
+  }
+
+  const t = clamp(((x - x1) * dx + (y - y1) * dy) / denominator, 0, 1);
+  const projectionX = x1 + t * dx;
+  const projectionY = y1 + t * dy;
+
+  return Math.sqrt((x - projectionX) ** 2 + (y - projectionY) ** 2);
+}
+
+function sampleDeterministicDetail(x: number, y: number, seed: number) {
+  const value = Math.sin(x * 12.9898 + y * 78.233 + seed * 0.01031) * 43758.5453;
+  return Math.abs(value - Math.floor(value));
+}
+
+export function smoothElevations(mesh: TMapMesh, elevations: Float32Array, factor: number) {
+  const smoothed = new Float32Array(elevations.length);
+
+  for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+    let total = elevations[cellIndex];
+
+    for (const neighborId of mesh.cells[cellIndex].neighbors) {
+      total += elevations[neighborId];
+    }
+
+    const average = total / (mesh.cells[cellIndex].neighbors.length + 1);
+    smoothed[cellIndex] = clamp(elevations[cellIndex] * (1 - factor) + average * factor, 0, 1);
+  }
+
+  elevations.set(smoothed);
+}
+
+export function applyEdgeShelf(
+  mesh: TMapMesh,
+  elevations: Float32Array,
+  strength: number,
+  seed: number
+) {
+  for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+    const [x, y] = mesh.cells[cellIndex].site;
+    const nx = x / mesh.width;
+    const ny = y / mesh.height;
+    const edgeDistance = Math.min(nx, 1 - nx, ny, 1 - ny);
+    const shelf = smoothStep((edgeDistance - 0.02) / 0.24);
+    const coastalDetail =
+      (sampleDeterministicDetail(nx * 3.1, ny * 3.1, seed + cellIndex) - 0.5) * 0.18;
+
+    elevations[cellIndex] = clamp(
+      elevations[cellIndex] * (1 - strength) +
+        (elevations[cellIndex] + coastalDetail) * shelf * strength,
+      0,
+      1
+    );
+  }
+}
+
+export function applyRangeBands(
+  mesh: TMapMesh,
+  random: () => number,
+  elevations: Float32Array,
+  { count, amplitude, width }: TRangeBandOptions
+) {
+  const diagonal = Math.sqrt(mesh.width ** 2 + mesh.height ** 2);
+
+  for (let bandIndex = 0; bandIndex < count; bandIndex += 1) {
+    const centerX = random() * mesh.width;
+    const centerY = random() * mesh.height;
+    const theta = random() * Math.PI * 2;
+    const halfLength = diagonal * (0.14 + random() * 0.22);
+    const x1 = clamp(centerX - Math.cos(theta) * halfLength, 0, mesh.width);
+    const y1 = clamp(centerY - Math.sin(theta) * halfLength, 0, mesh.height);
+    const x2 = clamp(centerX + Math.cos(theta) * halfLength, 0, mesh.width);
+    const y2 = clamp(centerY + Math.sin(theta) * halfLength, 0, mesh.height);
+
+    for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+      const [x, y] = mesh.cells[cellIndex].site;
+      const distance = distanceToSegment(x, y, x1, y1, x2, y2) / diagonal;
+      const influence = clamp(1 - distance / width, 0, 1);
+      if (influence === 0) continue;
+
+      const ridgeVariation = 0.65 + sampleDeterministicDetail(x * 0.02, y * 0.02, bandIndex) * 0.7;
+      elevations[cellIndex] = clamp(
+        elevations[cellIndex] + amplitude * influence * influence * ridgeVariation,
+        0,
+        1
+      );
+    }
+  }
+}
+
+export function applyValleyBands(
+  mesh: TMapMesh,
+  random: () => number,
+  elevations: Float32Array,
+  { count, depth, width }: TValleyBandOptions
+) {
+  const diagonal = Math.sqrt(mesh.width ** 2 + mesh.height ** 2);
+
+  for (let valleyIndex = 0; valleyIndex < count; valleyIndex += 1) {
+    const centerX = random() * mesh.width;
+    const centerY = random() * mesh.height;
+    const theta = random() * Math.PI * 2;
+    const halfLength = diagonal * (0.12 + random() * 0.18);
+    const bend = (random() - 0.5) * diagonal * 0.08;
+    const x1 = clamp(centerX - Math.cos(theta) * halfLength, 0, mesh.width);
+    const y1 = clamp(centerY - Math.sin(theta) * halfLength + bend, 0, mesh.height);
+    const x2 = clamp(centerX + Math.cos(theta) * halfLength, 0, mesh.width);
+    const y2 = clamp(centerY + Math.sin(theta) * halfLength - bend, 0, mesh.height);
+
+    for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+      const [x, y] = mesh.cells[cellIndex].site;
+      const distance = distanceToSegment(x, y, x1, y1, x2, y2) / diagonal;
+      const influence = clamp(1 - distance / width, 0, 1);
+      if (influence === 0) continue;
+
+      const valleyVariation =
+        0.8 + sampleDeterministicDetail(x * 0.03, y * 0.03, valleyIndex) * 0.4;
+      elevations[cellIndex] = clamp(
+        elevations[cellIndex] - depth * influence * influence * valleyVariation,
+        0,
+        1
+      );
+    }
+  }
+}
+
+function buildIslandSeeds(random: () => number, options: TArchipelagoOptions): TIslandSeed[] {
+  const seeds: TIslandSeed[] = [];
+
+  for (let index = 0; index < options.majorIslandCount; index += 1) {
+    seeds.push({
+      x: 0.14 + random() * 0.72,
+      y: 0.14 + random() * 0.72,
+      radius: 0.16 + random() * 0.11,
+      amplitude: 0.55 + random() * 0.12,
+    });
+  }
+
+  for (let index = 0; index < options.mediumIslandCount; index += 1) {
+    seeds.push({
+      x: 0.06 + random() * 0.88,
+      y: 0.06 + random() * 0.88,
+      radius: 0.09 + random() * 0.08,
+      amplitude: 0.32 + random() * 0.13,
+    });
+  }
+
+  for (let index = 0; index < options.smallIslandCount; index += 1) {
+    seeds.push({
+      x: 0.03 + random() * 0.94,
+      y: 0.03 + random() * 0.94,
+      radius: 0.04 + random() * 0.045,
+      amplitude: 0.18 + random() * 0.11,
+    });
+  }
+
+  return seeds;
+}
+
+export function applyArchipelagoSeeds(
+  mesh: TMapMesh,
+  random: () => number,
+  elevations: Float32Array,
+  options: TArchipelagoOptions
+) {
+  const seeds = buildIslandSeeds(random, options);
+
+  for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+    const [x, y] = mesh.cells[cellIndex].site;
+    const nx = x / mesh.width;
+    const ny = y / mesh.height;
+    let islandElevation = 0;
+
+    for (const seed of seeds) {
+      const dx = nx - seed.x;
+      const dy = ny - seed.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const influence = Math.exp(-((distance * distance) / (2 * seed.radius * seed.radius)));
+      islandElevation += seed.amplitude * influence;
+    }
+
+    // Keep channels between island groups to avoid one merged super-island.
+    const channelNoise = sampleDeterministicDetail(nx * 5.5, ny * 5.5, cellIndex) * 0.22;
+    const baseOcean = 0.08 + (sampleDeterministicDetail(nx * 1.8, ny * 1.8, 717) - 0.5) * 0.06;
+
+    elevations[cellIndex] = clamp(baseOcean + islandElevation - channelNoise, 0, 1);
+  }
+}

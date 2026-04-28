@@ -18,9 +18,7 @@ type TProps = {
 const T_SITE_MARKER_LIMIT = 4000;
 
 function drawPolygon(context: CanvasRenderingContext2D, polygon: TMapCell['polygon']) {
-  if (polygon.length === 0) {
-    return;
-  }
+  if (polygon.length === 0) return;
 
   context.beginPath();
   context.moveTo(polygon[0][0], polygon[0][1]);
@@ -28,7 +26,6 @@ function drawPolygon(context: CanvasRenderingContext2D, polygon: TMapCell['polyg
   for (let pointIndex = 1; pointIndex < polygon.length; pointIndex += 1) {
     context.lineTo(polygon[pointIndex][0], polygon[pointIndex][1]);
   }
-
   context.closePath();
 }
 
@@ -37,10 +34,7 @@ function getCanvasPoint(event: MouseEvent<HTMLCanvasElement>, width: number, hei
   const scaleX = width / rect.width;
   const scaleY = height / rect.height;
 
-  return {
-    x: (event.clientX - rect.left) * scaleX,
-    y: (event.clientY - rect.top) * scaleY,
-  };
+  return { x: (event.clientX - rect.left) * scaleX, y: (event.clientY - rect.top) * scaleY };
 }
 
 function setupCanvas(canvas: HTMLCanvasElement, width: number, height: number, pixelRatio: number) {
@@ -48,11 +42,7 @@ function setupCanvas(canvas: HTMLCanvasElement, width: number, height: number, p
   canvas.height = height * pixelRatio;
 
   const context = canvas.getContext('2d');
-
-  if (!context) {
-    return null;
-  }
-
+  if (!context) return null;
   context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   return context;
 }
@@ -105,16 +95,11 @@ export default function MapCanvas({
 
   useEffect(() => {
     const canvas = baseCanvasRef.current;
-
-    if (!canvas) {
-      return;
-    }
+    if (!canvas) return;
 
     const pixelRatio = window.devicePixelRatio || 1;
     const context = setupCanvas(canvas, width, height, pixelRatio);
-    if (!context) {
-      return;
-    }
+    if (!context) return;
 
     context.clearRect(0, 0, width, height);
     context.fillStyle = '#09131f';
@@ -125,11 +110,10 @@ export default function MapCanvas({
     }
 
     for (const cell of cells) {
-      if (!cell.isRiver || cell.downstreamId === null) {
-        continue;
-      }
+      if (!cell.isRiver || cell.downstreamId === null) continue;
 
       const downstreamCell = cells[cell.downstreamId];
+      if (!downstreamCell || downstreamCell.isWater) continue;
       context.beginPath();
       context.moveTo(cell.site[0], cell.site[1]);
       context.lineTo(downstreamCell.site[0], downstreamCell.site[1]);
@@ -150,17 +134,11 @@ export default function MapCanvas({
 
   useEffect(() => {
     const canvas = overlayCanvasRef.current;
-
-    if (!canvas) {
-      return;
-    }
+    if (!canvas) return;
 
     const pixelRatio = window.devicePixelRatio || 1;
     const context = setupCanvas(canvas, width, height, pixelRatio);
-
-    if (!context) {
-      return;
-    }
+    if (!context) return;
 
     context.clearRect(0, 0, width, height);
 

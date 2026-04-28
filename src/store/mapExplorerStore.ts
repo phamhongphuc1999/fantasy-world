@@ -1,17 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { TTerrainPreset } from 'src/types/global';
-
-export interface TMapExplorerState {
-  seed: string;
-  seedDraft: string;
-  cellCount: number;
-  seaLevel: number;
-  terrainPreset: TTerrainPreset;
-  hoverIndex: number | null;
-  selectedIndex: number | null;
-}
+import { TMapExplorerState, TTerrainPreset } from 'src/types/global';
 
 type TMapExplorerListener = () => void;
 

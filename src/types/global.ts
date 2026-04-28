@@ -1,4 +1,6 @@
-export type TPageMetadata = Partial<{
+import type { Delaunay } from 'd3-delaunay';
+
+export type TSiteMetadata = {
   title: string;
   description: string;
   url: string;
@@ -7,18 +9,28 @@ export type TPageMetadata = Partial<{
   icon: string;
   image: string;
   keywords: string;
-}>;
+};
 
 export type TTerrainBand =
   | 'deep-water'
   | 'shallow-water'
   | 'coast'
+  | 'lake'
   | 'plains'
-  | 'highlands'
+  | 'forest'
+  | 'desert'
+  | 'swamp'
+  | 'valley'
+  | 'hills'
   | 'mountains'
-  | 'peaks';
+  | 'tundra';
 
 export type TTerrainPreset = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
+
+export type TTerrainPresetOption = {
+  label: string;
+  value: TTerrainPreset;
+};
 
 export interface TTopographyCellData {
   elevation: number;
@@ -32,6 +44,11 @@ export interface THydrologyCellData {
   erosion: number;
   isRiver: boolean;
   isLake: boolean;
+  biome: string;
+  suitability: number;
+  temperature: number;
+  precipitation: number;
+  rainShadow: number;
 }
 
 export type TPoint = [number, number];
@@ -63,6 +80,11 @@ export interface TMapCell {
   erosion: number;
   isRiver: boolean;
   isLake: boolean;
+  biome: string;
+  suitability: number;
+  temperature: number;
+  precipitation: number;
+  rainShadow: number;
 }
 
 export interface TMapMesh {
@@ -71,4 +93,18 @@ export interface TMapMesh {
   cells: TMapCell[];
   edges: TMapEdge[];
   vertices: TMapVertex[];
+}
+
+export type TMapMeshWithDelaunay = TMapMesh & {
+  delaunay: Delaunay<TPoint>;
+};
+
+export interface TMapExplorerState {
+  seed: string;
+  seedDraft: string;
+  cellCount: number;
+  seaLevel: number;
+  terrainPreset: TTerrainPreset;
+  hoverIndex: number | null;
+  selectedIndex: number | null;
 }

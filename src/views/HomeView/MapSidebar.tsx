@@ -1,5 +1,6 @@
-import MapInfoCard from 'src/features/map/components/MapInfoCard';
-import TerrainPresetSelect from 'src/features/map/components/TerrainPresetSelect';
+import MapInfoCard from 'src/views/HomeView/MapInfoCard';
+import MapCellInspector from 'src/views/HomeView/MapCellInspector';
+import TerrainPresetSelect from 'src/views/HomeView/TerrainPresetSelect';
 import { TMapCell, TMapMesh, TTerrainPreset } from 'src/types/global';
 
 type TProps = {
@@ -143,23 +144,17 @@ export default function MapSidebar({
       />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-        <MapInfoCard
+        <MapCellInspector
           label="Hovered Cell"
-          value={hoveredCell ? `#${hoveredCell.id}` : 'None'}
-          detail={
-            hoveredCell
-              ? `${hoveredCell.terrain}, flow ${hoveredCell.flow.toFixed(1)}, erosion ${hoveredCell.erosion.toFixed(3)}`
-              : 'Move across the mesh to inspect cells.'
-          }
+          cell={hoveredCell}
+          mesh={mesh}
+          emptyMessage="Move across the mesh to inspect cells."
         />
-        <MapInfoCard
+        <MapCellInspector
           label="Selected Cell"
-          value={selectedCell ? `#${selectedCell.id}` : 'None'}
-          detail={
-            selectedCell
-              ? `${selectedCell.isRiver ? 'river' : selectedCell.isLake ? 'lake' : 'land'} cell with ${selectedCell.neighbors.length} neighbors`
-              : 'Click any polygon to pin its metadata.'
-          }
+          cell={selectedCell}
+          mesh={mesh}
+          emptyMessage="Click any polygon to pin its metadata."
         />
         <MapInfoCard
           label="Hydrology"

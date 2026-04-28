@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
-import MapCanvasPanel from 'src/features/map/components/MapCanvasPanel';
-import MapSidebar from 'src/features/map/components/MapSidebar';
-import { buildHydrology } from 'src/features/map/core/buildHydrology';
-import { buildMesh } from 'src/features/map/core/buildMesh';
-import { buildTopography } from 'src/features/map/core/buildTopography';
-import { useMapExplorerStore } from 'src/features/map/store/mapExplorerStore';
+import { useMemo, useRef } from 'react';
+import { buildHydrology } from 'src/services/map/buildHydrology';
+import { buildMesh } from 'src/services/map/buildMesh';
+import { buildTopography } from 'src/services/map/buildTopography';
+import { createSeededRandom } from 'src/services/map/seededRandom';
+import { useMapExplorerStore } from 'src/store/mapExplorerStore';
+import MapCanvasPanel from 'src/views/HomeView/MapCanvasPanel';
+import MapSidebar from 'src/views/HomeView/MapSidebar';
 
 const T_VIEWPORT = {
   width: 1200,
@@ -16,6 +17,7 @@ const T_VIEWPORT = {
 };
 
 export default function HomeView() {
+  const randomizeCountRef = useRef(0);
   const {
     seed,
     seedDraft,
@@ -58,7 +60,9 @@ export default function HomeView() {
   }
 
   function handleRandomizeSeed() {
-    const nextSeed = `world-${Math.floor(Math.random() * 1_000_000)
+    randomizeCountRef.current += 1;
+    const random = createSeededRandom(`${seed}:${randomizeCountRef.current}:seed-randomize`);
+    const nextSeed = `world-${Math.floor(random() * 1_000_000)
       .toString()
       .padStart(6, '0')}`;
     setSeed(nextSeed);

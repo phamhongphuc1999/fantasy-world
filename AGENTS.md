@@ -1,65 +1,118 @@
-# Next.js Framework Compliance
+# Next.js 16.2.4 Agent Guidelines
 
-This project operates on **Next.js 16.2.4** using the App Router. All framework-specific implementations (routing, rendering boundaries, metadata, layouts) must strictly follow the documentation located in `node_modules/next/dist/docs/` or the official Next.js 16 current docs. Do not apply legacy conventions from versions prior to 15/16.
+This project uses **Next.js 16.2.4 (App Router)** with React 19 and TypeScript (strict). All framework features (routing, metadata, layouts, rendering) must follow official Next.js 16 documentation.
 
-# Project Philosophy
+## Core Philosophy
 
-This repository is dedicated to building a **procedural fantasy map generator**. The engine follows a layered approach where each system builds upon the previous one. The goal is a deterministic, scalable, and modular world-generation system.
+Procedural fantasy map generator built with a **layered, deterministic, and modular** architecture.
 
-# Tech Stack
+**Tech Stack:**
 
-- **Framework:** Next.js 16 (App Router)
-- **Library:** React 19
-- **Language:** TypeScript (Strict Mode)
-- **Styling:** Tailwind CSS v4
-- **Geometry:** `d3-delaunay` for mesh calculations
+- Next.js 16.2.4 (App Router)
+- React 19 + TypeScript (Strict)
+- Tailwind CSS v4
+- d3-delaunay (geometry)
 
-# Development & Coding Standards
+## Strict Coding Standards
 
-To maintain a clean and scalable codebase, all contributors and AI agents must adhere to these strict rules:
+### 1. Component & Code Organization Rules
 
-### 1. Component Structure
+- Each `.tsx` file must export **exactly one** default component.
+- Each `.tsx` file should ideally be kept **≤ 200 lines** to maintain readability and ease of maintenance.
+- If a file exceeds 200 lines, extract sub-components or move logic out to hooks, utils, or services.
+- **Never** create trivial wrapper components that only forward props.
+- Props interface/type must always be named `TProps`.
 
-- **Single Responsibility:** Each `.tsx` file should only contain the `export default` of the main component it represents.
-- **File Length:** Components must be concise. Limit files to a maximum of **200 lines of code**. If a component exceeds this, refactor sub-components into separate files or move logic to hooks/utils.
-- **Props Definition:** Define component parameters using the naming convention `TProps`. If the props do not need to be exported, define them locally:
-  `type TProps = { ... }` or `interface TProps { ... }`
+**Exceptions – Files are allowed to exceed 200 lines when:**
 
-### 2. TypeScript Naming Conventions & Management
+The file is **atomic** (self-contained with a single clear responsibility) and falls into one of the following cases:
 
-- **Uniform Prefix:** All type definitions, whether using `type` or `interface`, must start with a capital **T**.
-  - _Example (Interface):_ `interface TMapData { ... }`
-  - _Example (Type):_ `type TCoordinate = [number, number]`
-- **Centralized Type Management:** All types and interfaces intended for shared use must be located within the `src/types/` directory.
-  - General shared types should go into `src/types/global.ts`.
-  - If a group of types serves a specific, large-scale purpose (e.g., `mesh`, `biomes`), create a dedicated file: `src/types/[category].ts`.
-  - Do not define shared types inside feature folders or component files.
+- **Page-level views** (`src/views/[PageName]/index.tsx` or `src/views/MapView/index.tsx`) that contain the overall layout and orchestration of an entire page.
+- **Core services or generators** with concentrated, focused logic (e.g. `src/services/map-service.ts`, `src/services/heightmap-generator.ts`, `src/services/river-generator.ts`).
+- **Large feature components** that have a single, well-defined responsibility and cannot be reasonably split further (e.g. complex Canvas renderer, SVG map renderer, or main editor component).
+- Files that primarily contain **closely related constants, configurations, or type definitions**.
 
-### 3. Styling with Tailwind CSS
+**Important Guideline:**
 
-- **Utility First:** Prioritize standard Tailwind utility classes over arbitrary values.
-- **Standard over Arbitrary:** Use standard scale classes (e.g., `mt-1`, `p-4`, `gap-2`) instead of arbitrary brackets (e.g., `mt-[4px]`, `p-[16px]`) unless a specific non-standard value is strictly required by the design spec.
+- Regular UI components should almost never exceed 200 lines.
+- Always prefer extracting logic into custom hooks, services, or utilities before allowing a component to grow too large.
 
-### 4. Architecture Rules
+### 2. File Placement Rules
 
-- **View-Feature Split:** Keep `app/` routes thin. Delegate UI implementation to `src/views/` and domain logic to `src/features/`.
-- **Logic Isolation:** Calculation logic (e.g., Voronoi, erosion, biomes) must reside in `src/features/[feature-name]/core/` and remain independent of React's render cycle where possible.
-- **Determinism:** All generation steps must be seed-driven. Ensure `seededRandom.ts` is the single source of truth for randomness.
+- **Components**:
+  - General/UI or share components → `src/components/` (group related components in subfolders when needed)
+  - Page-specific → `src/views/[page-name]/[component-name].tsx`
 
-# Roadmap & Evolution
+- **Views (Recommended for Next.js)**:
+  - All pages must remain thin in the `app/` directory.
+  - `app/[route]/page.tsx` should **not** contain implementation logic.
+  - Instead, import and render a View component from `src/views/`.
+  - Example:
 
-The development process is structured into sequential phases. Ensure new features do not bypass the established data flow:
+    ```tsx
+    // app/page.tsx
+    import HomeView from 'src/views/HomeView';
 
-1.  **Core Mesh:** Seed-based Voronoi/Delaunay structures.
-2.  **Geology:** Elevation mapping, tectonic plates, and terrain shapes.
-3.  **Hydrology:** Water flow, river systems, and thermal erosion.
-4.  **Ecology & Culture:** Biomes, climate simulation, and political boundaries.
+    export default function Home() {
+      return <HomeView />;
+    }
+    ```
 
-# Project Navigation
+- **Logic & Services**:
+  - All non-hook business logic and core calculations → `src/services/`
+  - Example: Map generation logic → `src/services/map-service.ts`
 
-1. `app/`: Routing and Metadata.
-2. `src/views/`: Page-level compositions.
-3. `src/features/`: Modular domain logic (Map, UI, Auth, etc.).
-4. `src/hooks/`: Shared React hooks.
-5. `src/utils/`: Pure helper functions.
-6. `src/types/`: **Canonical directory for all shared Type/Interface definitions.**
+- **Hooks**:
+  - All custom React hooks → `src/hooks/`
+
+- **State Management**:
+  - Zustand stores → `src/store/`
+  - React Context → `src/contexts/`
+
+- **Style**
+  - All style files (.css, .scss, .sass) store in `src/styles`
+
+### 3. TypeScript Conventions
+
+- All types and interfaces must be prefixed with **`T`**.
+  - Example: `type TCoordinate = [number, number]`
+
+- **Default Rule**: Most shared types should be placed in `src/types/global.ts`
+
+- **When to create separate files**:
+  - For types related to a specific domain or API group (e.g., user-related types) → create a dedicated file like `src/types/user.ts`
+  - For types belonging to a large page or complex feature (e.g., types used in the Caro game page) → create a dedicated file like `src/types/caro.ts`
+
+- Do **not** define shared types inside components or feature folders.
+
+### 4. Styling
+
+- Use **Tailwind utility classes** by default.
+- Prefer standard scale values (`p-4`, `gap-2`, `mt-6`) over arbitrary values (`p-[17px]`) unless strictly necessary.
+
+### 5. Architecture
+
+- `app/` → thin routing + metadata only.
+- UI composition → `src/views/`
+- Domain logic → `src/features/[domain]/core/`
+- All randomness must go through `seededRandom.ts` (deterministic generation).
+
+## Development Flow (Roadmap Layers)
+
+1. **Core Mesh** – Voronoi/Delaunay
+2. **Geology** – Elevation, tectonics, terrain
+3. **Hydrology** – Rivers, water flow, erosion
+4. **Ecology & Culture** – Biomes, climate, politics
+
+## Project Structure
+
+- `app/` – Routes & metadata
+- `src/views/` – Page compositions
+- `src/features/` – Domain logic (core calculations)
+- `src/hooks/` – React hooks
+- `src/utils/` – Pure utilities
+- `src/types/` – **Canonical location for all shared types**
+
+---
+
+**Follow these rules strictly.** They exist to keep the codebase clean, maintainable, and scalable.

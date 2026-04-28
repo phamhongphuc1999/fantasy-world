@@ -1,5 +1,5 @@
-import MapMetricCard from 'src/features/map/components/MapMetricCard';
-import MapSvg from 'src/features/map/components/MapSvg';
+import MapCanvas from 'src/views/HomeView/MapCanvas';
+import MapMetricCard from 'src/views/HomeView/MapMetricCard';
 import { TMapMesh } from 'src/types/global';
 
 type TProps = {
@@ -24,7 +24,7 @@ export default function MapCanvasPanel({
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/60">
-        <MapSvg
+        <MapCanvas
           cells={mesh.cells}
           width={mesh.width}
           height={mesh.height}

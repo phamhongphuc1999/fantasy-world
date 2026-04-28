@@ -1,6 +1,6 @@
 import { Delaunay } from 'd3-delaunay';
-import { createSeededRandom } from 'src/features/map/core/seededRandom';
-import { TMapCell, TMapEdge, TMapMesh, TMapVertex, TPoint } from 'src/types/global';
+import { createSeededRandom } from 'src/services/map/seededRandom';
+import { TMapCell, TMapEdge, TMapMeshWithDelaunay, TMapVertex, TPoint } from 'src/types/global';
 
 interface TBuildMeshOptions {
   width: number;
@@ -67,9 +67,12 @@ function createEdgeKey(vertexAId: number, vertexBId: number) {
   return vertexAId < vertexBId ? `${vertexAId}:${vertexBId}` : `${vertexBId}:${vertexAId}`;
 }
 
-export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions): TMapMesh & {
-  delaunay: Delaunay<TPoint>;
-} {
+export function buildMesh({
+  width,
+  height,
+  seed,
+  cellCount,
+}: TBuildMeshOptions): TMapMeshWithDelaunay {
   const points = generateJitteredGridPoints(width, height, cellCount, seed);
   const delaunay = Delaunay.from(points);
   const voronoi = delaunay.voronoi([0, 0, width, height]);
@@ -139,6 +142,11 @@ export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions)
       erosion: 0,
       isRiver: false,
       isLake: false,
+      biome: 'Unassigned',
+      suitability: 0,
+      temperature: 0,
+      precipitation: 0,
+      rainShadow: 0,
     };
   });
 

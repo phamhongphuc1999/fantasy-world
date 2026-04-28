@@ -14,7 +14,6 @@ export default function TerrainPresetSelect({ terrainPreset, onTerrainPresetChan
           Terrain Preset
         </span>
       </div>
-
       <select
         value={terrainPreset}
         onChange={(event) => onTerrainPresetChange(event.target.value as TTerrainPreset)}
