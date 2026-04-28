@@ -65,11 +65,59 @@ function sampleValueNoise(x: number, y: number, seedHash: number) {
 }
 
 function sampleFractalNoise(x: number, y: number, seedHash: number) {
-  const octaveA = sampleValueNoise(x * 0.75, y * 0.75, seedHash);
-  const octaveB = sampleValueNoise(x * 1.55, y * 1.55, seedHash ^ 0x9e3779b9);
-  const octaveC = sampleValueNoise(x * 3.7, y * 3.7, seedHash ^ 0x85ebca6b);
+  const { octaves, persistence, lacunarity } = MAP_TOPOGRAPHY_CONFIG.noise.fbm;
+  let total = 0;
+  let amplitude = 1;
+  let frequency = 1;
+  let weight = 0;
 
-  return octaveA + octaveB * 0.5 + octaveC * 0.25;
+  for (let octave = 0; octave < octaves; octave += 1) {
+    total +=
+      sampleValueNoise(x * frequency, y * frequency, seedHash ^ (octave * 374761393)) * amplitude;
+    weight += amplitude;
+    amplitude *= persistence;
+    frequency *= lacunarity;
+  }
+
+  return weight > 0 ? total / weight : 0;
+}
+
+function sampleRidgedNoise(x: number, y: number, seedHash: number) {
+  const { octaves, persistence, lacunarity, sharpness } = MAP_TOPOGRAPHY_CONFIG.noise.ridged;
+  let total = 0;
+  let amplitude = 1;
+  let frequency = 1;
+  let weight = 0;
+
+  for (let octave = 0; octave < octaves; octave += 1) {
+    const base = sampleValueNoise(x * frequency, y * frequency, seedHash ^ (octave * 668265263));
+    const ridge = Math.pow(1 - Math.abs(base * 2 - 1), sharpness);
+    total += ridge * amplitude;
+    weight += amplitude;
+    amplitude *= persistence;
+    frequency *= lacunarity;
+  }
+
+  return weight > 0 ? total / weight : 0;
+}
+
+function sampleBillowyNoise(x: number, y: number, seedHash: number) {
+  const { octaves, persistence, lacunarity } = MAP_TOPOGRAPHY_CONFIG.noise.billow;
+  let total = 0;
+  let amplitude = 1;
+  let frequency = 1;
+  let weight = 0;
+
+  for (let octave = 0; octave < octaves; octave += 1) {
+    const base = sampleValueNoise(x * frequency, y * frequency, seedHash ^ (octave * 1274126177));
+    const billow = Math.abs(base * 2 - 1);
+    total += billow * amplitude;
+    weight += amplitude;
+    amplitude *= persistence;
+    frequency *= lacunarity;
+  }
+
+  return weight > 0 ? total / weight : 0;
 }
 
 function distanceToSegment(x: number, y: number, line: TBoundaryLine): number {
@@ -221,8 +269,30 @@ export function buildTopography({
         ny * MAP_TOPOGRAPHY_CONFIG.warp.frequency,
         warpHash ^ 0x27d4eb2d
       ) - 0.5;
-    const warpedX = clamp(nx + warpX * MAP_TOPOGRAPHY_CONFIG.warp.strength, 0, 1);
-    const warpedY = clamp(ny + warpY * MAP_TOPOGRAPHY_CONFIG.warp.strength, 0, 1);
+    const warpedPrimaryX = clamp(nx + warpX * MAP_TOPOGRAPHY_CONFIG.warp.strength, 0, 1);
+    const warpedPrimaryY = clamp(ny + warpY * MAP_TOPOGRAPHY_CONFIG.warp.strength, 0, 1);
+    const warpSecondaryX =
+      sampleValueNoise(
+        warpedPrimaryX * MAP_TOPOGRAPHY_CONFIG.warp.secondaryFrequency,
+        warpedPrimaryY * MAP_TOPOGRAPHY_CONFIG.warp.secondaryFrequency,
+        warpHash ^ 0x85ebca6b
+      ) - 0.5;
+    const warpSecondaryY =
+      sampleValueNoise(
+        warpedPrimaryX * MAP_TOPOGRAPHY_CONFIG.warp.secondaryFrequency,
+        warpedPrimaryY * MAP_TOPOGRAPHY_CONFIG.warp.secondaryFrequency,
+        warpHash ^ 0x9e3779b9
+      ) - 0.5;
+    const warpedX = clamp(
+      warpedPrimaryX + warpSecondaryX * MAP_TOPOGRAPHY_CONFIG.warp.secondaryStrength,
+      0,
+      1
+    );
+    const warpedY = clamp(
+      warpedPrimaryY + warpSecondaryY * MAP_TOPOGRAPHY_CONFIG.warp.secondaryStrength,
+      0,
+      1
+    );
 
     const macroNoise =
       sampleFractalNoise(warpedX, warpedY, macroHash) / MAP_TOPOGRAPHY_CONFIG.noise.macroDivisor;
@@ -232,6 +302,9 @@ export function buildTopography({
         warpedY * MAP_TOPOGRAPHY_CONFIG.noise.secondaryFrequency,
         macroHash ^ 0x85ebca6b
       ) / MAP_TOPOGRAPHY_CONFIG.noise.secondaryDivisor;
+    const ridgedNoise = sampleRidgedNoise(warpedX * 1.35, warpedY * 1.35, macroHash ^ 0x27d4eb2d);
+    const billowNoise = sampleBillowyNoise(warpedX * 1.15, warpedY * 1.15, macroHash ^ 0x165667b1);
+    const erosionMask = sampleFractalNoise(warpedX * 2.8, warpedY * 2.8, detailHash ^ 0x7feb352d);
     const coastNoise = sampleValueNoise(
       warpedX * MAP_TOPOGRAPHY_CONFIG.noise.coastFrequency,
       warpedY * MAP_TOPOGRAPHY_CONFIG.noise.coastFrequency,
@@ -287,6 +360,9 @@ export function buildTopography({
     baseElevations[cellIndex] = clamp(
       macroNoise * MAP_TOPOGRAPHY_CONFIG.blend.macro +
         secondaryNoise * MAP_TOPOGRAPHY_CONFIG.blend.secondary +
+        ridgedNoise * MAP_TOPOGRAPHY_CONFIG.blend.ridged +
+        billowNoise * MAP_TOPOGRAPHY_CONFIG.blend.billow +
+        erosionMask * MAP_TOPOGRAPHY_CONFIG.blend.erosionMask +
         upliftField * MAP_TOPOGRAPHY_CONFIG.blend.upliftField +
         tectonicUplift * MAP_TOPOGRAPHY_CONFIG.blend.tectonicUplift +
         coastNoise * MAP_TOPOGRAPHY_CONFIG.blend.coastNoise +

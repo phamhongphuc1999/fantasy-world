@@ -172,6 +172,9 @@ export default function MapSidebar({
           <option value="cells">Cell mode (có biên)</option>
           <option value="seamless">Seamless mode (liền mạch)</option>
           <option value="rivers">River mode (chỉ hiện sông)</option>
+          <option value="nations">Nation border mode (biên giới quốc gia)</option>
+          <option value="political-flat">Political Flat (đất tô màu quốc gia)</option>
+          <option value="political-tinted">Political Tinted (địa hình + tint 30%)</option>
         </select>
       </div>
 

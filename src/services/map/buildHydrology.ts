@@ -120,6 +120,15 @@ function getTerrainBand(
     return 'hills';
   }
 
+  if (
+    cell.elevation > MAP_HYDROLOGY_CONFIG.plateauElevationMin &&
+    relief < MAP_HYDROLOGY_CONFIG.plateauReliefMax &&
+    precipitation > 0.22 &&
+    precipitation < 0.58
+  ) {
+    return 'plateau';
+  }
+
   if (cell.elevation > MAP_HYDROLOGY_CONFIG.mountainElevationMin) return 'mountains';
   if (cell.elevation > MAP_HYDROLOGY_CONFIG.hillElevationMin) return 'hills';
   if (inValley) return 'valley';
@@ -129,6 +138,7 @@ function getTerrainBand(
     precipitation < MAP_HYDROLOGY_CONFIG.desertPrecipitationMax &&
     rainShadow > MAP_HYDROLOGY_CONFIG.desertRainShadowMin
   ) {
+    if (cell.elevation > seaLevel + 0.12 && relief > 0.012) return 'badlands';
     return 'desert';
   }
 
@@ -140,7 +150,19 @@ function getTerrainBand(
     return 'swamp';
   }
 
-  if (precipitation > MAP_HYDROLOGY_CONFIG.forestPrecipitationMin) return 'forest';
+  if (precipitation > MAP_HYDROLOGY_CONFIG.forestPrecipitationMin && temperature > 0.22) {
+    return 'forest';
+  }
+  if (precipitation < 0.2 && temperature > 0.56 && rainShadow > 0.35) return 'desert';
+  if (
+    cell.elevation > MAP_HYDROLOGY_CONFIG.mountainElevationMin - 0.04 &&
+    precipitation < 0.34 &&
+    temperature > 0.42
+  ) {
+    return 'volcanic';
+  }
+  if (relief < -0.008 && precipitation > 0.44) return 'valley';
+  if (relief > 0.03 && cell.elevation > seaLevel + 0.08) return 'hills';
   return 'plains';
 }
 
@@ -154,8 +176,12 @@ function getBiome(terrain: TTerrainBand): string {
       return 'Freshwater Lake';
     case 'coast':
       return 'Coastal Littoral';
+    case 'plateau':
+      return 'High Plateau';
     case 'desert':
       return 'Arid Desert';
+    case 'badlands':
+      return 'Rocky Badlands';
     case 'forest':
       return 'Woodland';
     case 'swamp':
@@ -166,6 +192,8 @@ function getBiome(terrain: TTerrainBand): string {
       return 'Highland';
     case 'mountains':
       return 'Mountain Range';
+    case 'volcanic':
+      return 'Volcanic Wastes';
     case 'tundra':
       return 'Tundra';
     default:
@@ -177,6 +205,7 @@ function getSuitability(terrain: TTerrainBand, precipitation: number, temperatur
   if (terrain === 'deep-water' || terrain === 'shallow-water') return 0;
   if (terrain === 'lake') return 0.12;
   if (terrain === 'mountains' || terrain === 'tundra') return 0.14;
+  if (terrain === 'volcanic' || terrain === 'badlands') return 0.18;
   if (terrain === 'desert') return 0.22;
   if (terrain === 'swamp') return 0.34;
 
@@ -198,6 +227,7 @@ function isWaterTerrain(terrain: TTerrainBand) {
 function isLockedTerrain(cell: TMapCell, terrain: TTerrainBand) {
   if (isWaterTerrain(terrain)) return true;
   if (terrain === 'mountains' || terrain === 'tundra') return true;
+  if (terrain === 'volcanic') return true;
   if (cell.isRiver && terrain === 'valley') return true;
   return false;
 }
@@ -216,34 +246,57 @@ function getTerrainFitness(
   if (terrain === 'desert') {
     if (cell.elevation > 0.72) return -10;
     return (
-      (cell.temperature > 0.52 ? 0.8 : 0.1) +
-      (cell.precipitation < 0.28 ? 0.75 : -0.25) +
-      cell.rainShadow * 0.5
+      (cell.temperature > 0.58 ? 0.78 : 0.04) +
+      (cell.precipitation < 0.2 ? 0.95 : -0.45) +
+      cell.rainShadow * 0.62
+    );
+  }
+
+  if (terrain === 'badlands') {
+    if (cell.elevation > 0.84) return -10;
+    return (
+      (cell.precipitation < 0.3 ? 0.9 : 0.2) +
+      (cell.rainShadow > 0.3 ? 0.6 : 0) +
+      (relief > 0.008 ? 0.35 : -0.1)
     );
   }
 
   if (terrain === 'swamp') {
     if (cell.elevation > 0.66) return -10;
-    return (cell.precipitation > 0.65 ? 1 : 0.2) + (relief < 0.01 ? 0.4 : -0.1);
+    return (cell.precipitation > 0.76 ? 1.1 : 0.15) + (relief < 0.008 ? 0.5 : -0.15);
   }
 
   if (terrain === 'forest') {
     if (cell.elevation > 0.8) return -10;
     return (
-      0.35 +
-      (cell.precipitation > 0.48 ? 0.55 : -0.2) +
-      (cell.temperature > 0.2 && cell.temperature < 0.72 ? 0.2 : -0.1)
+      0.28 +
+      (cell.precipitation > 0.56 ? 0.65 : -0.2) +
+      (cell.temperature > 0.24 && cell.temperature < 0.7 ? 0.2 : -0.1)
     );
+  }
+
+  if (terrain === 'plateau') {
+    if (cell.elevation < seaLevel + 0.12) return -10;
+    return 0.58 + (relief < MAP_HYDROLOGY_CONFIG.plateauReliefMax ? 0.35 : -0.1);
   }
 
   if (terrain === 'plains') {
     if (cell.elevation > 0.78) return -10;
-    return 0.45 + (cell.precipitation > 0.28 && cell.precipitation < 0.62 ? 0.45 : 0);
+    return 0.62 + (cell.precipitation > 0.28 && cell.precipitation < 0.62 ? 0.5 : 0.14);
   }
 
   if (terrain === 'hills') {
     if (cell.elevation < seaLevel + 0.08) return -10;
     return 0.5 + clamp((cell.elevation - 0.62) * 1.8, 0, 0.7);
+  }
+
+  if (terrain === 'volcanic') {
+    if (cell.elevation < seaLevel + 0.12) return -10;
+    return (
+      (cell.precipitation < 0.36 ? 0.5 : -0.2) +
+      (cell.temperature > 0.42 ? 0.4 : 0) +
+      (relief > 0.012 ? 0.25 : 0)
+    );
   }
 
   return -10;
@@ -959,6 +1012,296 @@ function addInlandPlainTributaries(cells: TMapCell[], flow: Float32Array, downst
   }
 }
 
+function rebalanceTerrainDistribution(cells: TMapCell[]) {
+  const landCellIds = cells
+    .map((cell, cellIndex) => ({ cell, cellIndex }))
+    .filter(({ cell }) => !isWaterTerrain(cell.terrain))
+    .map(({ cellIndex }) => cellIndex);
+  const landCount = landCellIds.length;
+  if (landCount === 0) return;
+
+  const counts = new Map<TTerrainBand, number>();
+  for (const cellId of landCellIds) {
+    const terrain = cells[cellId].terrain;
+    counts.set(terrain, (counts.get(terrain) || 0) + 1);
+  }
+
+  function getShare(terrain: TTerrainBand) {
+    return (counts.get(terrain) || 0) / landCount;
+  }
+
+  function convertCells(
+    source: TTerrainBand,
+    target: TTerrainBand,
+    maxConversions: number,
+    score: (cell: TMapCell) => number
+  ) {
+    if (maxConversions <= 0) return 0;
+    const candidates = landCellIds
+      .filter((cellId) => cells[cellId].terrain === source)
+      .filter((cellId) => !(cells[cellId].isRiver && source === 'valley'))
+      .sort((left, right) => score(cells[right]) - score(cells[left]));
+    const take = Math.min(maxConversions, candidates.length);
+
+    for (let index = 0; index < take; index += 1) {
+      cells[candidates[index]].terrain = target;
+    }
+
+    if (take > 0) {
+      counts.set(source, Math.max(0, (counts.get(source) || 0) - take));
+      counts.set(target, (counts.get(target) || 0) + take);
+    }
+
+    return take;
+  }
+
+  const target = MAP_HYDROLOGY_CONFIG.terrainBalance;
+  const desertExcess = Math.max(
+    0,
+    Math.floor((getShare('desert') - target.desertMaxShare) * landCount)
+  );
+  convertCells(
+    'desert',
+    'plains',
+    desertExcess,
+    (cell) => 1 - cell.rainShadow + cell.precipitation
+  );
+
+  const badlandsExcess = Math.max(
+    0,
+    Math.floor((getShare('badlands') - target.badlandsMaxShare) * landCount)
+  );
+  convertCells(
+    'badlands',
+    'hills',
+    badlandsExcess,
+    (cell) => 1 - cell.rainShadow + cell.precipitation
+  );
+
+  const volcanicExcess = Math.max(
+    0,
+    Math.floor((getShare('volcanic') - target.volcanicMaxShare) * landCount)
+  );
+  convertCells(
+    'volcanic',
+    'mountains',
+    volcanicExcess,
+    (cell) => 1 - cell.elevation + cell.precipitation
+  );
+
+  const swampExcess = Math.max(
+    0,
+    Math.floor((getShare('swamp') - target.swampMaxShare) * landCount)
+  );
+  convertCells('swamp', 'valley', swampExcess, (cell) => cell.precipitation + cell.flow * 0.01);
+
+  const mountainExcess = Math.max(
+    0,
+    Math.floor((getShare('mountains') - target.mountainsMaxShare) * landCount)
+  );
+  convertCells(
+    'mountains',
+    'hills',
+    mountainExcess,
+    (cell) => 1 - cell.elevation + Math.abs(cell.temperature - 0.45)
+  );
+
+  const hillsExcess = Math.max(
+    0,
+    Math.floor((getShare('hills') - target.hillsMaxShare) * landCount)
+  );
+  convertCells('hills', 'plains', hillsExcess, (cell) => 1 - cell.elevation + cell.precipitation);
+
+  const plateauExcess = Math.max(
+    0,
+    Math.floor((getShare('plateau') - target.plateauMaxShare) * landCount)
+  );
+  convertCells(
+    'plateau',
+    'plains',
+    plateauExcess,
+    (cell) => 1 - cell.elevation + cell.precipitation
+  );
+
+  const forestExcess = Math.max(
+    0,
+    Math.floor((getShare('forest') - target.forestMaxShare) * landCount)
+  );
+  convertCells(
+    'forest',
+    'plains',
+    forestExcess,
+    (cell) => 1 - cell.precipitation + Math.abs(cell.temperature - 0.5)
+  );
+
+  const forestDeficit = Math.max(
+    0,
+    Math.floor((target.forestMinShare - getShare('forest')) * landCount)
+  );
+  convertCells(
+    'plains',
+    'forest',
+    forestDeficit,
+    (cell) => cell.precipitation - Math.abs(cell.temperature - 0.52) - cell.rainShadow * 0.35
+  );
+
+  const plainsDeficit = Math.max(
+    0,
+    Math.floor((target.plainsMinShare - getShare('plains')) * landCount)
+  );
+  if (plainsDeficit > 0) {
+    let remaining = plainsDeficit;
+    remaining -= convertCells('hills', 'plains', remaining, (cell) => 1 - cell.elevation);
+    if (remaining > 0) {
+      remaining -= convertCells('forest', 'plains', remaining, (cell) => 1 - cell.precipitation);
+    }
+    if (remaining > 0) {
+      convertCells('valley', 'plains', remaining, (cell) => Math.max(0, cell.precipitation - 0.5));
+    }
+  }
+
+  const plateauDeficit = Math.max(
+    0,
+    Math.floor((target.plateauMinShare - getShare('plateau')) * landCount)
+  );
+  convertCells(
+    'hills',
+    'plateau',
+    plateauDeficit,
+    (cell) => cell.elevation + Math.max(0, cell.precipitation - 0.26)
+  );
+
+  const plainsExcess = Math.max(
+    0,
+    Math.floor((getShare('plains') - target.plainsMaxShare) * landCount)
+  );
+  if (plainsExcess > 0) {
+    let remaining = plainsExcess;
+    remaining -= convertCells(
+      'plains',
+      'forest',
+      remaining,
+      (cell) => cell.precipitation - cell.rainShadow * 0.3
+    );
+    if (remaining > 0) {
+      remaining -= convertCells(
+        'plains',
+        'hills',
+        remaining,
+        (cell) => cell.elevation - 0.55 + Math.max(0, cell.flow - 3) * 0.01
+      );
+    }
+    if (remaining > 0) {
+      convertCells(
+        'plains',
+        'swamp',
+        remaining,
+        (cell) => cell.precipitation + Math.max(0, 0.62 - cell.elevation)
+      );
+    }
+  }
+}
+
+function antiAliasTerrains(cells: TMapCell[]) {
+  for (let pass = 0; pass < MAP_HYDROLOGY_CONFIG.antiAlias.passes; pass += 1) {
+    const nextTerrains = cells.map((cell) => cell.terrain);
+
+    for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+      const cell = cells[cellIndex];
+      if (isWaterTerrain(cell.terrain)) continue;
+      if (cell.isRiver && cell.terrain === 'valley') continue;
+
+      const counts = getNeighborTerrainCounts(cell, cells);
+      if (counts.size === 0) continue;
+
+      const sameCount = counts.get(cell.terrain) || 0;
+      if (sameCount > MAP_HYDROLOGY_CONFIG.antiAlias.isolatedNeighborMax) continue;
+
+      let dominantTerrain = cell.terrain;
+      let dominantCount = 0;
+      for (const [terrain, count] of counts) {
+        if (isWaterTerrain(terrain)) continue;
+        if (count > dominantCount) {
+          dominantCount = count;
+          dominantTerrain = terrain;
+        }
+      }
+
+      if (dominantTerrain === cell.terrain) continue;
+      if (dominantCount < MAP_HYDROLOGY_CONFIG.antiAlias.dominantNeighborMin) continue;
+      nextTerrains[cellIndex] = dominantTerrain;
+    }
+
+    for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+      cells[cellIndex].terrain = nextTerrains[cellIndex];
+    }
+  }
+}
+
+function mergeSmallTerrainClusters(cells: TMapCell[], seaLevel: number) {
+  const visited = new Uint8Array(cells.length);
+
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+    if (visited[cellIndex] === 1) continue;
+    const terrain = cells[cellIndex].terrain;
+    if (isWaterTerrain(terrain)) continue;
+
+    const queue = [cellIndex];
+    const region: number[] = [];
+    visited[cellIndex] = 1;
+
+    while (queue.length > 0) {
+      const current = queue.pop();
+      if (current === undefined) continue;
+      region.push(current);
+
+      for (const neighborId of cells[current].neighbors) {
+        if (visited[neighborId] === 1) continue;
+        if (cells[neighborId].terrain !== terrain) continue;
+        if (isWaterTerrain(cells[neighborId].terrain)) continue;
+        visited[neighborId] = 1;
+        queue.push(neighborId);
+      }
+    }
+
+    const minSize =
+      MAP_HYDROLOGY_CONFIG.terrainClusterMinCells[
+        terrain as keyof typeof MAP_HYDROLOGY_CONFIG.terrainClusterMinCells
+      ] || 0;
+    if (region.length >= minSize) continue;
+
+    const regionSet = new Set(region);
+    for (const regionCellId of region) {
+      const cell = cells[regionCellId];
+      if (isLockedTerrain(cell, cell.terrain)) continue;
+
+      const borderCounts = new Map<TTerrainBand, number>();
+      for (const neighborId of cell.neighbors) {
+        if (regionSet.has(neighborId)) continue;
+        const neighborTerrain = cells[neighborId].terrain;
+        if (isWaterTerrain(neighborTerrain)) continue;
+        borderCounts.set(neighborTerrain, (borderCounts.get(neighborTerrain) || 0) + 1);
+      }
+
+      if (borderCounts.size === 0) continue;
+
+      const relief = cell.elevation - getNeighborAverageElevation(cell, cells);
+      let bestTerrain = cell.terrain;
+      let bestScore = -Infinity;
+
+      for (const [candidateTerrain, count] of borderCounts) {
+        const score = getTerrainFitness(candidateTerrain, cell, seaLevel, relief) + count * 0.25;
+        if (score > bestScore) {
+          bestScore = score;
+          bestTerrain = candidateTerrain;
+        }
+      }
+
+      cells[regionCellId].terrain = bestTerrain;
+    }
+  }
+}
+
 function extendRiversTowardHighlands(
   cells: TMapCell[],
   flow: Float32Array,
@@ -1136,6 +1479,11 @@ export function buildHydrology({ mesh, seaLevel }: TBuildHydrologyOptions): TMap
       terrain: 'plains' as TTerrainBand,
       biome: '',
       suitability: 0,
+      nationId: null,
+      provinceId: null,
+      zoneType: 'international-waters' as const,
+      isCapital: false,
+      isEconomicHub: false,
     };
 
     if (nextCell.isWater && !nextCell.isLake) {
@@ -1227,6 +1575,10 @@ export function buildHydrology({ mesh, seaLevel }: TBuildHydrologyOptions): TMap
   extendRiversTowardHighlands(cells, flow, downstream, seaLevel);
 
   regionalizeLandTerrains(cells, seaLevel);
+  rebalanceTerrainDistribution(cells);
+  antiAliasTerrains(cells);
+  mergeSmallTerrainClusters(cells, seaLevel);
+  antiAliasTerrains(cells);
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];

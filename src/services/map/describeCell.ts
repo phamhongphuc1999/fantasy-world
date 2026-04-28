@@ -10,6 +10,9 @@ export type TCellDescription = {
   temperature: string;
   precipitation: string;
   rainShadow: string;
+  nationId: string;
+  provinceId: string;
+  zoneType: string;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -32,12 +35,15 @@ function getTerrainType(cell: TMapCell, mesh: TMapMesh): string {
   if (cell.terrain === 'shallow-water') return 'Sea';
   if (cell.terrain === 'lake') return 'Lake';
   if (cell.terrain === 'coast') return 'Coast';
+  if (cell.terrain === 'plateau') return 'Plateau';
   if (cell.terrain === 'desert') return 'Desert';
+  if (cell.terrain === 'badlands') return 'Badlands';
   if (cell.terrain === 'forest') return 'Forest';
   if (cell.terrain === 'swamp') return 'Swamp';
   if (cell.terrain === 'valley') return 'Valley';
   if (cell.terrain === 'hills') return 'Hill';
   if (cell.terrain === 'mountains') return 'Mountain';
+  if (cell.terrain === 'volcanic') return 'Volcanic';
   if (cell.terrain === 'tundra') return 'Tundra';
 
   const averageNeighborElevation = getAverageNeighborElevation(cell, mesh);
@@ -62,5 +68,8 @@ export function describeCell(cell: TMapCell, mesh: TMapMesh): TCellDescription {
     temperature: `${temperatureC}C`,
     precipitation: `${precipitationPercent}%`,
     rainShadow: `${rainShadowPercent}%`,
+    nationId: cell.nationId !== null ? String(cell.nationId) : 'None',
+    provinceId: cell.provinceId !== null ? String(cell.provinceId) : 'None',
+    zoneType: cell.zoneType,
   };
 }

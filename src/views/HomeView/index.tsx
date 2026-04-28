@@ -3,6 +3,7 @@
 import { useMemo, useRef } from 'react';
 import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
 import { buildHydrology } from 'src/services/map/buildHydrology';
+import { buildGeopolitics } from 'src/services/map/buildGeopolitics';
 import { buildMesh } from 'src/services/map/buildMesh';
 import { buildTopography } from 'src/services/map/buildTopography';
 import { createSeededRandom } from 'src/services/map/seededRandom';
@@ -41,7 +42,8 @@ export default function HomeView() {
       cellCount,
     });
     const topographyMesh = buildTopography({ mesh: baseMesh, seed, seaLevel, terrainPreset });
-    return buildHydrology({ mesh: topographyMesh, seaLevel });
+    const hydrologyMesh = buildHydrology({ mesh: topographyMesh, seaLevel });
+    return buildGeopolitics({ mesh: hydrologyMesh, seed });
   }, [cellCount, seaLevel, seed, terrainPreset]);
 
   const hoveredCell = hoverIndex !== null ? mesh.cells[hoverIndex] : null;

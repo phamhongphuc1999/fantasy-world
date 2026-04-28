@@ -147,8 +147,13 @@ export function buildMesh({
       temperature: 0,
       precipitation: 0,
       rainShadow: 0,
+      nationId: null,
+      provinceId: null,
+      zoneType: 'international-waters',
+      isCapital: false,
+      isEconomicHub: false,
     };
   });
 
-  return { width, height, cells, edges, vertices, delaunay };
+  return { width, height, cells, edges, vertices, nations: [], delaunay };
 }

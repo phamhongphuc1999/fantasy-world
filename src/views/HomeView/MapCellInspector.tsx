@@ -44,6 +44,12 @@ export default function MapCellInspector({ label, cell, mesh, emptyMessage }: TP
         <span>{description.rainShadow}</span>
         <span className="text-slate-400">Suitability</span>
         <span>{description.suitability}</span>
+        <span className="text-slate-400">Nation ID</span>
+        <span>{description.nationId}</span>
+        <span className="text-slate-400">Province ID</span>
+        <span>{description.provinceId}</span>
+        <span className="text-slate-400">Zone Type</span>
+        <span>{description.zoneType}</span>
       </div>
     </article>
   );

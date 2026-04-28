@@ -17,16 +17,35 @@ export type TTerrainBand =
   | 'coast'
   | 'lake'
   | 'plains'
+  | 'plateau'
   | 'forest'
   | 'desert'
+  | 'badlands'
   | 'swamp'
   | 'valley'
   | 'hills'
   | 'mountains'
+  | 'volcanic'
   | 'tundra';
 
 export type TTerrainPreset = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
-export type TMapRenderMode = 'cells' | 'seamless' | 'rivers';
+export type TMapRenderMode =
+  | 'cells'
+  | 'seamless'
+  | 'rivers'
+  | 'nations'
+  | 'political-flat'
+  | 'political-tinted';
+export type TZoneType = 'land' | 'internal-waters' | 'territorial-waters' | 'international-waters';
+
+export type TNation = {
+  id: number;
+  name: string;
+  capitalCellId: number | null;
+  capital_coords: TPoint | null;
+  economicHubCellIds: number[];
+  economic_hubs_coords: TPoint[];
+};
 
 export type TTerrainPresetOption = {
   label: string;
@@ -50,6 +69,8 @@ export interface THydrologyCellData {
   temperature: number;
   precipitation: number;
   rainShadow: number;
+  nationId: number | null;
+  zoneType: TZoneType;
 }
 
 export type TPoint = [number, number];
@@ -86,6 +107,11 @@ export interface TMapCell {
   temperature: number;
   precipitation: number;
   rainShadow: number;
+  nationId: number | null;
+  provinceId: number | null;
+  zoneType: TZoneType;
+  isCapital: boolean;
+  isEconomicHub: boolean;
 }
 
 export interface TMapMesh {
@@ -94,6 +120,7 @@ export interface TMapMesh {
   cells: TMapCell[];
   edges: TMapEdge[];
   vertices: TMapVertex[];
+  nations: TNation[];
 }
 
 export type TMapMeshWithDelaunay = TMapMesh & {
