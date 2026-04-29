@@ -24,6 +24,7 @@ export const TERRAIN_PRESET_OPTIONS: TTerrainPresetOption[] = [
 export const TERRAIN_COLORS: Record<TTerrainBand, string> = {
   'deep-water': '#0b2f6b',
   'shallow-water': '#1e5fa8',
+  'inland-sea': '#2f7fbe',
   coast: '#d9c89b',
   lake: '#63b3ed',
   plains: '#63c64d',

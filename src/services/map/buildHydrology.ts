@@ -172,6 +172,8 @@ function getBiome(terrain: TTerrainBand): string {
       return 'Deep Ocean';
     case 'shallow-water':
       return 'Sea Shelf';
+    case 'inland-sea':
+      return 'Inland Sea';
     case 'lake':
       return 'Freshwater Lake';
     case 'coast':
@@ -202,7 +204,7 @@ function getBiome(terrain: TTerrainBand): string {
 }
 
 function getSuitability(terrain: TTerrainBand, precipitation: number, temperature: number): number {
-  if (terrain === 'deep-water' || terrain === 'shallow-water') return 0;
+  if (terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea') return 0;
   if (terrain === 'lake') return 0.12;
   if (terrain === 'mountains' || terrain === 'tundra') return 0.14;
   if (terrain === 'volcanic' || terrain === 'badlands') return 0.18;
@@ -219,6 +221,7 @@ function isWaterTerrain(terrain: TTerrainBand) {
   return (
     terrain === 'deep-water' ||
     terrain === 'shallow-water' ||
+    terrain === 'inland-sea' ||
     terrain === 'coast' ||
     terrain === 'lake'
   );
@@ -538,7 +541,109 @@ function buildLakeRegions(cells: TMapCell[]) {
 }
 
 function isSeaTerrain(terrain: TTerrainBand) {
-  return terrain === 'deep-water' || terrain === 'shallow-water';
+  return terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea';
+}
+
+function touchesMapBoundary(cell: TMapCell, width: number, height: number) {
+  const epsilon = 1;
+  if (cell.site[0] <= epsilon || cell.site[0] >= width - epsilon) return true;
+  if (cell.site[1] <= epsilon || cell.site[1] >= height - epsilon) return true;
+  for (const [x, y] of cell.polygon) {
+    if (x <= epsilon || x >= width - epsilon) return true;
+    if (y <= epsilon || y >= height - epsilon) return true;
+  }
+  return false;
+}
+
+function buildOceanConnectedWaterMask(cells: TMapCell[], width: number, height: number) {
+  const oceanConnected = new Uint8Array(cells.length);
+  const queue: number[] = [];
+
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+    if (!cells[cellIndex].isWater) continue;
+    if (!touchesMapBoundary(cells[cellIndex], width, height)) continue;
+    oceanConnected[cellIndex] = 1;
+    queue.push(cellIndex);
+  }
+
+  while (queue.length > 0) {
+    const current = queue.pop();
+    if (current === undefined) continue;
+    for (const neighborId of cells[current].neighbors) {
+      if (oceanConnected[neighborId] === 1) continue;
+      if (!cells[neighborId].isWater) continue;
+      oceanConnected[neighborId] = 1;
+      queue.push(neighborId);
+    }
+  }
+
+  return oceanConnected;
+}
+
+function classifyEnclosedWaterBodies(
+  cells: TMapCell[],
+  width: number,
+  height: number,
+  seaLevel: number,
+  downstream: Int32Array
+) {
+  const oceanConnected = buildOceanConnectedWaterMask(cells, width, height);
+  const threshold = seaLevel + MAP_HYDROLOGY_CONFIG.enclosedWaterElevationBuffer;
+  const visited = new Uint8Array(cells.length);
+
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+    if (visited[cellIndex] === 1) continue;
+    if (oceanConnected[cellIndex] === 1) continue;
+    const isEnclosedSeedCandidate =
+      cells[cellIndex].isWater || cells[cellIndex].isLake || downstream[cellIndex] === -1;
+    if (!isEnclosedSeedCandidate) continue;
+    if (cells[cellIndex].elevation > threshold) continue;
+
+    const queue = [cellIndex];
+    const component: number[] = [];
+    visited[cellIndex] = 1;
+    let minElevation = cells[cellIndex].elevation;
+
+    while (queue.length > 0) {
+      const current = queue.pop();
+      if (current === undefined) continue;
+      const currentCell = cells[current];
+      component.push(current);
+      minElevation = Math.min(minElevation, currentCell.elevation);
+
+      for (const neighborId of currentCell.neighbors) {
+        if (visited[neighborId] === 1) continue;
+        if (oceanConnected[neighborId] === 1) continue;
+        if (cells[neighborId].elevation > threshold) continue;
+        visited[neighborId] = 1;
+        queue.push(neighborId);
+      }
+    }
+
+    const basinDepth = seaLevel - minElevation;
+    const shouldPersistWater =
+      basinDepth >= MAP_HYDROLOGY_CONFIG.enclosedWaterPersistentDepthMin ||
+      component.some((id) => cells[id].isWater);
+    if (!shouldPersistWater) continue;
+
+    const isLake = component.length <= MAP_HYDROLOGY_CONFIG.enclosedLakeMaxCells;
+    const shorelineRise = Math.min(
+      MAP_HYDROLOGY_CONFIG.enclosedWaterDepthShoreMax,
+      basinDepth * MAP_HYDROLOGY_CONFIG.enclosedWaterDepthShoreFactor
+    );
+    const waterSurface = seaLevel + Math.max(0, shorelineRise);
+
+    for (const waterCellId of component) {
+      const waterCell = cells[waterCellId];
+      if (waterCell.elevation > waterSurface) continue;
+      waterCell.isWater = true;
+      waterCell.isLake = isLake;
+      waterCell.isRiver = false;
+      waterCell.terrain = isLake ? 'lake' : 'inland-sea';
+      waterCell.biome = isLake ? 'Freshwater Lake' : 'Inland Sea';
+      waterCell.suitability = isLake ? 0.12 : 0;
+    }
+  }
 }
 
 function filterAndLimitLakes(cells: TMapCell[], flow: Float32Array) {
@@ -1145,6 +1250,53 @@ function rebalanceTerrainDistribution(cells: TMapCell[]) {
     (cell) => cell.precipitation - Math.abs(cell.temperature - 0.52) - cell.rainShadow * 0.35
   );
 
+  const mountainsDeficit = Math.max(
+    0,
+    Math.floor((target.mountainsMinShare - getShare('mountains')) * landCount)
+  );
+  if (mountainsDeficit > 0) {
+    let remaining = mountainsDeficit;
+    remaining -= convertCells(
+      'hills',
+      'mountains',
+      remaining,
+      (cell) => cell.elevation + Math.max(0, 0.7 - cell.precipitation) + cell.rainShadow * 0.3
+    );
+    if (remaining > 0) {
+      convertCells(
+        'plateau',
+        'mountains',
+        remaining,
+        (cell) => cell.elevation + Math.max(0, 0.64 - cell.precipitation)
+      );
+    }
+  }
+
+  const swampDeficit = Math.max(
+    0,
+    Math.floor((target.swampMinShare - getShare('swamp')) * landCount)
+  );
+  if (swampDeficit > 0) {
+    let remaining = swampDeficit;
+    remaining -= convertCells(
+      'valley',
+      'swamp',
+      remaining,
+      (cell) => cell.precipitation + Math.max(0, 0.62 - cell.elevation) + cell.flow * 0.01
+    );
+    if (remaining > 0) {
+      convertCells(
+        'plains',
+        'swamp',
+        remaining,
+        (cell) =>
+          cell.precipitation +
+          Math.max(0, 0.6 - cell.elevation) +
+          Math.max(0, cell.flow - 2.5) * 0.02
+      );
+    }
+  }
+
   const plainsDeficit = Math.max(
     0,
     Math.floor((target.plainsMinShare - getShare('plains')) * landCount)
@@ -1542,6 +1694,7 @@ export function buildHydrology({ mesh, seaLevel }: TBuildHydrologyOptions): TMap
 
   expandLakes(cells, flow, downstream);
   filterAndLimitLakes(cells, flow);
+  classifyEnclosedWaterBodies(cells, mesh.width, mesh.height, seaLevel, downstream);
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];

@@ -15,7 +15,7 @@ export default function GeneratePanel() {
           value={seedDraft}
           onChange={(event) => setSeedDraft(event.target.value)}
           className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500"
-          placeholder="world-001"
+          placeholder="world000"
         />
       </label>
       <div className="flex gap-2">

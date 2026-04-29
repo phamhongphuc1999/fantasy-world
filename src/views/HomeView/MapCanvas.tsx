@@ -2,13 +2,13 @@
 
 import { type MouseEvent, useEffect, useRef } from 'react';
 import { getTerrainColor } from 'src/services';
-import { TMapCell, TMapRenderMode } from 'src/types/global';
+import { TMapCell, TMapDisplaySettings } from 'src/types/global';
 
 type TProps = {
   cells: TMapCell[];
   width: number;
   height: number;
-  renderMode: TMapRenderMode;
+  displaySettings: TMapDisplaySettings;
   hoverIndex: number | null;
   selectedIndex: number | null;
   onPointerMove: (x: number, y: number) => void;
@@ -110,82 +110,63 @@ function isWaterCell(cell: TMapCell) {
   );
 }
 
-function getNationColor(nationId: number | null) {
-  if (nationId === null) return '#64748b';
-  const palette = [
-    '#ef4444',
-    '#f97316',
-    '#eab308',
-    '#22c55e',
-    '#14b8a6',
-    '#06b6d4',
-    '#3b82f6',
-    '#8b5cf6',
-    '#ec4899',
-  ];
-  return palette[Math.abs(nationId) % palette.length];
-}
-
-function getProvinceTint(nationColor: string, provinceId: number | null) {
-  if (provinceId === null) return nationColor;
-  const base = hexToRgb(nationColor);
-  const oscillation = Math.sin((provinceId + 1) * 1.73);
-  const delta = Math.round(oscillation * 18);
-  return rgbToHex(
-    Math.max(0, Math.min(255, base.r + delta)),
-    Math.max(0, Math.min(255, base.g + delta)),
-    Math.max(0, Math.min(255, base.b + delta))
-  );
-}
-
-function hexToRgb(hex: string) {
-  const normalized = hex.replace('#', '');
-  const value =
-    normalized.length === 3
-      ? normalized
-          .split('')
-          .map((char) => char + char)
-          .join('')
-      : normalized;
-  return {
-    r: parseInt(value.slice(0, 2), 16),
-    g: parseInt(value.slice(2, 4), 16),
-    b: parseInt(value.slice(4, 6), 16),
-  };
-}
-
-function rgbToHex(r: number, g: number, b: number) {
-  const toHex = (channel: number) => channel.toString(16).padStart(2, '0');
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function blendHex(base: string, overlay: string, alpha: number) {
-  const baseRgb = hexToRgb(base);
-  const overlayRgb = hexToRgb(overlay);
-  return rgbToHex(
-    Math.round(baseRgb.r * (1 - alpha) + overlayRgb.r * alpha),
-    Math.round(baseRgb.g * (1 - alpha) + overlayRgb.g * alpha),
-    Math.round(baseRgb.b * (1 - alpha) + overlayRgb.b * alpha)
-  );
-}
-
-function getCellDisplayColor(cell: TMapCell, mode: TMapRenderMode) {
+function getCellDisplayColor(cell: TMapCell) {
   const terrainColor = getTerrainColor(cell.terrain);
-  const nationColor = getNationColor(cell.nationId);
-  const provinceColor = getProvinceTint(nationColor, cell.provinceId);
-  const isWater = isWaterCell(cell);
-
-  if (mode === 'political-flat') {
-    if (isWater) return terrainColor;
-    return cell.nationId !== null ? provinceColor : terrainColor;
-  }
-
-  if (mode === 'political-tinted') {
-    if (isWater) return terrainColor;
-    return cell.nationId !== null ? blendHex(terrainColor, provinceColor, 0.3) : terrainColor;
-  }
-
   return terrainColor;
+}
+
+const NATION_COLOR_PALETTE = [
+  '#e6194b', // red
+  '#3cb44b', // green
+  '#f58231', // orange
+  '#f032e6', // magenta (kept - distinct enough)
+  '#bcf60c', // lime
+  '#fabebe', // pink
+  '#008080', // teal (kept - borderline but still distinguishable)
+  '#9a6324', // brown
+  '#fffac8', // light yellow
+  '#800000', // maroon
+  '#aaffc3', // light green
+  '#808000', // olive
+  '#ffd8b1', // peach
+  '#ff7f00', // vivid amber
+  '#00ff7f', // spring green
+  '#ff1493', // deep pink
+  '#ff4500', // orange red
+  '#2e8b57', // sea green
+  '#8b0000', // dark red
+  '#daa520', // goldenrod
+  '#ffcc00', // strong yellow
+  '#ff8c00', // dark orange
+  '#cc5500', // burnt orange
+  '#556b2f', // dark olive green
+  '#8fbc8f', // muted green
+  '#cd853f', // peru (earth tone)
+  '#a0522d', // sienna
+  '#deb887', // burlywood
+];
+
+function getNationPaletteColor(nationId: number | null) {
+  if (nationId === null) return '#334155';
+  const paletteIndex = Math.abs(nationId) % NATION_COLOR_PALETTE.length;
+  return NATION_COLOR_PALETTE[paletteIndex];
+}
+
+function drawCountryFill(
+  context: CanvasRenderingContext2D,
+  cells: TMapCell[],
+  showTerrain: boolean
+) {
+  const fillOpacity = showTerrain ? 0 : 0.86;
+  for (const cell of cells) {
+    if (!isLandCell(cell)) continue;
+    const fillColor = getNationPaletteColor(cell.nationId);
+    drawPolygon(context, cell.polygon);
+    context.fillStyle = fillColor;
+    context.globalAlpha = fillOpacity;
+    context.fill();
+    context.globalAlpha = 1;
+  }
 }
 
 function toPointKey(point: [number, number]) {
@@ -198,72 +179,52 @@ function toEdgeKey(startPoint: [number, number], endPoint: [number, number]) {
   return startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
 }
 
-function drawNationBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
-  const edgeOwner = new Map<
-    string,
-    { start: [number, number]; end: [number, number]; nationId: number | null; isLand: boolean }
-  >();
-
-  for (const cell of cells) {
-    if (cell.polygon.length < 2) continue;
-
-    for (let index = 0; index < cell.polygon.length; index += 1) {
-      const start = cell.polygon[index];
-      const end = cell.polygon[(index + 1) % cell.polygon.length];
-      const edgeKey = toEdgeKey(start, end);
-      const existing = edgeOwner.get(edgeKey);
-
-      if (!existing) {
-        edgeOwner.set(edgeKey, {
-          start,
-          end,
-          nationId: cell.nationId,
-          isLand: !cell.isWater,
-        });
-        continue;
-      }
-
-      const sharedOnLand = existing.isLand && !cell.isWater;
-      const isNationBorder =
-        sharedOnLand &&
-        existing.nationId !== null &&
-        cell.nationId !== null &&
-        existing.nationId !== cell.nationId;
-      if (!isNationBorder) continue;
-
-      context.beginPath();
-      context.moveTo(existing.start[0], existing.start[1]);
-      context.lineTo(existing.end[0], existing.end[1]);
-      context.strokeStyle = '#fef08a';
-      context.lineWidth = 2.1;
-      context.lineCap = 'round';
-      context.globalAlpha = 0.95;
-      context.shadowColor = '#fde047';
-      context.shadowBlur = 3;
-      context.stroke();
-      context.shadowBlur = 0;
-      context.globalAlpha = 1;
-    }
+function edgeNoiseValue(edgeKey: string, salt: number) {
+  let hash = 2166136261 ^ salt;
+  for (let index = 0; index < edgeKey.length; index += 1) {
+    hash ^= edgeKey.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
   }
+  return (hash >>> 0) / 4294967295;
 }
 
-function shouldDrawBorder(cellA: TMapCell, cellB: TMapCell) {
-  const waterA = isWaterCell(cellA);
-  const waterB = isWaterCell(cellB);
+function drawNaturalBorderSegment(
+  context: CanvasRenderingContext2D,
+  start: [number, number],
+  end: [number, number],
+  edgeKey: string
+) {
+  const dx = end[0] - start[0];
+  const dy = end[1] - start[1];
+  const length = Math.hypot(dx, dy);
+  if (length < 0.0001) return;
 
-  if (waterA !== waterB) return true;
+  const nx = -dy / length;
+  const ny = dx / length;
+  const amplitudeBase = Math.min(8.5, Math.max(1.6, length * 0.2));
+  const wobbleA = (edgeNoiseValue(edgeKey, 0x9e3779b9) - 0.5) * 2;
+  const wobbleB = (edgeNoiseValue(edgeKey, 0x85ebca6b) - 0.5) * 2;
+  const cp1Amplitude = amplitudeBase * wobbleA;
+  const cp2Amplitude = amplitudeBase * wobbleB;
 
-  const nationA = cellA.nationId;
-  const nationB = cellB.nationId;
-  if (nationA !== nationB && (nationA !== null || nationB !== null)) return true;
+  const cp1: [number, number] = [
+    start[0] + dx * 0.33 + nx * cp1Amplitude,
+    start[1] + dy * 0.33 + ny * cp1Amplitude,
+  ];
+  const cp2: [number, number] = [
+    start[0] + dx * 0.66 + nx * cp2Amplitude,
+    start[1] + dy * 0.66 + ny * cp2Amplitude,
+  ];
 
-  const isEezA = cellA.zoneType === 'territorial-waters';
-  const isEezB = cellB.zoneType === 'territorial-waters';
-  const isIntlA = cellA.zoneType === 'international-waters';
-  const isIntlB = cellB.zoneType === 'international-waters';
-  if ((isEezA && isIntlB) || (isEezB && isIntlA)) return true;
+  context.beginPath();
+  context.moveTo(start[0], start[1]);
+  context.bezierCurveTo(cp1[0], cp1[1], cp2[0], cp2[1], end[0], end[1]);
+}
 
-  return false;
+function shouldDrawCountryLandBorder(cellA: TMapCell, cellB: TMapCell) {
+  if (!isLandCell(cellA) || !isLandCell(cellB)) return false;
+  if (cellA.nationId === null || cellB.nationId === null) return false;
+  return cellA.nationId !== cellB.nationId;
 }
 
 function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
@@ -286,13 +247,12 @@ function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
         continue;
       }
 
-      if (!shouldDrawBorder(existing.cell, cell)) continue;
-      context.beginPath();
-      context.moveTo(existing.start[0], existing.start[1]);
-      context.lineTo(existing.end[0], existing.end[1]);
+      if (!shouldDrawCountryLandBorder(existing.cell, cell)) continue;
+      drawNaturalBorderSegment(context, existing.start, existing.end, edgeKey);
       context.strokeStyle = '#1f2937';
       context.lineWidth = 1;
       context.lineCap = 'round';
+      context.lineJoin = 'round';
       context.globalAlpha = 0.98;
       context.stroke();
       context.globalAlpha = 1;
@@ -396,7 +356,7 @@ export default function MapCanvas({
   cells,
   width,
   height,
-  renderMode,
+  displaySettings,
   hoverIndex,
   selectedIndex,
   onPointerMove,
@@ -418,71 +378,65 @@ export default function MapCanvas({
     context.fillStyle = '#09131f';
     context.fillRect(0, 0, width, height);
 
-    const hasCellBorders = renderMode === 'cells';
-    const isRiverMode = renderMode === 'rivers';
-    const isPoliticalMode = renderMode === 'political-flat' || renderMode === 'political-tinted';
-    const isNationMode = renderMode === 'nations';
-    const strokeStyle = hasCellBorders ? '#16283c' : 'transparent';
-    const strokeWidth = hasCellBorders ? 1 : 0;
-
     for (const cell of cells) {
-      drawCellShape(
-        context,
-        cell,
-        getCellDisplayColor(cell, renderMode),
-        isRiverMode ? 0.55 : 0.95,
-        strokeStyle,
-        strokeWidth
-      );
+      if (isLandCell(cell)) continue;
+      drawCellShape(context, cell, getTerrainColor(cell.terrain), 0.95, 'transparent', 0);
     }
 
-    if (isRiverMode) {
+    const showUniformLand = !displaySettings.showTerrain && !displaySettings.showCountryBorders;
+
+    if (displaySettings.showTerrain) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        drawCellShape(context, cell, getCellDisplayColor(cell), 0.95, 'transparent', 0);
+      }
+    }
+
+    if (showUniformLand) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        drawCellShape(context, cell, '#3f3f46', 1, 'transparent', 0);
+      }
+    }
+
+    if (displaySettings.showCountryBorders) {
+      drawCountryFill(context, cells, displaySettings.showTerrain);
+    }
+
+    if (displaySettings.showRivers) {
       for (const cell of cells) {
         if (!cell.isRiver || cell.downstreamId === null) continue;
 
         const downstreamCell = cells[cell.downstreamId];
-        if (!downstreamCell || downstreamCell.isWater) continue;
+        if (!downstreamCell) continue;
         drawCurvedRiverSegment(context, cell, downstreamCell);
         context.strokeStyle = '#38bdf8';
-        context.lineWidth = Math.min(5, 1.3 + Math.log2(cell.flow + 1) * 0.55);
+        context.lineWidth = Math.min(4.4, 1.25 + Math.log2(cell.flow + 1) * 0.45);
         context.lineCap = 'round';
-        context.globalAlpha = 0.98;
+        context.globalAlpha = 0.96;
         context.shadowColor = '#7dd3fc';
-        context.shadowBlur = 6;
+        context.shadowBlur = 4;
         context.stroke();
         context.shadowBlur = 0;
         context.globalAlpha = 1;
       }
     }
 
-    if (isNationMode) {
-      drawNationBorders(context, cells);
-    }
-
-    if (isPoliticalMode) {
-      for (const cell of cells) {
-        if (!cell.isRiver || cell.downstreamId === null) continue;
-        const downstreamCell = cells[cell.downstreamId];
-        if (!downstreamCell) continue;
-        drawCurvedRiverSegment(context, cell, downstreamCell);
-        context.strokeStyle = '#38bdf8';
-        context.lineWidth = Math.min(3.8, 1.2 + Math.log2(cell.flow + 1) * 0.45);
-        context.lineCap = 'round';
-        context.globalAlpha = 0.95;
-        context.stroke();
-        context.globalAlpha = 1;
-      }
-      drawProvinceBorders(context, cells);
+    if (displaySettings.showCountryBorders) {
       drawGrayBorders(context, cells);
       drawUrbanHierarchy(context, cells);
     }
 
-    if (renderMode === 'cells' && cells.length <= T_SITE_MARKER_LIMIT) {
+    if (displaySettings.showCountryBorders && displaySettings.showProvinceBorders) {
+      drawProvinceBorders(context, cells);
+    }
+
+    if (displaySettings.showTerrain && cells.length <= T_SITE_MARKER_LIMIT) {
       for (const cell of cells) {
-        drawSiteMarker(context, cell, 1.8, cell.isWater ? '#dbeafe' : '#fef3c7', 0.45);
+        drawSiteMarker(context, cell, 1.4, cell.isWater ? '#dbeafe' : '#fef3c7', 0.22);
       }
     }
-  }, [cells, height, renderMode, width]);
+  }, [cells, displaySettings, height, width]);
 
   useEffect(() => {
     const canvas = overlayCanvasRef.current;

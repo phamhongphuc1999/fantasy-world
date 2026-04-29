@@ -33,6 +33,7 @@ function getAverageNeighborElevation(cell: TMapCell, mesh: TMapMesh) {
 function getTerrainType(cell: TMapCell, mesh: TMapMesh): string {
   if (cell.terrain === 'deep-water') return 'Ocean';
   if (cell.terrain === 'shallow-water') return 'Sea';
+  if (cell.terrain === 'inland-sea') return 'Inland Sea';
   if (cell.terrain === 'lake') return 'Lake';
   if (cell.terrain === 'coast') return 'Coast';
   if (cell.terrain === 'plateau') return 'Plateau';

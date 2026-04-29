@@ -20,7 +20,7 @@ export default function SeaLevelPanel() {
       <input
         type="range"
         min={0.2}
-        max={0.7}
+        max={0.9}
         step={0.01}
         value={seaLevelDraft}
         onChange={(event) => handleSeaLevelDraftChange(Number(event.target.value))}

@@ -226,6 +226,31 @@ function buildCellTopography(elevation: number, seaLevel: number): TTopographyCe
   return { elevation, isWater: elevation < seaLevel, terrain };
 }
 
+function reinforceHighMountains(elevations: Float32Array, seaLevel: number) {
+  const landElevations: number[] = [];
+  for (let index = 0; index < elevations.length; index += 1) {
+    if (elevations[index] > seaLevel) landElevations.push(elevations[index]);
+  }
+  if (landElevations.length < 12) return elevations;
+
+  landElevations.sort((a, b) => a - b);
+  const startIndex = Math.floor(
+    (landElevations.length - 1) * MAP_TOPOGRAPHY_CONFIG.mountainRecovery.quantileStart
+  );
+  const threshold = landElevations[startIndex];
+  if (!Number.isFinite(threshold) || threshold >= 0.995) return elevations;
+
+  const boosted = Float32Array.from(elevations);
+  for (let index = 0; index < boosted.length; index += 1) {
+    const elevation = boosted[index];
+    if (elevation <= threshold) continue;
+    const normalized = (elevation - threshold) / Math.max(0.0001, 1 - threshold);
+    const uplift = normalized * normalized * MAP_TOPOGRAPHY_CONFIG.mountainRecovery.peakBoostMax;
+    boosted[index] = clamp(elevation + uplift, 0, 1);
+  }
+  return boosted;
+}
+
 export function buildTopography({
   mesh,
   seed,
@@ -374,12 +399,13 @@ export function buildTopography({
     );
   }
 
-  const elevations = applyTerrainPreset({
+  const presetElevations = applyTerrainPreset({
     mesh,
     seed,
     preset: terrainPreset,
     elevations: baseElevations,
   });
+  const elevations = reinforceHighMountains(presetElevations, seaLevel);
 
   const cells = mesh.cells.map((cell) => ({
     ...cell,

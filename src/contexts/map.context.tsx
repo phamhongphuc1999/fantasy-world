@@ -42,6 +42,8 @@ export default function MapProvider({ children }: TProps) {
     cellCount,
     seaLevel,
     terrainPreset,
+    customCountryMode,
+    customCountryCount,
     setSeed,
     setCellCount,
     setSeaLevelDraft,
@@ -57,8 +59,13 @@ export default function MapProvider({ children }: TProps) {
     });
     const topographyMesh = buildTopography({ mesh: baseMesh, seed, seaLevel, terrainPreset });
     const hydrologyMesh = buildHydrology({ mesh: topographyMesh, seaLevel });
-    return buildGeopolitics({ mesh: hydrologyMesh, seed });
-  }, [cellCount, seaLevel, seed, terrainPreset]);
+    return buildGeopolitics({
+      mesh: hydrologyMesh,
+      seed,
+      customCountryMode,
+      customCountryCount,
+    });
+  }, [cellCount, customCountryCount, customCountryMode, seaLevel, seed, terrainPreset]);
 
   const handlePointerMove = useCallback(
     (x: number, y: number) => {

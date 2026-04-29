@@ -1,15 +1,20 @@
 import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
-import { TMapCell, TMapMeshWithDelaunay, TNation, TZoneType } from 'src/types/global';
+import {
+  TCustomCountryMode,
+  TMapCell,
+  TMapMeshWithDelaunay,
+  TNation,
+  TZoneType,
+} from 'src/types/global';
 
 interface TBuildGeopoliticsOptions {
   mesh: TMapMeshWithDelaunay;
   seed: string;
+  customCountryMode: TCustomCountryMode;
+  customCountryCount: number;
 }
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
+const CAPITAL_VIEWPORT_MARGIN = 14;
 
 function edgeNoise(seedHash: number, leftId: number, rightId: number) {
   const low = Math.min(leftId, rightId);
@@ -35,13 +40,31 @@ function isRidgeBarrier(left: TMapCell, right: TMapCell) {
   return ruggedLeft && ruggedRight;
 }
 
-function getNationCount(landCount: number) {
-  const estimated = Math.round(landCount / MAP_GEOPOLITICAL_CONFIG.targetLandCellsPerNation);
-  return clamp(
-    estimated,
-    MAP_GEOPOLITICAL_CONFIG.nationCountMin,
-    MAP_GEOPOLITICAL_CONFIG.nationCountMax
-  );
+function isSoftNaturalBarrier(left: TMapCell, right: TMapCell) {
+  const softTerrain = new Set(['forest', 'swamp', 'tundra', 'badlands']);
+  const leftSoft = softTerrain.has(left.terrain);
+  const rightSoft = softTerrain.has(right.terrain);
+  return leftSoft || rightSoft;
+}
+
+function getRiverBarrierPenalty(left: TMapCell, right: TMapCell) {
+  if (!isRiverBarrier(left, right)) return 0;
+  const riverStrength = Math.max(left.flow, right.flow);
+  return MAP_GEOPOLITICAL_CONFIG.barrierCost.river + Math.log2(riverStrength + 1) * 1.25;
+}
+
+function getRidgeBarrierPenalty(left: TMapCell, right: TMapCell) {
+  if (!isRidgeBarrier(left, right)) return 0;
+  const relief = Math.abs(left.elevation - right.elevation);
+  return MAP_GEOPOLITICAL_CONFIG.barrierCost.ridge + relief * 9;
+}
+
+function getNationCount(mode: TCustomCountryMode, customCountryCount: number, seed: string) {
+  if (mode === 'balanced') {
+    return Math.min(40, Math.max(2, Math.floor(customCountryCount)));
+  }
+  const random = createSeededRandom(`${seed}:custom-country-dominant-count`);
+  return 2 + Math.floor(random() * 4);
 }
 
 function getSeedSuitability(cellId: number, cells: TMapCell[]) {
@@ -105,8 +128,13 @@ function selectNationSeeds(cells: TMapCell[], nationCount: number) {
   return seeds;
 }
 
-function buildLandNations(cells: TMapCell[], seed: string) {
-  const nationCount = getNationCount(cells.filter(isLand).length);
+function buildLandNations(
+  cells: TMapCell[],
+  seed: string,
+  customCountryMode: TCustomCountryMode,
+  customCountryCount: number
+) {
+  const nationCount = getNationCount(customCountryMode, customCountryCount, seed);
   const seeds = selectNationSeeds(cells, nationCount);
   const owner = new Int32Array(cells.length);
   const cost = new Float64Array(cells.length);
@@ -138,12 +166,13 @@ function buildLandNations(cells: TMapCell[], seed: string) {
           neighbor.terrain as keyof typeof MAP_GEOPOLITICAL_CONFIG.terrainCost
         ] || 1.2;
       let stepCost = terrainCost;
-
-      if (isRiverBarrier(currentCell, neighbor)) {
-        stepCost += MAP_GEOPOLITICAL_CONFIG.barrierCost.river;
+      if (customCountryMode === 'dominant') {
+        stepCost *= current.nationId === 0 ? 0.72 : 1.18;
       }
-      if (isRidgeBarrier(currentCell, neighbor)) {
-        stepCost += MAP_GEOPOLITICAL_CONFIG.barrierCost.ridge;
+      stepCost += getRiverBarrierPenalty(currentCell, neighbor);
+      stepCost += getRidgeBarrierPenalty(currentCell, neighbor);
+      if (isSoftNaturalBarrier(currentCell, neighbor)) {
+        stepCost += MAP_GEOPOLITICAL_CONFIG.barrierCost.biomeBreak;
       }
 
       const noise = (edgeNoise(seedHash, current.cellId, neighborId) - 0.5) * 2;
@@ -158,6 +187,49 @@ function buildLandNations(cells: TMapCell[], seed: string) {
     }
   }
   return owner;
+}
+
+function alignNaturalTerrainClusters(cells: TMapCell[], owner: Int32Array) {
+  const targetTerrains = new Set(['mountains', 'hills', 'forest', 'swamp', 'tundra']);
+  const passes = 2;
+
+  for (let pass = 0; pass < passes; pass += 1) {
+    const nextOwner = Int32Array.from(owner);
+
+    for (let cellId = 0; cellId < cells.length; cellId += 1) {
+      const cell = cells[cellId];
+      if (!isLand(cell)) continue;
+      if (!targetTerrains.has(cell.terrain)) continue;
+      if (owner[cellId] < 0) continue;
+
+      const nationCounts = new Map<number, number>();
+      let sameTerrainNeighbors = 0;
+      for (const neighborId of cell.neighbors) {
+        const neighbor = cells[neighborId];
+        if (!isLand(neighbor)) continue;
+        if (neighbor.terrain !== cell.terrain) continue;
+        sameTerrainNeighbors += 1;
+        const nationId = owner[neighborId];
+        if (nationId < 0) continue;
+        nationCounts.set(nationId, (nationCounts.get(nationId) || 0) + 1);
+      }
+
+      if (sameTerrainNeighbors < 3) continue;
+      let bestNationId = owner[cellId];
+      let bestCount = nationCounts.get(bestNationId) || 0;
+      for (const [nationId, count] of nationCounts) {
+        if (count > bestCount) {
+          bestNationId = nationId;
+          bestCount = count;
+        }
+      }
+      if (bestNationId !== owner[cellId] && bestCount >= 3) {
+        nextOwner[cellId] = bestNationId;
+      }
+    }
+
+    owner.set(nextOwner);
+  }
 }
 
 function getNationNeighborCounts(cells: TMapCell[], owner: Int32Array, cellId: number) {
@@ -414,7 +486,9 @@ function strategicCapitalScore(
   cells: TMapCell[],
   borderDistanceMap: Int32Array,
   coastDistanceMap: Int32Array,
-  hubCellIds: number[]
+  hubCellIds: number[],
+  mapWidth: number,
+  mapHeight: number
 ) {
   const cell = cells[cellId];
   if (cell.terrain === 'mountains' || cell.terrain === 'desert' || cell.terrain === 'forest') {
@@ -437,6 +511,15 @@ function strategicCapitalScore(
   if (coastDistance >= 3) score += 15;
   else if (coastDistance <= 1) score -= 18;
 
+  const edgeDistance = Math.min(
+    cell.site[0],
+    mapWidth - cell.site[0],
+    cell.site[1],
+    mapHeight - cell.site[1]
+  );
+  if (edgeDistance >= CAPITAL_VIEWPORT_MARGIN + 6) score += 16;
+  else if (edgeDistance < CAPITAL_VIEWPORT_MARGIN) score -= 120;
+
   for (const hubCellId of hubCellIds) {
     const hubSite = cells[hubCellId].site;
     const distance = Math.hypot(cell.site[0] - hubSite[0], cell.site[1] - hubSite[1]);
@@ -446,7 +529,22 @@ function strategicCapitalScore(
   return score;
 }
 
-function pickEconomicAndCapital(cells: TMapCell[], owner: Int32Array, seed: string): TNation[] {
+function isCellInSafeViewport(cell: TMapCell, mapWidth: number, mapHeight: number) {
+  return (
+    cell.site[0] >= CAPITAL_VIEWPORT_MARGIN &&
+    cell.site[0] <= mapWidth - CAPITAL_VIEWPORT_MARGIN &&
+    cell.site[1] >= CAPITAL_VIEWPORT_MARGIN &&
+    cell.site[1] <= mapHeight - CAPITAL_VIEWPORT_MARGIN
+  );
+}
+
+function pickEconomicAndCapital(
+  cells: TMapCell[],
+  owner: Int32Array,
+  seed: string,
+  mapWidth: number,
+  mapHeight: number
+): TNation[] {
   const nationIds = Array.from(new Set(owner)).filter((nationId) => nationId >= 0);
   const seedHash = hashSeed(`${seed}:nation-names`);
 
@@ -455,6 +553,10 @@ function pickEconomicAndCapital(cells: TMapCell[], owner: Int32Array, seed: stri
     const mainland = components[0] || [];
     const mainlandSet = new Set(mainland);
     const mainlandCells = mainland.map((cellId) => cells[cellId]);
+    const safeMainlandCells = mainlandCells.filter((cell) =>
+      isCellInSafeViewport(cell, mapWidth, mapHeight)
+    );
+    const capitalPool = safeMainlandCells.length > 0 ? safeMainlandCells : mainlandCells;
     const landSize = mainlandCells.length;
     const random = createSeededRandom(`${seed}:capital:${nationId}`);
 
@@ -463,7 +565,7 @@ function pickEconomicAndCapital(cells: TMapCell[], owner: Int32Array, seed: stri
     else if (landSize >= MAP_GEOPOLITICAL_CONFIG.hubCount.smallNationMinLand) hubCount = 2;
     hubCount = Math.min(hubCount, MAP_GEOPOLITICAL_CONFIG.hubCount.maxHubsPerNation);
 
-    const scored = mainlandCells
+    const scored = capitalPool
       .map((cell) => {
         const flatScore = flatnessScore(cell);
         const waterScore = waterProximityScore(cell, cells);
@@ -499,6 +601,7 @@ function pickEconomicAndCapital(cells: TMapCell[], owner: Int32Array, seed: stri
     });
 
     const capitalCandidates = mainland
+      .filter((cellId) => isCellInSafeViewport(cells[cellId], mapWidth, mapHeight))
       .map((cellId) => ({
         cellId,
         score: strategicCapitalScore(
@@ -506,7 +609,9 @@ function pickEconomicAndCapital(cells: TMapCell[], owner: Int32Array, seed: stri
           cells,
           borderDistanceMap,
           coastDistanceMap,
-          hubCellIds
+          hubCellIds,
+          mapWidth,
+          mapHeight
         ),
       }))
       .filter((entry) => entry.score > -200)
@@ -530,7 +635,16 @@ function pickEconomicAndCapital(cells: TMapCell[], owner: Int32Array, seed: stri
         }
       }
       if (capitalCellId === null) capitalCellId = topCandidates[topCandidates.length - 1].cellId;
-    } else if (hubCellIds.length > 0) capitalCellId = hubCellIds[0];
+    } else if (hubCellIds.length > 0) {
+      const safeHubId = hubCellIds.find((cellId) =>
+        isCellInSafeViewport(cells[cellId], mapWidth, mapHeight)
+      );
+      capitalCellId = safeHubId ?? hubCellIds[0];
+    }
+
+    if (capitalCellId === null && capitalPool.length > 0) {
+      capitalCellId = capitalPool[0].id;
+    }
 
     const nationName = `Nation ${String.fromCharCode(65 + ((nationId + seedHash) % 26))}-${nationId + 1}`;
 
@@ -799,17 +913,24 @@ function enforceProvinceContiguity(
   }
 }
 
-export function buildGeopolitics({ mesh, seed }: TBuildGeopoliticsOptions): TMapMeshWithDelaunay {
-  const owner = buildLandNations(mesh.cells, seed);
+export function buildGeopolitics({
+  mesh,
+  seed,
+  customCountryMode,
+  customCountryCount,
+}: TBuildGeopoliticsOptions): TMapMeshWithDelaunay {
+  const owner = buildLandNations(mesh.cells, seed, customCountryMode, customCountryCount);
+  alignNaturalTerrainClusters(mesh.cells, owner);
   enforceMinimumNationArea(mesh.cells, owner);
   enforceMainlandContiguity(mesh.cells, owner);
+  alignNaturalTerrainClusters(mesh.cells, owner);
   fillUnclaimedLand(mesh.cells, owner);
   ensureAllLandClaimed(mesh.cells, owner);
 
   const { waterOwner, zoneType } = assignMaritimeZones(mesh.cells, owner, seed);
   const provinceOwner = buildNationProvinces(mesh.cells, owner, seed);
   enforceProvinceContiguity(mesh.cells, owner, provinceOwner);
-  const nations = pickEconomicAndCapital(mesh.cells, owner, seed);
+  const nations = pickEconomicAndCapital(mesh.cells, owner, seed, mesh.width, mesh.height);
 
   const hubCellIds = new Set<number>();
   const capitalCellIds = new Set<number>();

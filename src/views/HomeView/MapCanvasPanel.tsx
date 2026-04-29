@@ -3,7 +3,7 @@ import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import MapCanvas from 'src/views/HomeView/MapCanvas';
 
 export default function MapCanvasPanel() {
-  const { renderMode, hoverIndex, selectedIndex, setHoverIndex, toggleSelectedIndex } =
+  const { displaySettings, hoverIndex, selectedIndex, setHoverIndex, toggleSelectedIndex } =
     useMapExplorerStore();
 
   const { mesh, handlePointerMove } = useMapContext();
@@ -14,7 +14,7 @@ export default function MapCanvasPanel() {
         cells={mesh.cells}
         width={mesh.width}
         height={mesh.height}
-        renderMode={renderMode}
+        displaySettings={displaySettings}
         hoverIndex={hoverIndex}
         selectedIndex={selectedIndex}
         onPointerMove={handlePointerMove}

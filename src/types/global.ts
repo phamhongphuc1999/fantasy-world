@@ -14,6 +14,7 @@ export type TSiteMetadata = {
 export type TTerrainBand =
   | 'deep-water'
   | 'shallow-water'
+  | 'inland-sea'
   | 'coast'
   | 'lake'
   | 'plains'
@@ -29,14 +30,16 @@ export type TTerrainBand =
   | 'tundra';
 
 export type TTerrainPreset = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
-export type TMapRenderMode =
-  | 'cells'
-  | 'seamless'
-  | 'rivers'
-  | 'nations'
-  | 'political-flat'
-  | 'political-tinted';
 export type TZoneType = 'land' | 'internal-waters' | 'territorial-waters' | 'international-waters';
+
+export type TMapDisplaySettings = {
+  showTerrain: boolean;
+  showRivers: boolean;
+  showCountryBorders: boolean;
+  showProvinceBorders: boolean;
+};
+
+export type TCustomCountryMode = 'dominant' | 'balanced';
 
 export type TNation = {
   id: number;
@@ -134,7 +137,9 @@ export interface TMapExplorerState {
   seaLevel: number;
   seaLevelDraft: number;
   terrainPreset: TTerrainPreset;
-  renderMode: TMapRenderMode;
+  customCountryMode: TCustomCountryMode;
+  customCountryCount: number;
+  displaySettings: TMapDisplaySettings;
   hoverIndex: number | null;
   selectedIndex: number | null;
 }

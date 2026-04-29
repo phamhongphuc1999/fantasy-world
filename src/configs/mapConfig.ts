@@ -1,17 +1,26 @@
-import { TMapRenderMode, TTerrainPreset } from 'src/types/global';
+import { TCustomCountryMode, TMapDisplaySettings, TTerrainPreset } from 'src/types/global';
 
 export const MAP_EXPLORER_DEFAULT_CONFIG: {
   seed: string;
   cellCount: number;
   seaLevel: number;
   terrainPreset: TTerrainPreset;
-  renderMode: TMapRenderMode;
+  customCountryMode: TCustomCountryMode;
+  customCountryCount: number;
+  displaySettings: TMapDisplaySettings;
 } = {
-  seed: 'world000',
+  seed: 'world-001',
   cellCount: 10000,
   seaLevel: 0.5,
   terrainPreset: 'balanced',
-  renderMode: 'seamless',
+  customCountryMode: 'balanced',
+  customCountryCount: 8,
+  displaySettings: {
+    showTerrain: true,
+    showRivers: false,
+    showCountryBorders: false,
+    showProvinceBorders: false,
+  },
 };
 
 export const MAP_VIEWPORT_CONFIG = {
@@ -108,6 +117,10 @@ export const MAP_TOPOGRAPHY_CONFIG = {
     maxUplift: 1.2,
     maxRift: 1,
   },
+  mountainRecovery: {
+    quantileStart: 0.86,
+    peakBoostMax: 0.14,
+  },
 };
 
 export const MAP_PRESET_CONFIG = {
@@ -185,6 +198,11 @@ export const MAP_HYDROLOGY_CONFIG = {
   lakeExpansionPrecipitationMin: 0.28,
   maxLakeCount: 12,
   largeLakeMinCells: 4,
+  enclosedLakeMaxCells: 199,
+  enclosedWaterElevationBuffer: 0.04,
+  enclosedWaterPersistentDepthMin: 0.055,
+  enclosedWaterDepthShoreFactor: 0.7,
+  enclosedWaterDepthShoreMax: 0.09,
   riverSourceElevationMin: 0.78,
   plainRiverSourceFlowMin: 3.8,
   tundraRiverSourceFlowMin: 4.8,
@@ -234,18 +252,30 @@ export const MAP_HYDROLOGY_CONFIG = {
     switchMargin: 0.2,
   },
   terrainBalance: {
-    plainsMinShare: 0.52,
-    plainsMaxShare: 0.72,
-    forestMinShare: 0.1,
-    forestMaxShare: 0.2,
-    swampMaxShare: 0.06,
-    desertMaxShare: 0.05,
+    plainsMinShare: 0.3,
+    plainsMaxShare: 0.4,
+
+    forestMinShare: 0.18,
+    forestMaxShare: 0.26,
+
+    swampMinShare: 0.12,
+    swampMaxShare: 0.2,
+
+    desertMinShare: 0.05,
+    desertMaxShare: 0.1,
+
     badlandsMaxShare: 0.07,
-    volcanicMaxShare: 0.03,
-    hillsMaxShare: 0.18,
-    mountainsMaxShare: 0.1,
-    plateauMinShare: 0.04,
-    plateauMaxShare: 0.13,
+
+    volcanicMaxShare: 0.04,
+
+    hillsMinShare: 0.08,
+    hillsMaxShare: 0.15,
+
+    mountainsMinShare: 0.06,
+    mountainsMaxShare: 0.13,
+
+    plateauMinShare: 0.05,
+    plateauMaxShare: 0.1,
   },
   terrainClusterMinCells: {
     forest: 10,
@@ -269,8 +299,8 @@ export const MAP_GEOPOLITICAL_CONFIG = {
   nationCountMin: 3,
   nationCountMax: 7,
   targetLandCellsPerNation: 620,
-  minNationLandRatio: 0.07,
-  minNationLandCells: 180,
+  minNationLandRatio: 0,
+  minNationLandCells: 20,
   territorialRadiusMinCells: 3,
   territorialRadiusMaxCells: 3,
   narrowStraitThresholdCells: 6,
@@ -290,9 +320,9 @@ export const MAP_GEOPOLITICAL_CONFIG = {
     tundra: 1.35,
   },
   barrierCost: {
-    river: 1.35,
-    ridge: 1.65,
-    biomeBreak: 0.4,
+    river: 4.8,
+    ridge: 6.2,
+    biomeBreak: 2.4,
   },
   hubCount: {
     smallNationMinLand: 450,
