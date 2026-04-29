@@ -41,6 +41,17 @@ export type TMapDisplaySettings = {
 
 export type TCustomCountryMode = 'dominant' | 'balanced';
 
+export type TTerrainRatioKey =
+  | 'plains'
+  | 'forest'
+  | 'swamp'
+  | 'desert'
+  | 'hills'
+  | 'mountains'
+  | 'plateau';
+
+export type TTerrainRatioMap = Record<TTerrainRatioKey, number>;
+
 export type TNation = {
   id: number;
   name: string;
@@ -139,6 +150,8 @@ export interface TMapExplorerState {
   terrainPreset: TTerrainPreset;
   customCountryMode: TCustomCountryMode;
   customCountryCount: number;
+  terrainRatios: TTerrainRatioMap;
+  terrainRatiosDraft: TTerrainRatioMap;
   displaySettings: TMapDisplaySettings;
   hoverVisualizationEnabled: boolean;
   hoverIndex: number | null;

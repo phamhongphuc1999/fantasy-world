@@ -1,10 +1,12 @@
 'use client';
 
 import { MAP_EXPLORER_DEFAULT_CONFIG } from 'src/configs/mapConfig';
+import { rebalanceTerrainRatioAfterChange } from 'src/services/map/terrainRatios';
 import {
   TCustomCountryMode,
   TMapDisplaySettings,
   TMapExplorerState,
+  TTerrainRatioKey,
   TTerrainPreset,
 } from 'src/types/global';
 import { create } from 'zustand';
@@ -20,6 +22,9 @@ type TMapExplorerActions = {
   setTerrainPreset: (terrainPreset: TTerrainPreset) => void;
   setCustomCountryMode: (customCountryMode: TCustomCountryMode) => void;
   setCustomCountryCount: (customCountryCount: number) => boolean;
+  setTerrainRatioDraft: (terrain: TTerrainRatioKey, ratio: number) => void;
+  applyTerrainRatios: () => void;
+  cancelTerrainRatios: () => void;
   setDisplaySettings: (displaySettings: TMapDisplaySettings) => void;
   setDisplayLayer: <K extends keyof TMapDisplaySettings>(layer: K, enabled: boolean) => void;
   setHoverVisualizationEnabled: (enabled: boolean) => void;
@@ -40,6 +45,8 @@ const DEFAULT_STATE: TMapExplorerState = {
   terrainPreset: MAP_EXPLORER_DEFAULT_CONFIG.terrainPreset,
   customCountryMode: MAP_EXPLORER_DEFAULT_CONFIG.customCountryMode,
   customCountryCount: MAP_EXPLORER_DEFAULT_CONFIG.customCountryCount,
+  terrainRatios: MAP_EXPLORER_DEFAULT_CONFIG.terrainRatios,
+  terrainRatiosDraft: MAP_EXPLORER_DEFAULT_CONFIG.terrainRatios,
   displaySettings: MAP_EXPLORER_DEFAULT_CONFIG.displaySettings,
   hoverVisualizationEnabled: true,
   hoverIndex: null,
@@ -80,6 +87,24 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         if (customCountryCount < 2 || customCountryCount > 40) return false;
         set({ customCountryCount, hoverIndex: null });
         return true;
+      },
+      setTerrainRatioDraft(terrain: TTerrainRatioKey, ratio: number) {
+        const current = get().terrainRatiosDraft;
+        const next = rebalanceTerrainRatioAfterChange(current, terrain, ratio);
+        set({ terrainRatiosDraft: next });
+      },
+      applyTerrainRatios() {
+        const { terrainRatios, terrainRatiosDraft } = get();
+        const changed = Object.keys(terrainRatios).some((key) => {
+          const terrainKey = key as TTerrainRatioKey;
+          return Math.abs(terrainRatios[terrainKey] - terrainRatiosDraft[terrainKey]) > 0.0001;
+        });
+        if (!changed) return;
+        set({ terrainRatios: terrainRatiosDraft, hoverIndex: null });
+      },
+      cancelTerrainRatios() {
+        const { terrainRatios } = get();
+        set({ terrainRatiosDraft: terrainRatios });
       },
       setDisplaySettings(displaySettings: TMapDisplaySettings) {
         const normalizedSettings = displaySettings.showCountryBorders
@@ -127,9 +152,22 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         terrainPreset: state.terrainPreset,
         customCountryMode: state.customCountryMode,
         customCountryCount: state.customCountryCount,
+        terrainRatios: state.terrainRatios,
+        terrainRatiosDraft: state.terrainRatiosDraft,
         displaySettings: state.displaySettings,
         hoverVisualizationEnabled: state.hoverVisualizationEnabled,
       }),
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<TMapExplorerState> | undefined;
+        if (!state) return DEFAULT_STATE;
+        return {
+          ...DEFAULT_STATE,
+          ...state,
+          terrainRatiosDraft:
+            state.terrainRatiosDraft ?? state.terrainRatios ?? DEFAULT_STATE.terrainRatios,
+        };
+      },
     }
   )
 );

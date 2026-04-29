@@ -318,3 +318,55 @@ export function drawUrbanHierarchy(context: CanvasRenderingContext2D, cells: TMa
     }
   }
 }
+
+export function drawLogisticsRouteOverlay(
+  context: CanvasRenderingContext2D,
+  cells: TMapCell[],
+  routeCellIds: number[],
+  startCellId: number | null,
+  goalCellId: number | null
+) {
+  if (routeCellIds.length > 1) {
+    context.beginPath();
+    const first = cells[routeCellIds[0]];
+    context.moveTo(first.site[0], first.site[1]);
+    for (let index = 1; index < routeCellIds.length; index += 1) {
+      const prev = cells[routeCellIds[index - 1]];
+      const curr = cells[routeCellIds[index]];
+      const mx = (prev.site[0] + curr.site[0]) * 0.5;
+      const my = (prev.site[1] + curr.site[1]) * 0.5;
+      context.quadraticCurveTo(prev.site[0], prev.site[1], mx, my);
+    }
+    const last = cells[routeCellIds[routeCellIds.length - 1]];
+    context.lineTo(last.site[0], last.site[1]);
+    context.strokeStyle = '#f59e0b';
+    context.lineWidth = 3;
+    context.globalAlpha = 0.95;
+    context.shadowColor = '#facc15';
+    context.shadowBlur = 5;
+    context.lineCap = 'round';
+    context.stroke();
+    context.shadowBlur = 0;
+    context.globalAlpha = 1;
+  }
+
+  if (startCellId !== null && cells[startCellId]) {
+    const startCell = cells[startCellId];
+    context.beginPath();
+    context.arc(startCell.site[0], startCell.site[1], 5.2, 0, Math.PI * 2);
+    context.fillStyle = '#22c55e';
+    context.globalAlpha = 0.95;
+    context.fill();
+    context.globalAlpha = 1;
+  }
+
+  if (goalCellId !== null && cells[goalCellId]) {
+    const goalCell = cells[goalCellId];
+    context.beginPath();
+    context.arc(goalCell.site[0], goalCell.site[1], 5.2, 0, Math.PI * 2);
+    context.fillStyle = '#ef4444';
+    context.globalAlpha = 0.95;
+    context.fill();
+    context.globalAlpha = 1;
+  }
+}

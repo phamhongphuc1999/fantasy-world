@@ -1,4 +1,9 @@
-import { TCustomCountryMode, TMapDisplaySettings, TTerrainPreset } from 'src/types/global';
+import {
+  TCustomCountryMode,
+  TMapDisplaySettings,
+  TTerrainPreset,
+  TTerrainRatioMap,
+} from 'src/types/global';
 
 export const NATION_COLOR_PALETTE = [
   '#e6194b', // red
@@ -38,6 +43,7 @@ export const MAP_EXPLORER_DEFAULT_CONFIG: {
   terrainPreset: TTerrainPreset;
   customCountryMode: TCustomCountryMode;
   customCountryCount: number;
+  terrainRatios: TTerrainRatioMap;
   displaySettings: TMapDisplaySettings;
 } = {
   seed: 'world-001',
@@ -46,6 +52,15 @@ export const MAP_EXPLORER_DEFAULT_CONFIG: {
   terrainPreset: 'balanced',
   customCountryMode: 'balanced',
   customCountryCount: 8,
+  terrainRatios: {
+    plains: 0.35,
+    forest: 0.2,
+    swamp: 0.12,
+    desert: 0.07,
+    hills: 0.1,
+    mountains: 0.08,
+    plateau: 0.08,
+  },
   displaySettings: {
     showTerrain: true,
     showRivers: false,

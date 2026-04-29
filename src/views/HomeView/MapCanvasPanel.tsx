@@ -8,6 +8,7 @@ import {
   drawCountryFill,
   drawCurvedRiverSegment,
   drawGrayBorders,
+  drawLogisticsRouteOverlay,
   drawProvinceBorders,
   drawSiteMarker,
   drawUrbanHierarchy,
@@ -16,6 +17,7 @@ import {
   isLandCell,
   setupCanvas,
 } from 'src/services/map/mapCanvas.service';
+import { useLogisticsGameStore } from 'src/store/logisticsGameStore';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
 const T_SITE_MARKER_LIMIT = 4000;
@@ -24,6 +26,14 @@ export default function MapCanvasPanel() {
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const { displaySettings, hoverIndex, setHoverClientPoint, setHoverIndex } = useMapExplorerStore();
+  const {
+    enabled: logisticsEnabled,
+    startCellId,
+    goalCellId,
+    routeCellIds,
+    handleMapCellClick,
+    recalculateRoute,
+  } = useLogisticsGameStore();
   const { mesh, handlePointerMove } = useMapContext();
   const { cells, width, height } = mesh;
 
@@ -96,7 +106,20 @@ export default function MapCanvasPanel() {
         drawSiteMarker(context, cell, 1.4, cell.isWater ? '#dbeafe' : '#fef3c7', 0.22);
       }
     }
-  }, [cells, displaySettings, height, width]);
+
+    if (logisticsEnabled) {
+      drawLogisticsRouteOverlay(context, cells, routeCellIds, startCellId, goalCellId);
+    }
+  }, [
+    cells,
+    displaySettings,
+    goalCellId,
+    height,
+    logisticsEnabled,
+    routeCellIds,
+    startCellId,
+    width,
+  ]);
 
   useEffect(() => {
     const canvas = overlayCanvasRef.current;
@@ -117,23 +140,40 @@ export default function MapCanvasPanel() {
   }, [cells, height, hoverIndex, width]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      <canvas ref={baseCanvasRef} width={width} height={height} className="block h-auto w-full" />
-      <canvas
-        ref={overlayCanvasRef}
-        width={width}
-        height={height}
-        className="absolute inset-0 h-full w-full cursor-pointer"
-        onMouseMove={(event) => {
-          const point = getCanvasPoint(event, width, height);
-          handlePointerMove(point.x, point.y);
-          setHoverClientPoint({ x: event.clientX, y: event.clientY });
-        }}
-        onMouseLeave={() => {
-          setHoverIndex(null);
-          setHoverClientPoint(null);
-        }}
-      />
+    <div className="flex h-full w-full items-center justify-center overflow-hidden">
+      <div className="relative max-h-full w-full" style={{ aspectRatio: `${width}/${height}` }}>
+        <canvas
+          ref={baseCanvasRef}
+          width={width}
+          height={height}
+          className="absolute inset-0 h-full w-full"
+        />
+        <canvas
+          ref={overlayCanvasRef}
+          width={width}
+          height={height}
+          className="absolute inset-0 h-full w-full cursor-pointer"
+          onMouseMove={(event) => {
+            const point = getCanvasPoint(event, width, height);
+            handlePointerMove(point.x, point.y);
+            setHoverClientPoint({ x: event.clientX, y: event.clientY });
+          }}
+          onMouseLeave={() => {
+            setHoverIndex(null);
+            setHoverClientPoint(null);
+          }}
+          onClick={(event) => {
+            if (!logisticsEnabled) return;
+            const point = getCanvasPoint(event, width, height);
+            const clickedId = mesh.delaunay.find(point.x, point.y);
+            if (clickedId < 0 || cells[clickedId]?.isWater) return;
+            handleMapCellClick(clickedId);
+            queueMicrotask(() => {
+              recalculateRoute(mesh);
+            });
+          }}
+        />
+      </div>
     </div>
   );
 }
