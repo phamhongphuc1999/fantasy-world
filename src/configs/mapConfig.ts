@@ -7,9 +7,9 @@ export const MAP_EXPLORER_DEFAULT_CONFIG: {
   terrainPreset: TTerrainPreset;
   renderMode: TMapRenderMode;
 } = {
-  seed: 'world-001',
-  cellCount: 7000,
-  seaLevel: 0.46,
+  seed: 'world000',
+  cellCount: 10000,
+  seaLevel: 0.5,
   terrainPreset: 'balanced',
   renderMode: 'seamless',
 };

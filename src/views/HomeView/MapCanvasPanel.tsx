@@ -1,56 +1,26 @@
+import { useMapContext } from 'src/contexts/map.context';
+import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import MapCanvas from 'src/views/HomeView/MapCanvas';
-import MapMetricCard from 'src/views/HomeView/MapMetricCard';
-import { TMapMesh, TMapRenderMode } from 'src/types/global';
 
-type TProps = {
-  mesh: TMapMesh;
-  seed: string;
-  renderMode: TMapRenderMode;
-  hoverIndex: number | null;
-  selectedIndex: number | null;
-  onPointerMove: (x: number, y: number) => void;
-  onPointerLeave: () => void;
-  onCellSelect: (x: number, y: number) => void;
-};
+export default function MapCanvasPanel() {
+  const { renderMode, hoverIndex, selectedIndex, setHoverIndex, toggleSelectedIndex } =
+    useMapExplorerStore();
 
-export default function MapCanvasPanel({
-  mesh,
-  seed,
-  renderMode,
-  hoverIndex,
-  selectedIndex,
-  onPointerMove,
-  onPointerLeave,
-  onCellSelect,
-}: TProps) {
+  const { mesh, handlePointerMove } = useMapContext();
+
   return (
-    <div className="space-y-4">
-      <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/60">
-        <MapCanvas
-          cells={mesh.cells}
-          width={mesh.width}
-          height={mesh.height}
-          renderMode={renderMode}
-          hoverIndex={hoverIndex}
-          selectedIndex={selectedIndex}
-          onPointerMove={onPointerMove}
-          onPointerLeave={onPointerLeave}
-          onCellSelect={onCellSelect}
-        />
-      </div>
-
-      <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-4">
-        <MapMetricCard label="Seed" value={seed} />
-        <MapMetricCard label="Cells" value={String(mesh.cells.length)} />
-        <MapMetricCard
-          label="Rivers"
-          value={String(mesh.cells.filter((cell) => cell.isRiver).length)}
-        />
-        <MapMetricCard
-          label="Lakes"
-          value={String(mesh.cells.filter((cell) => cell.isLake).length)}
-        />
-      </div>
+    <div className="h-full w-full overflow-hidden">
+      <MapCanvas
+        cells={mesh.cells}
+        width={mesh.width}
+        height={mesh.height}
+        renderMode={renderMode}
+        hoverIndex={hoverIndex}
+        selectedIndex={selectedIndex}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={() => setHoverIndex(null)}
+        onCellSelect={(x, y) => toggleSelectedIndex(mesh.delaunay.find(x, y))}
+      />
     </div>
   );
 }

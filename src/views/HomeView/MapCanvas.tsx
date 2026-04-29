@@ -291,7 +291,7 @@ function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
       context.moveTo(existing.start[0], existing.start[1]);
       context.lineTo(existing.end[0], existing.end[1]);
       context.strokeStyle = '#1f2937';
-      context.lineWidth = 2.4;
+      context.lineWidth = 1;
       context.lineCap = 'round';
       context.globalAlpha = 0.98;
       context.stroke();
@@ -334,12 +334,12 @@ function drawProvinceBorders(context: CanvasRenderingContext2D, cells: TMapCell[
       context.beginPath();
       context.moveTo(existing.start[0], existing.start[1]);
       context.lineTo(existing.end[0], existing.end[1]);
-      context.strokeStyle = '#374151';
-      context.lineWidth = 1.7;
-      context.setLineDash([6, 3]);
+      context.strokeStyle = '#1f2937';
+      context.lineWidth = 0.5;
+      context.setLineDash([3, 3]);
       context.globalAlpha = 1;
-      context.shadowColor = '#111827';
-      context.shadowBlur = 1.5;
+      context.shadowColor = '#030712';
+      context.shadowBlur = 2.2;
       context.stroke();
       context.shadowBlur = 0;
       context.setLineDash([]);

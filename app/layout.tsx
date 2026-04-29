@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import { Fira_Code } from 'next/font/google';
+import { Fira_Code, Geist } from 'next/font/google';
 import { type ReactNode } from 'react';
 import { APP_NAME, siteMetadata } from 'src/configs/constance';
-import { cn } from 'src/services';
+import { cn } from 'src/lib/utils';
 import '../src/styles/globals.css';
 
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const firaCode = Fira_Code({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -42,7 +43,7 @@ interface TProps {
 
 export default function RootLayout({ children }: TProps) {
   return (
-    <html lang="en">
+    <html lang="en" className={cn('font-sans', geist.variable)}>
       <body className={cn('flex min-h-full flex-col antialiased', firaCode.className)}>
         {children}
       </body>

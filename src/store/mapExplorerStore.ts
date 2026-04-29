@@ -40,10 +40,7 @@ function getSnapshot() {
 }
 
 function setState(nextState: Partial<TMapExplorerState>) {
-  state = {
-    ...state,
-    ...nextState,
-  };
+  state = { ...state, ...nextState };
   emitChange();
 }
 
@@ -68,10 +65,7 @@ export function useMapExplorerStore() {
       setState({ seaLevelDraft });
     },
     applySeaLevel() {
-      if (state.seaLevel === state.seaLevelDraft) {
-        return;
-      }
-
+      if (state.seaLevel === state.seaLevelDraft) return;
       setState({ seaLevel: state.seaLevelDraft, hoverIndex: null, selectedIndex: null });
     },
     setTerrainPreset(terrainPreset: TTerrainPreset) {
@@ -81,16 +75,11 @@ export function useMapExplorerStore() {
       setState({ renderMode });
     },
     setHoverIndex(hoverIndex: number | null) {
-      if (state.hoverIndex === hoverIndex) {
-        return;
-      }
-
+      if (state.hoverIndex === hoverIndex) return;
       setState({ hoverIndex });
     },
     toggleSelectedIndex(selectedIndex: number) {
-      setState({
-        selectedIndex: state.selectedIndex === selectedIndex ? null : selectedIndex,
-      });
+      setState({ selectedIndex: state.selectedIndex === selectedIndex ? null : selectedIndex });
     },
     resetSelection() {
       setState({ hoverIndex: null, selectedIndex: null });

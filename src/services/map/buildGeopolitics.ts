@@ -63,7 +63,6 @@ function getSeedSuitability(cellId: number, cells: TMapCell[]) {
     if (neighbor.isWater && !neighbor.isLake) score += 0.22;
     if (neighbor.isRiver || neighbor.isLake) score += 0.35;
   }
-
   score += cell.suitability * 1.1;
   return score;
 }
@@ -75,7 +74,6 @@ function selectNationSeeds(cells: TMapCell[], nationCount: number) {
     .sort((a, b) => b.score - a.score);
 
   if (candidates.length === 0) return [];
-
   const seeds: number[] = [candidates[0].cellId];
 
   while (seeds.length < nationCount) {
@@ -101,11 +99,9 @@ function selectNationSeeds(cells: TMapCell[], nationCount: number) {
         bestCellId = candidate.cellId;
       }
     }
-
     if (bestCellId < 0) break;
     seeds.push(bestCellId);
   }
-
   return seeds;
 }
 
@@ -161,7 +157,6 @@ function buildLandNations(cells: TMapCell[], seed: string) {
       }
     }
   }
-
   return owner;
 }
 
@@ -207,7 +202,6 @@ function enforceMinimumNationArea(cells: TMapCell[], owner: Int32Array) {
           bestNationId = candidateNationId;
         }
       }
-
       if (bestNationId >= 0) owner[cellId] = bestNationId;
     }
   }
@@ -243,7 +237,6 @@ function enforceMainlandContiguity(cells: TMapCell[], owner: Int32Array) {
           queue.push(neighborId);
         }
       }
-
       components.push(component);
     }
 
@@ -263,7 +256,6 @@ function enforceMainlandContiguity(cells: TMapCell[], owner: Int32Array) {
             bestNationId = candidateNationId;
           }
         }
-
         if (bestNationId >= 0) owner[cellId] = bestNationId;
       }
     }
@@ -312,10 +304,7 @@ function ensureAllLandClaimed(cells: TMapCell[], owner: Int32Array) {
         bestNationId = owner[claimedCell.id];
       }
     }
-
-    if (bestNationId >= 0) {
-      owner[cellId] = bestNationId;
-    }
+    if (bestNationId >= 0) owner[cellId] = bestNationId;
   }
 }
 
@@ -329,7 +318,6 @@ function assignMaritimeZones(cells: TMapCell[], owner: Int32Array, seed: string)
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     if (isLand(cells[cellId])) zoneType[cellId] = 'land';
   }
-
   return { waterOwner, zoneType };
 }
 
@@ -358,7 +346,6 @@ function getLandDistanceMap(
       queue.push(neighborId);
     }
   }
-
   return distances;
 }
 
@@ -386,10 +373,8 @@ function getNationComponents(cells: TMapCell[], owner: Int32Array, nationId: num
         queue.push(neighborId);
       }
     }
-
     components.push(component);
   }
-
   components.sort((a, b) => b.length - a.length);
   return components;
 }
@@ -411,7 +396,6 @@ function waterProximityScore(cell: TMapCell, cells: TMapCell[]) {
       }
     }
   }
-
   return Math.min(0.85, secondRingWater * 0.08);
 }
 
@@ -459,7 +443,6 @@ function strategicCapitalScore(
     if (distance < 40) score -= 14;
     else if (distance < 70) score -= 6;
   }
-
   return score;
 }
 
@@ -546,12 +529,8 @@ function pickEconomicAndCapital(cells: TMapCell[], owner: Int32Array, seed: stri
           break;
         }
       }
-      if (capitalCellId === null) {
-        capitalCellId = topCandidates[topCandidates.length - 1].cellId;
-      }
-    } else if (hubCellIds.length > 0) {
-      capitalCellId = hubCellIds[0];
-    }
+      if (capitalCellId === null) capitalCellId = topCandidates[topCandidates.length - 1].cellId;
+    } else if (hubCellIds.length > 0) capitalCellId = hubCellIds[0];
 
     const nationName = `Nation ${String.fromCharCode(65 + ((nationId + seedHash) % 26))}-${nationId + 1}`;
 
@@ -750,13 +729,10 @@ function buildNationProvinces(cells: TMapCell[], owner: Int32Array, seed: string
         addedSeed = true;
         break;
       }
-
       if (!addedSeed) break;
     }
-
     nextProvinceId = nationStartProvinceId + seeds.length;
   }
-
   return provinceOwner;
 }
 
@@ -860,6 +836,5 @@ export function buildGeopolitics({ mesh, seed }: TBuildGeopoliticsOptions): TMap
       isCapital: capitalCellIds.has(cell.id),
     };
   });
-
   return { ...mesh, cells, nations };
 }
