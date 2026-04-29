@@ -23,7 +23,12 @@ function LayerToggle({ label, checked, disabled = false, onChange }: TLayerToggl
 }
 
 export default function DisplayModePanel() {
-  const { displaySettings, setDisplayLayer } = useMapExplorerStore();
+  const {
+    displaySettings,
+    hoverVisualizationEnabled,
+    setDisplayLayer,
+    setHoverVisualizationEnabled,
+  } = useMapExplorerStore();
 
   return (
     <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -51,6 +56,11 @@ export default function DisplayModePanel() {
           checked={displaySettings.showProvinceBorders}
           disabled={!displaySettings.showCountryBorders}
           onChange={(checked) => setDisplayLayer('showProvinceBorders', checked)}
+        />
+        <LayerToggle
+          label="Show Cell Information"
+          checked={hoverVisualizationEnabled}
+          onChange={setHoverVisualizationEnabled}
         />
       </div>
     </div>

@@ -1,7 +1,5 @@
 'use client';
 
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { MAP_EXPLORER_DEFAULT_CONFIG } from 'src/configs/mapConfig';
 import {
   TCustomCountryMode,
@@ -9,6 +7,8 @@ import {
   TMapExplorerState,
   TTerrainPreset,
 } from 'src/types/global';
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 type TMapExplorerActions = {
   setSeed: (seed: string) => void;
@@ -22,8 +22,9 @@ type TMapExplorerActions = {
   setCustomCountryCount: (customCountryCount: number) => boolean;
   setDisplaySettings: (displaySettings: TMapDisplaySettings) => void;
   setDisplayLayer: <K extends keyof TMapDisplaySettings>(layer: K, enabled: boolean) => void;
+  setHoverVisualizationEnabled: (enabled: boolean) => void;
   setHoverIndex: (hoverIndex: number | null) => void;
-  toggleSelectedIndex: (selectedIndex: number) => void;
+  setHoverClientPoint: (point: { x: number; y: number } | null) => void;
   resetSelection: () => void;
   resetToDefaults: () => void;
 };
@@ -40,8 +41,9 @@ const DEFAULT_STATE: TMapExplorerState = {
   customCountryMode: MAP_EXPLORER_DEFAULT_CONFIG.customCountryMode,
   customCountryCount: MAP_EXPLORER_DEFAULT_CONFIG.customCountryCount,
   displaySettings: MAP_EXPLORER_DEFAULT_CONFIG.displaySettings,
+  hoverVisualizationEnabled: true,
   hoverIndex: null,
-  selectedIndex: null,
+  hoverClientPoint: null,
 };
 
 export const useMapExplorerStore = create<TMapExplorerStore>()(
@@ -49,16 +51,16 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
     (set, get) => ({
       ...DEFAULT_STATE,
       setSeed(seed: string) {
-        set({ seed, seedDraft: seed, hoverIndex: null, selectedIndex: null });
+        set({ seed, seedDraft: seed, hoverIndex: null });
       },
       setSeedDraft(seedDraft: string) {
         set({ seedDraft });
       },
       setCellCount(cellCount: number) {
-        set({ cellCount, hoverIndex: null, selectedIndex: null });
+        set({ cellCount, hoverIndex: null });
       },
       setSeaLevel(seaLevel: number) {
-        set({ seaLevel, seaLevelDraft: seaLevel, hoverIndex: null, selectedIndex: null });
+        set({ seaLevel, seaLevelDraft: seaLevel, hoverIndex: null });
       },
       setSeaLevelDraft(seaLevelDraft: number) {
         set({ seaLevelDraft });
@@ -66,17 +68,17 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
       applySeaLevel() {
         const { seaLevel, seaLevelDraft } = get();
         if (seaLevel === seaLevelDraft) return;
-        set({ seaLevel: seaLevelDraft, hoverIndex: null, selectedIndex: null });
+        set({ seaLevel: seaLevelDraft, hoverIndex: null });
       },
       setTerrainPreset(terrainPreset: TTerrainPreset) {
-        set({ terrainPreset, hoverIndex: null, selectedIndex: null });
+        set({ terrainPreset, hoverIndex: null });
       },
       setCustomCountryMode(customCountryMode: TCustomCountryMode) {
-        set({ customCountryMode, hoverIndex: null, selectedIndex: null });
+        set({ customCountryMode, hoverIndex: null });
       },
       setCustomCountryCount(customCountryCount: number) {
         if (customCountryCount < 2 || customCountryCount > 40) return false;
-        set({ customCountryCount, hoverIndex: null, selectedIndex: null });
+        set({ customCountryCount, hoverIndex: null });
         return true;
       },
       setDisplaySettings(displaySettings: TMapDisplaySettings) {
@@ -93,22 +95,24 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         }
         set({ displaySettings: nextSettings });
       },
+      setHoverVisualizationEnabled(enabled: boolean) {
+        set({ hoverVisualizationEnabled: enabled });
+      },
       setHoverIndex(hoverIndex: number | null) {
         if (get().hoverIndex === hoverIndex) return;
         set({ hoverIndex });
       },
-      toggleSelectedIndex(selectedIndex: number) {
-        const current = get().selectedIndex;
-        set({ selectedIndex: current === selectedIndex ? null : selectedIndex });
+      setHoverClientPoint(point: { x: number; y: number } | null) {
+        set({ hoverClientPoint: point });
       },
       resetSelection() {
-        set({ hoverIndex: null, selectedIndex: null });
+        set({ hoverIndex: null, hoverClientPoint: null });
       },
       resetToDefaults() {
         set({
           ...DEFAULT_STATE,
           hoverIndex: null,
-          selectedIndex: null,
+          hoverClientPoint: null,
         });
       },
     }),
@@ -124,6 +128,7 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         customCountryMode: state.customCountryMode,
         customCountryCount: state.customCountryCount,
         displaySettings: state.displaySettings,
+        hoverVisualizationEnabled: state.hoverVisualizationEnabled,
       }),
     }
   )

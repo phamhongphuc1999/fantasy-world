@@ -1,10 +1,9 @@
 'use client';
 
 import MapConfigDialog from 'src/components/AppDialog/MapConfigDialog';
-import MapProvider from 'src/contexts/map.context';
 import MapCanvasPanel from 'src/views/HomeView/MapCanvasPanel';
 
-function HomeViewLayout() {
+export default function HomeView() {
   return (
     <main className="h-dvh w-full overflow-hidden bg-slate-950">
       <section className="relative h-full w-full">
@@ -14,13 +13,5 @@ function HomeViewLayout() {
         </div>
       </section>
     </main>
-  );
-}
-
-export default function HomeView() {
-  return (
-    <MapProvider>
-      <HomeViewLayout />
-    </MapProvider>
   );
 }

@@ -140,6 +140,7 @@ export interface TMapExplorerState {
   customCountryMode: TCustomCountryMode;
   customCountryCount: number;
   displaySettings: TMapDisplaySettings;
+  hoverVisualizationEnabled: boolean;
   hoverIndex: number | null;
-  selectedIndex: number | null;
+  hoverClientPoint: { x: number; y: number } | null;
 }

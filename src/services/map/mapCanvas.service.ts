@@ -1,22 +1,7 @@
-'use client';
-
-import { type MouseEvent, useEffect, useRef } from 'react';
+import { type MouseEvent } from 'react';
+import { NATION_COLOR_PALETTE } from 'src/configs/mapConfig';
 import { getTerrainColor } from 'src/services';
-import { TMapCell, TMapDisplaySettings } from 'src/types/global';
-
-type TProps = {
-  cells: TMapCell[];
-  width: number;
-  height: number;
-  displaySettings: TMapDisplaySettings;
-  hoverIndex: number | null;
-  selectedIndex: number | null;
-  onPointerMove: (x: number, y: number) => void;
-  onPointerLeave: () => void;
-  onCellSelect: (x: number, y: number) => void;
-};
-
-const T_SITE_MARKER_LIMIT = 4000;
+import { TMapCell } from 'src/types/global';
 
 function drawPolygon(context: CanvasRenderingContext2D, polygon: TMapCell['polygon']) {
   if (polygon.length === 0) return;
@@ -30,7 +15,11 @@ function drawPolygon(context: CanvasRenderingContext2D, polygon: TMapCell['polyg
   context.closePath();
 }
 
-function getCanvasPoint(event: MouseEvent<HTMLCanvasElement>, width: number, height: number) {
+export function getCanvasPoint(
+  event: MouseEvent<HTMLCanvasElement>,
+  width: number,
+  height: number
+) {
   const rect = event.currentTarget.getBoundingClientRect();
   const scaleX = width / rect.width;
   const scaleY = height / rect.height;
@@ -38,7 +27,12 @@ function getCanvasPoint(event: MouseEvent<HTMLCanvasElement>, width: number, hei
   return { x: (event.clientX - rect.left) * scaleX, y: (event.clientY - rect.top) * scaleY };
 }
 
-function setupCanvas(canvas: HTMLCanvasElement, width: number, height: number, pixelRatio: number) {
+export function setupCanvas(
+  canvas: HTMLCanvasElement,
+  width: number,
+  height: number,
+  pixelRatio: number
+) {
   canvas.width = width * pixelRatio;
   canvas.height = height * pixelRatio;
 
@@ -48,7 +42,7 @@ function setupCanvas(canvas: HTMLCanvasElement, width: number, height: number, p
   return context;
 }
 
-function drawCellShape(
+export function drawCellShape(
   context: CanvasRenderingContext2D,
   cell: TMapCell,
   fillStyle: string,
@@ -66,7 +60,7 @@ function drawCellShape(
   context.stroke();
 }
 
-function drawSiteMarker(
+export function drawSiteMarker(
   context: CanvasRenderingContext2D,
   cell: TMapCell,
   radius: number,
@@ -81,7 +75,11 @@ function drawSiteMarker(
   context.globalAlpha = 1;
 }
 
-function drawCurvedRiverSegment(context: CanvasRenderingContext2D, from: TMapCell, to: TMapCell) {
+export function drawCurvedRiverSegment(
+  context: CanvasRenderingContext2D,
+  from: TMapCell,
+  to: TMapCell
+) {
   const dx = to.site[0] - from.site[0];
   const dy = to.site[1] - from.site[1];
   const length = Math.hypot(dx, dy);
@@ -110,41 +108,10 @@ function isWaterCell(cell: TMapCell) {
   );
 }
 
-function getCellDisplayColor(cell: TMapCell) {
+export function getCellDisplayColor(cell: TMapCell) {
   const terrainColor = getTerrainColor(cell.terrain);
   return terrainColor;
 }
-
-const NATION_COLOR_PALETTE = [
-  '#e6194b', // red
-  '#3cb44b', // green
-  '#f58231', // orange
-  '#f032e6', // magenta (kept - distinct enough)
-  '#bcf60c', // lime
-  '#fabebe', // pink
-  '#008080', // teal (kept - borderline but still distinguishable)
-  '#9a6324', // brown
-  '#fffac8', // light yellow
-  '#800000', // maroon
-  '#aaffc3', // light green
-  '#808000', // olive
-  '#ffd8b1', // peach
-  '#ff7f00', // vivid amber
-  '#00ff7f', // spring green
-  '#ff1493', // deep pink
-  '#ff4500', // orange red
-  '#2e8b57', // sea green
-  '#8b0000', // dark red
-  '#daa520', // goldenrod
-  '#ffcc00', // strong yellow
-  '#ff8c00', // dark orange
-  '#cc5500', // burnt orange
-  '#556b2f', // dark olive green
-  '#8fbc8f', // muted green
-  '#cd853f', // peru (earth tone)
-  '#a0522d', // sienna
-  '#deb887', // burlywood
-];
 
 function getNationPaletteColor(nationId: number | null) {
   if (nationId === null) return '#334155';
@@ -152,7 +119,7 @@ function getNationPaletteColor(nationId: number | null) {
   return NATION_COLOR_PALETTE[paletteIndex];
 }
 
-function drawCountryFill(
+export function drawCountryFill(
   context: CanvasRenderingContext2D,
   cells: TMapCell[],
   showTerrain: boolean
@@ -227,7 +194,7 @@ function shouldDrawCountryLandBorder(cellA: TMapCell, cellB: TMapCell) {
   return cellA.nationId !== cellB.nationId;
 }
 
-function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
+export function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
   const edgeOwner = new Map<
     string,
     { start: [number, number]; end: [number, number]; cell: TMapCell }
@@ -260,7 +227,7 @@ function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
   }
 }
 
-function drawProvinceBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
+export function drawProvinceBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
   const edgeOwner = new Map<
     string,
     { start: [number, number]; end: [number, number]; cell: TMapCell }
@@ -308,11 +275,11 @@ function drawProvinceBorders(context: CanvasRenderingContext2D, cells: TMapCell[
   }
 }
 
-function isLandCell(cell: TMapCell) {
+export function isLandCell(cell: TMapCell) {
   return !isWaterCell(cell);
 }
 
-function drawUrbanHierarchy(context: CanvasRenderingContext2D, cells: TMapCell[]) {
+export function drawUrbanHierarchy(context: CanvasRenderingContext2D, cells: TMapCell[]) {
   for (const cell of cells) {
     if (!cell.isEconomicHub && !cell.isCapital) continue;
 
@@ -350,136 +317,4 @@ function drawUrbanHierarchy(context: CanvasRenderingContext2D, cells: TMapCell[]
       context.globalAlpha = 1;
     }
   }
-}
-
-export default function MapCanvas({
-  cells,
-  width,
-  height,
-  displaySettings,
-  hoverIndex,
-  selectedIndex,
-  onPointerMove,
-  onPointerLeave,
-  onCellSelect,
-}: TProps) {
-  const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    const canvas = baseCanvasRef.current;
-    if (!canvas) return;
-
-    const pixelRatio = window.devicePixelRatio || 1;
-    const context = setupCanvas(canvas, width, height, pixelRatio);
-    if (!context) return;
-
-    context.clearRect(0, 0, width, height);
-    context.fillStyle = '#09131f';
-    context.fillRect(0, 0, width, height);
-
-    for (const cell of cells) {
-      if (isLandCell(cell)) continue;
-      drawCellShape(context, cell, getTerrainColor(cell.terrain), 0.95, 'transparent', 0);
-    }
-
-    const showUniformLand = !displaySettings.showTerrain && !displaySettings.showCountryBorders;
-
-    if (displaySettings.showTerrain) {
-      for (const cell of cells) {
-        if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, getCellDisplayColor(cell), 0.95, 'transparent', 0);
-      }
-    }
-
-    if (showUniformLand) {
-      for (const cell of cells) {
-        if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, '#3f3f46', 1, 'transparent', 0);
-      }
-    }
-
-    if (displaySettings.showCountryBorders) {
-      drawCountryFill(context, cells, displaySettings.showTerrain);
-    }
-
-    if (displaySettings.showRivers) {
-      for (const cell of cells) {
-        if (!cell.isRiver || cell.downstreamId === null) continue;
-
-        const downstreamCell = cells[cell.downstreamId];
-        if (!downstreamCell) continue;
-        drawCurvedRiverSegment(context, cell, downstreamCell);
-        context.strokeStyle = '#38bdf8';
-        context.lineWidth = Math.min(4.4, 1.25 + Math.log2(cell.flow + 1) * 0.45);
-        context.lineCap = 'round';
-        context.globalAlpha = 0.96;
-        context.shadowColor = '#7dd3fc';
-        context.shadowBlur = 4;
-        context.stroke();
-        context.shadowBlur = 0;
-        context.globalAlpha = 1;
-      }
-    }
-
-    if (displaySettings.showCountryBorders) {
-      drawGrayBorders(context, cells);
-      drawUrbanHierarchy(context, cells);
-    }
-
-    if (displaySettings.showCountryBorders && displaySettings.showProvinceBorders) {
-      drawProvinceBorders(context, cells);
-    }
-
-    if (displaySettings.showTerrain && cells.length <= T_SITE_MARKER_LIMIT) {
-      for (const cell of cells) {
-        drawSiteMarker(context, cell, 1.4, cell.isWater ? '#dbeafe' : '#fef3c7', 0.22);
-      }
-    }
-  }, [cells, displaySettings, height, width]);
-
-  useEffect(() => {
-    const canvas = overlayCanvasRef.current;
-    if (!canvas) return;
-
-    const pixelRatio = window.devicePixelRatio || 1;
-    const context = setupCanvas(canvas, width, height, pixelRatio);
-    if (!context) return;
-
-    context.clearRect(0, 0, width, height);
-
-    const hoveredCell = hoverIndex !== null ? cells[hoverIndex] : null;
-    const selectedCell = selectedIndex !== null ? cells[selectedIndex] : null;
-
-    if (hoveredCell && hoveredCell.id !== selectedCell?.id) {
-      drawCellShape(context, hoveredCell, '#38bdf8', 0.84, '#e0f2fe', 1.5);
-      drawSiteMarker(context, hoveredCell, 2.75, hoveredCell.isWater ? '#dbeafe' : '#fef3c7', 0.95);
-    }
-
-    if (selectedCell) {
-      drawCellShape(context, selectedCell, '#f59e0b', 0.9, '#fef3c7', 2.25);
-      drawSiteMarker(context, selectedCell, 3.5, '#fff7ed', 0.95);
-    }
-  }, [cells, height, hoverIndex, selectedIndex, width]);
-
-  return (
-    <div className="relative">
-      <canvas ref={baseCanvasRef} width={width} height={height} className="block h-auto w-full" />
-      <canvas
-        ref={overlayCanvasRef}
-        width={width}
-        height={height}
-        className="absolute inset-0 h-full w-full cursor-pointer"
-        onMouseMove={(event) => {
-          const point = getCanvasPoint(event, width, height);
-          onPointerMove(point.x, point.y);
-        }}
-        onMouseLeave={onPointerLeave}
-        onClick={(event) => {
-          const point = getCanvasPoint(event, width, height);
-          onCellSelect(point.x, point.y);
-        }}
-      />
-    </div>
-  );
 }

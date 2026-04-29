@@ -10,20 +10,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from 'src/components/ui/dialog';
-import { useMapContext } from 'src/contexts/map.context';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import MapCellInspector from 'src/views/HomeView/MapCellInspector';
 import CountryModePanel from './CountryModePanel';
 import DisplayModePanel from './DisplayModePanel';
 import GeneratePanel from './GeneratePanel';
 import SeaLevelPanel from './SeaLevelPanel';
 
 export default function MapConfigDialog() {
-  const { hoverIndex, selectedIndex, resetToDefaults } = useMapExplorerStore();
-  const { mesh } = useMapContext();
-
-  const hoveredCell = hoverIndex !== null ? mesh.cells[hoverIndex] : null;
-  const selectedCell = selectedIndex !== null ? mesh.cells[selectedIndex] : null;
+  const { resetToDefaults } = useMapExplorerStore();
 
   return (
     <Dialog>
@@ -47,29 +41,13 @@ export default function MapConfigDialog() {
           <TerrainPresetSelect />
           <CountryModePanel />
           <DisplayModePanel />
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <button
-              type="button"
-              onClick={resetToDefaults}
-              className="w-full rounded-xl border border-rose-300/30 bg-rose-400/15 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-400/25"
-            >
-              Reset to Default Config
-            </button>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
-            <MapCellInspector
-              label="Hovered Cell"
-              cell={hoveredCell}
-              mesh={mesh}
-              emptyMessage="Move across the mesh to inspect cells."
-            />
-            <MapCellInspector
-              label="Selected Cell"
-              cell={selectedCell}
-              mesh={mesh}
-              emptyMessage="Click any polygon to pin its metadata."
-            />
-          </div>
+          <Button
+            type="button"
+            onClick={resetToDefaults}
+            className="w-full rounded-xl border border-rose-300/30 bg-rose-400/15 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-400/25"
+          >
+            Reset to Default Config
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

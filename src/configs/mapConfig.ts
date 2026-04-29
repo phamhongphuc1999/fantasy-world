@@ -1,5 +1,36 @@
 import { TCustomCountryMode, TMapDisplaySettings, TTerrainPreset } from 'src/types/global';
 
+export const NATION_COLOR_PALETTE = [
+  '#e6194b', // red
+  '#3cb44b', // green
+  '#f58231', // orange
+  '#f032e6', // magenta (kept - distinct enough)
+  '#bcf60c', // lime
+  '#fabebe', // pink
+  '#008080', // teal (kept - borderline but still distinguishable)
+  '#9a6324', // brown
+  '#fffac8', // light yellow
+  '#800000', // maroon
+  '#aaffc3', // light green
+  '#808000', // olive
+  '#ffd8b1', // peach
+  '#ff7f00', // vivid amber
+  '#00ff7f', // spring green
+  '#ff1493', // deep pink
+  '#ff4500', // orange red
+  '#2e8b57', // sea green
+  '#8b0000', // dark red
+  '#daa520', // goldenrod
+  '#ffcc00', // strong yellow
+  '#ff8c00', // dark orange
+  '#cc5500', // burnt orange
+  '#556b2f', // dark olive green
+  '#8fbc8f', // muted green
+  '#cd853f', // peru (earth tone)
+  '#a0522d', // sienna
+  '#deb887', // burlywood
+];
+
 export const MAP_EXPLORER_DEFAULT_CONFIG: {
   seed: string;
   cellCount: number;
