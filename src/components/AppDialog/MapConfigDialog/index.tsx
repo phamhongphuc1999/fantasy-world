@@ -2,7 +2,6 @@
 
 import { Settings2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import CellPanel from 'src/components/AppDialog/MapConfigDialog/CellPanel';
 import TerrainPresetSelect from 'src/components/AppDialog/MapConfigDialog/TerrainPresetSelect';
 import { Button } from 'src/components/ui/button';
 import {
@@ -87,7 +86,6 @@ export default function MapConfigDialog() {
             {activePanel === 'generation' && (
               <div className="space-y-4">
                 <GeneratePanel />
-                <CellPanel />
                 <SeaLevelPanel />
                 <CountryModePanel />
                 <LogisticsGamePanel />

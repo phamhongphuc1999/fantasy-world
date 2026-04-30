@@ -8,6 +8,113 @@ import {
   makeFrontierHash,
 } from './shared';
 
+const LARGE_LAND_COMPONENT_MIN_CELLS = 200;
+
+type TConnectivityContext = {
+  componentByCellId: Int32Array;
+  componentCellIds: number[][];
+  componentSizes: number[];
+  largeComponentIds: Set<number>;
+  boundaryCellsByComponentId: number[][];
+};
+
+function buildConnectivityContext(cells: TMapCell[]): TConnectivityContext {
+  const componentByCellId = new Int32Array(cells.length);
+  componentByCellId.fill(-1);
+  const componentCellIds: number[][] = [];
+  const componentSizes: number[] = [];
+  const boundaryCellsByComponentId: number[][] = [];
+  const visited = new Uint8Array(cells.length);
+
+  let componentId = 0;
+  for (const cell of cells) {
+    if (!isLand(cell) || visited[cell.id] === 1) continue;
+
+    const queue = [cell.id];
+    const component: number[] = [];
+    const boundaries: number[] = [];
+    visited[cell.id] = 1;
+    componentByCellId[cell.id] = componentId;
+
+    while (queue.length > 0) {
+      const currentId = queue.pop() as number;
+      component.push(currentId);
+
+      let touchesWater = false;
+      for (const neighborId of cells[currentId].neighbors) {
+        if (!isLand(cells[neighborId])) {
+          touchesWater = true;
+          continue;
+        }
+        if (visited[neighborId] === 1) continue;
+        visited[neighborId] = 1;
+        componentByCellId[neighborId] = componentId;
+        queue.push(neighborId);
+      }
+      if (touchesWater) boundaries.push(currentId);
+    }
+
+    componentCellIds.push(component);
+    componentSizes.push(component.length);
+    boundaryCellsByComponentId.push(boundaries.length > 0 ? boundaries : [component[0] as number]);
+    componentId += 1;
+  }
+
+  const largeComponentIds = new Set<number>();
+  for (let id = 0; id < componentSizes.length; id += 1) {
+    if (componentSizes[id] >= LARGE_LAND_COMPONENT_MIN_CELLS) largeComponentIds.add(id);
+  }
+
+  return {
+    componentByCellId,
+    componentCellIds,
+    componentSizes,
+    largeComponentIds,
+    boundaryCellsByComponentId,
+  };
+}
+
+function estimateWaterCellsBetweenComponents(
+  cells: TMapCell[],
+  context: TConnectivityContext,
+  leftComponentId: number,
+  rightComponentId: number
+) {
+  if (leftComponentId === rightComponentId) return 0;
+  const leftBoundaries = context.boundaryCellsByComponentId[leftComponentId] || [];
+  const rightBoundaries = context.boundaryCellsByComponentId[rightComponentId] || [];
+  if (leftBoundaries.length === 0 || rightBoundaries.length === 0) return 0;
+
+  const sampleLeft = leftBoundaries.slice(0, Math.min(24, leftBoundaries.length));
+  const sampleRight = rightBoundaries.slice(0, Math.min(24, rightBoundaries.length));
+
+  let minDistance = Number.POSITIVE_INFINITY;
+  for (const leftId of sampleLeft) {
+    for (const rightId of sampleRight) {
+      const dx = cells[leftId].site[0] - cells[rightId].site[0];
+      const dy = cells[leftId].site[1] - cells[rightId].site[1];
+      const distance = Math.hypot(dx, dy);
+      if (distance < minDistance) minDistance = distance;
+    }
+  }
+  if (!Number.isFinite(minDistance)) return 0;
+
+  const left = cells[sampleLeft[0] as number];
+  const avgNeighborDistance =
+    left.neighbors.length > 0
+      ? left.neighbors.reduce((sum, neighborId) => {
+          const neighbor = cells[neighborId];
+          return sum + Math.hypot(left.site[0] - neighbor.site[0], left.site[1] - neighbor.site[1]);
+        }, 0) / left.neighbors.length
+      : 1;
+
+  return Math.max(0, Math.round(minDistance / Math.max(1, avgNeighborDistance)));
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
 function getSeedSuitability(cellId: number, cells: TMapCell[]) {
   const cell = cells[cellId];
   if (!isLand(cell)) return -1000;
@@ -31,21 +138,38 @@ function getSeedSuitability(cellId: number, cells: TMapCell[]) {
   return score;
 }
 
-function selectNationSeeds(cells: TMapCell[], nationCount: number) {
+function selectNationSeeds(
+  cells: TMapCell[],
+  nationCount: number,
+  seed: string,
+  connectivity: TConnectivityContext
+) {
   const candidates = cells
-    .map((_, cellId) => ({ cellId, score: getSeedSuitability(cellId, cells) }))
+    .map((_, cellId) => ({
+      cellId,
+      score: getSeedSuitability(cellId, cells),
+      componentId: connectivity.componentByCellId[cellId],
+    }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score);
 
   if (candidates.length === 0) return [];
   const seeds: number[] = [candidates[0].cellId];
+  const seededLargeComponentIds = new Set<number>();
+  const firstComponentId = connectivity.componentByCellId[candidates[0].cellId];
+  if (connectivity.largeComponentIds.has(firstComponentId)) {
+    seededLargeComponentIds.add(firstComponentId);
+  }
+  const seedHash = makeFrontierHash(seed, 'nation-seed-soft-geo');
 
   while (seeds.length < nationCount) {
     let bestCellId = -1;
     let bestScore = -Infinity;
+    let bestComponentId = -1;
 
     for (const candidate of candidates) {
       if (seeds.includes(candidate.cellId)) continue;
+      if (candidate.componentId < 0) continue;
 
       const point = cells[candidate.cellId].site;
       let minDistance = Infinity;
@@ -57,14 +181,74 @@ function selectNationSeeds(cells: TMapCell[], nationCount: number) {
         );
       }
 
-      const totalScore = candidate.score * 1.15 + Math.sqrt(minDistance) * 0.18;
+      let totalScore = candidate.score * 1.15 + Math.sqrt(minDistance) * 0.18;
+
+      const isLargeComponent = connectivity.largeComponentIds.has(candidate.componentId);
+      const componentSize = connectivity.componentSizes[candidate.componentId] || 0;
+      const alreadySeededInComponent = seeds.some(
+        (seedCellId) => connectivity.componentByCellId[seedCellId] === candidate.componentId
+      );
+
+      let nearestSeededComponentId = -1;
+      let nearestWaterGap = Number.POSITIVE_INFINITY;
+      for (const seedCellId of seeds) {
+        const seededComponentId = connectivity.componentByCellId[seedCellId];
+        if (seededComponentId < 0 || seededComponentId === candidate.componentId) continue;
+        const gap = estimateWaterCellsBetweenComponents(
+          cells,
+          connectivity,
+          candidate.componentId,
+          seededComponentId
+        );
+        if (gap < nearestWaterGap) {
+          nearestWaterGap = gap;
+          nearestSeededComponentId = seededComponentId;
+        }
+      }
+
+      // Soft geography bias:
+      // - Large + far disconnected components: moderately prefer separate seeds.
+      // - Small + close/similar components: prefer sharing nations (fewer seeds across islands).
+      if (isLargeComponent && !alreadySeededInComponent) {
+        const gapFactor = Number.isFinite(nearestWaterGap)
+          ? clamp((nearestWaterGap - 6) / 18, 0, 1)
+          : 0.5;
+        totalScore += 1.8 + gapFactor * 3.2;
+      } else if (isLargeComponent && alreadySeededInComponent) {
+        totalScore -= 0.7;
+      }
+
+      if (!isLargeComponent && !alreadySeededInComponent && nearestSeededComponentId >= 0) {
+        const nearestSize = connectivity.componentSizes[nearestSeededComponentId] || 1;
+        const sizeSimilarity =
+          1 - Math.abs(componentSize - nearestSize) / Math.max(componentSize, nearestSize);
+        const similarity = clamp(sizeSimilarity, 0, 1);
+        const closeGapFactor = Number.isFinite(nearestWaterGap)
+          ? clamp(1 - nearestWaterGap / 12, 0, 1)
+          : 0;
+
+        // Nearby and similarly-sized small islands should often stay under the same nation.
+        const groupingBias = closeGapFactor * (0.55 + similarity * 0.45);
+        totalScore -= groupingBias * 2.4;
+
+        // If small island is far from existing seeded components, allow new nation seed more easily.
+        if (nearestWaterGap > 16) totalScore += 0.65;
+      }
+
+      const noise = Math.sin((candidate.cellId * 2654435761 + seedHash) * 0.000001) * 0.35;
+      totalScore += noise;
+
       if (totalScore > bestScore) {
         bestScore = totalScore;
         bestCellId = candidate.cellId;
+        bestComponentId = candidate.componentId;
       }
     }
     if (bestCellId < 0) break;
     seeds.push(bestCellId);
+    if (connectivity.largeComponentIds.has(bestComponentId)) {
+      seededLargeComponentIds.add(bestComponentId);
+    }
   }
   return seeds;
 }
@@ -77,7 +261,8 @@ export function buildLandNations(
 ) {
   const profile = MAP_GEOPOLITICAL_CONFIG.borderLevels.country;
   const nationCount = getNationCount(customCountryMode, customCountryCount, seed);
-  const seeds = selectNationSeeds(cells, nationCount);
+  const connectivity = buildConnectivityContext(cells);
+  const seeds = selectNationSeeds(cells, nationCount, seed, connectivity);
   const owner = new Int32Array(cells.length);
   const cost = new Float64Array(cells.length);
   owner.fill(-1);

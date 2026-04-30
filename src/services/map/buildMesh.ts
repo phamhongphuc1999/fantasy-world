@@ -148,6 +148,7 @@ export function buildMesh({
       precipitation: 0,
       rainShadow: 0,
       population: 0,
+      waterAccessibility: 0,
       nationId: null,
       provinceId: null,
       ethnicGroupId: null,

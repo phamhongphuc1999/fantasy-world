@@ -3,21 +3,22 @@ import { TEthnicStatistic, TNation, TTerrainStatistic } from 'src/types/global';
 interface TProps {
   nation: TNation;
   totalPopulation: number;
+  numberOfCells: number;
   terrainStats: Array<TTerrainStatistic>;
   ethnicStats: Array<TEthnicStatistic>;
 }
 
-export default function NationStatistic({
-  nation,
-  totalPopulation,
-  terrainStats,
-  ethnicStats,
-}: TProps) {
+export default function NationStatistic(props: TProps) {
+  const { nation, totalPopulation, numberOfCells, terrainStats, ethnicStats } = props;
+
   return (
     <>
       <section className="rounded-lg border border-white/10 bg-slate-900/60 p-3 text-slate-200">
         <h4 className="text-xs font-semibold tracking-wide text-slate-300 uppercase">Population</h4>
-        <div className="mt-2">Total Population: {totalPopulation.toLocaleString()}</div>
+        <div className="mt-2">
+          Total Population: {totalPopulation.toLocaleString()} (
+          {(totalPopulation / numberOfCells).toFixed(2)} people per cell)
+        </div>
       </section>
 
       <section className="rounded-lg border border-white/10 bg-slate-900/60 p-3">

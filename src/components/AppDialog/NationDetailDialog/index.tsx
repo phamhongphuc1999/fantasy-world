@@ -48,6 +48,7 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
           <NationStatistic
             nation={nation}
             totalPopulation={data.totalPopulation}
+            numberOfCells={data.nationCells.length}
             terrainStats={data.terrainStats}
             ethnicStats={data.ethnicStats}
           />

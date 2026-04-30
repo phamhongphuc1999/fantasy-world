@@ -92,6 +92,7 @@ export interface THydrologyCellData {
   precipitation: number;
   rainShadow: number;
   population: number;
+  waterAccessibility: number;
   nationId: number | null;
   zoneType: TZoneType;
 }
@@ -131,6 +132,7 @@ export interface TMapCell {
   precipitation: number;
   rainShadow: number;
   population: number;
+  waterAccessibility: number;
   nationId: number | null;
   provinceId: number | null;
   ethnicGroupId: number | null;

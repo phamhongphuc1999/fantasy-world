@@ -18,13 +18,13 @@ export default function SeaLevelPanel() {
       </div>
 
       <input
-        type="range"
-        min={0.2}
+        type="number"
+        min={0.1}
         max={0.9}
         step={0.01}
         value={seaLevelDraft}
         onChange={(event) => handleSeaLevelDraftChange(Number(event.target.value))}
-        className="w-full accent-sky-400"
+        className="w-full rounded-lg border border-white/10 bg-slate-900/70 px-2 py-1 text-sm text-white outline-none"
       />
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-slate-300">Applied: {seaLevel.toFixed(2)}</p>

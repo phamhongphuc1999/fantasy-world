@@ -138,6 +138,7 @@ export function buildHydrology({
       precipitation: 0,
       rainShadow: 0,
       population: 0,
+      waterAccessibility: 0,
       terrain: 'plains' as TTerrainBand,
       biome: '',
       suitability: 0,

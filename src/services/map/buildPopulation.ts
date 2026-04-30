@@ -10,15 +10,15 @@ function terrainBaseWeight(terrain: TTerrainBand) {
   if (terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea') return 0;
   if (terrain === 'lake') return 0;
   if (terrain === 'plains') return 1;
-  if (terrain === 'valley') return 0.9;
-  if (terrain === 'coast') return 0.85;
-  if (terrain === 'forest') return 0.6;
+  if (terrain === 'valley') return 0.7;
+  if (terrain === 'coast') return 0.5;
+  if (terrain === 'forest') return 0.2;
   if (terrain === 'swamp') return 0.3;
   if (terrain === 'hills') return 0.42;
   if (terrain === 'plateau') return 0.38;
-  if (terrain === 'mountains' || terrain === 'volcanic') return 0.2;
-  if (terrain === 'desert' || terrain === 'badlands') return 0.1;
-  if (terrain === 'tundra') return 0.16;
+  if (terrain === 'mountains' || terrain === 'volcanic') return 0.1;
+  if (terrain === 'desert' || terrain === 'badlands') return 0.04;
+  if (terrain === 'tundra') return 0.06;
   return 0.4;
 }
 
@@ -45,19 +45,57 @@ function populationMultiplier(
 ) {
   if (cell.terrain === 'plains') {
     const nearWater = cell.neighbors.some((neighborId) => cells[neighborId]?.isWater);
-    return nearWater ? 15 : 10;
+    return nearWater ? 15 : 7;
   }
-  if (cell.terrain === 'coast') return 9;
-  if (cell.terrain === 'valley') return 10;
-  if (cell.terrain === 'swamp') return 2;
-  if (cell.terrain === 'hills') return 3;
-  return 1;
+  if (cell.terrain === 'coast') return 3;
+  if (cell.terrain === 'valley') return 6;
+  if (cell.terrain === 'swamp') return 0.7;
+  if (cell.terrain === 'hills') return 1;
+  if (cell.terrain === 'mountains' || cell.terrain === 'volcanic') return 0.5;
+  return 0.1;
+}
+
+function buildWaterAccessibility(cells: TMapMeshWithDelaunay['cells']) {
+  const distances = new Int32Array(cells.length);
+  distances.fill(-1);
+  const queue: number[] = [];
+
+  for (let cellId = 0; cellId < cells.length; cellId += 1) {
+    const terrain = cells[cellId].terrain;
+    const isMarineWater =
+      terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea';
+    if (!isMarineWater) continue;
+    distances[cellId] = 0;
+    queue.push(cellId);
+  }
+
+  while (queue.length > 0) {
+    const currentId = queue.shift() as number;
+    const nextDistance = distances[currentId] + 1;
+    for (const neighborId of cells[currentId].neighbors) {
+      if (distances[neighborId] >= 0) continue;
+      distances[neighborId] = nextDistance;
+      queue.push(neighborId);
+    }
+  }
+
+  const accessibility = new Float64Array(cells.length);
+  for (let cellId = 0; cellId < cells.length; cellId += 1) {
+    const distance = distances[cellId];
+    if (distance < 0) {
+      accessibility[cellId] = 0.2;
+      continue;
+    }
+    accessibility[cellId] = clamp(Math.exp(-distance / 22), 0.12, 1);
+  }
+  return accessibility;
 }
 
 export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMeshWithDelaunay {
   const cells = mesh.cells;
   const random = createSeededRandom(`${seed}:population`);
   const score = new Float64Array(cells.length);
+  const waterAccessibility = buildWaterAccessibility(cells);
 
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     const cell = cells[cellId];
@@ -165,12 +203,16 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
 
   const normalizedMax = Math.max(0.0001, maxScore);
   const nextCells = cells.map((cell) => {
-    if (cell.isWater) return { ...cell, population: 0 };
+    if (cell.isWater) {
+      return { ...cell, population: 0, waterAccessibility: waterAccessibility[cell.id] };
+    }
     const density = clamp(score[cell.id] / normalizedMax, 0, 1);
     const shaped = Math.pow(density, 1.08);
     const basePopulation = Math.round(shaped * 5000);
-    const population = Math.round(basePopulation * populationMultiplier(cell, cells));
-    return { ...cell, population };
+    const population = Math.round(
+      basePopulation * populationMultiplier(cell, cells) * waterAccessibility[cell.id]
+    );
+    return { ...cell, population, waterAccessibility: waterAccessibility[cell.id] };
   });
 
   return { ...mesh, cells: nextCells };
