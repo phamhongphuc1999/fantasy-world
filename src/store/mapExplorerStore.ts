@@ -1,7 +1,10 @@
 'use client';
 
 import { MAP_EXPLORER_DEFAULT_CONFIG } from 'src/configs/mapConfig';
-import { rebalanceTerrainRatioAfterChange } from 'src/services/map/terrainRatios';
+import {
+  normalizeTerrainRatios,
+  rebalanceTerrainRatioAfterChange,
+} from 'src/services/map/terrainRatios';
 import {
   TCustomCountryMode,
   TMapDisplaySettings,
@@ -53,6 +56,20 @@ const DEFAULT_STATE: TMapExplorerState = {
   hoverClientPoint: null,
 };
 
+function migrateLegacyTerrainRatios(raw?: Partial<Record<string, number>>) {
+  if (!raw) return MAP_EXPLORER_DEFAULT_CONFIG.terrainRatios;
+  const plainValue = raw.plains ?? raw.plain;
+  return normalizeTerrainRatios({
+    plains: plainValue,
+    forest: raw.forest,
+    swamp: raw.swamp,
+    desert: raw.desert,
+    hills: raw.hills,
+    mountains: raw.mountains,
+    plateau: raw.plateau,
+  });
+}
+
 export const useMapExplorerStore = create<TMapExplorerStore>()(
   persist(
     (set, get) => ({
@@ -89,12 +106,13 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         return true;
       },
       setTerrainRatioDraft(terrain: TTerrainRatioKey, ratio: number) {
-        const current = get().terrainRatiosDraft;
+        const current = normalizeTerrainRatios(get().terrainRatiosDraft);
         const next = rebalanceTerrainRatioAfterChange(current, terrain, ratio);
         set({ terrainRatiosDraft: next });
       },
       applyTerrainRatios() {
-        const { terrainRatios, terrainRatiosDraft } = get();
+        const terrainRatios = normalizeTerrainRatios(get().terrainRatios);
+        const terrainRatiosDraft = normalizeTerrainRatios(get().terrainRatiosDraft);
         const changed = Object.keys(terrainRatios).some((key) => {
           const terrainKey = key as TTerrainRatioKey;
           return Math.abs(terrainRatios[terrainKey] - terrainRatiosDraft[terrainKey]) > 0.0001;
@@ -103,7 +121,7 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         set({ terrainRatios: terrainRatiosDraft, hoverIndex: null });
       },
       cancelTerrainRatios() {
-        const { terrainRatios } = get();
+        const terrainRatios = normalizeTerrainRatios(get().terrainRatios);
         set({ terrainRatiosDraft: terrainRatios });
       },
       setDisplaySettings(displaySettings: TMapDisplaySettings) {
@@ -157,7 +175,7 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         displaySettings: state.displaySettings,
         hoverVisualizationEnabled: state.hoverVisualizationEnabled,
       }),
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
         const state = persistedState as Partial<TMapExplorerState> | undefined;
         if (!state) return DEFAULT_STATE;
@@ -165,12 +183,18 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
           ...DEFAULT_STATE.displaySettings,
           ...(state.displaySettings ?? {}),
         };
+        const terrainRatios = migrateLegacyTerrainRatios(
+          state.terrainRatios as unknown as Partial<Record<string, number>> | undefined
+        );
+        const terrainRatiosDraft = migrateLegacyTerrainRatios(
+          state.terrainRatiosDraft as unknown as Partial<Record<string, number>> | undefined
+        );
         return {
           ...DEFAULT_STATE,
           ...state,
           displaySettings,
-          terrainRatiosDraft:
-            state.terrainRatiosDraft ?? state.terrainRatios ?? DEFAULT_STATE.terrainRatios,
+          terrainRatios,
+          terrainRatiosDraft,
         };
       },
     }

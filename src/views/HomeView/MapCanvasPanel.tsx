@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import NationDetailDialog from 'src/components/AppDialog/NationDetailDialog';
 import { useMapContext } from 'src/contexts/map.context';
 import { getTerrainColor } from 'src/services';
 import {
@@ -27,6 +28,8 @@ const T_SITE_MARKER_LIMIT = 4000;
 export default function MapCanvasPanel() {
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [selectedNationId, setSelectedNationId] = useState<number | null>(null);
+  const [nationDialogOpen, setNationDialogOpen] = useState(false);
   const { displaySettings, hoverIndex, setHoverClientPoint, setHoverIndex } = useMapExplorerStore();
   const {
     enabled: logisticsEnabled,
@@ -181,17 +184,31 @@ export default function MapCanvasPanel() {
             setHoverClientPoint(null);
           }}
           onClick={(event) => {
-            if (!logisticsEnabled) return;
             const point = getCanvasPoint(event, width, height);
             const clickedId = mesh.delaunay.find(point.x, point.y);
             if (clickedId < 0 || cells[clickedId]?.isWater) return;
-            handleMapCellClick(clickedId);
-            queueMicrotask(() => {
-              recalculateRoute(mesh);
-            });
+
+            if (logisticsEnabled) {
+              handleMapCellClick(clickedId);
+              queueMicrotask(() => {
+                recalculateRoute(mesh);
+              });
+              return;
+            }
+
+            const nationId = cells[clickedId]?.nationId ?? null;
+            if (nationId === null) return;
+            setSelectedNationId(nationId);
+            setNationDialogOpen(true);
           }}
         />
       </div>
+      <NationDetailDialog
+        open={nationDialogOpen}
+        onOpenChange={setNationDialogOpen}
+        nationId={selectedNationId}
+        mesh={mesh}
+      />
     </div>
   );
 }

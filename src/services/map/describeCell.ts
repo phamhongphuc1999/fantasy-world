@@ -6,6 +6,7 @@ export type TCellDescription = {
   biome: string;
   flow: string;
   suitability: string;
+  population: string;
   riverState: string;
   temperature: string;
   precipitation: string;
@@ -65,6 +66,7 @@ export function describeCell(cell: TMapCell, mesh: TMapMesh): TCellDescription {
     biome: cell.biome,
     flow: cell.flow.toFixed(2),
     suitability: `${suitabilityPercent}%`,
+    population: String(cell.population),
     riverState: cell.isRiver ? (cell.downstreamId === null ? 'River Mouth' : 'River') : 'No',
     temperature: `${temperatureC}C`,
     precipitation: `${precipitationPercent}%`,

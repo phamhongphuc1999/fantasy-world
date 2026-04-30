@@ -91,6 +91,8 @@ export default function HoverCellOverview() {
           <span>{description.rainShadow}</span>
           <span className="text-slate-400">Suitability</span>
           <span>{description.suitability}</span>
+          <span className="text-slate-400">Population</span>
+          <span>{description.population}</span>
           <span className="text-slate-400">Nation ID</span>
           <span>{description.nationId}</span>
           <span className="text-slate-400">Province ID</span>

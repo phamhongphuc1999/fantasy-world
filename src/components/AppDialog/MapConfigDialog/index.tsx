@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Settings2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import CellPanel from 'src/components/AppDialog/MapConfigDialog/CellPanel';
 import TerrainPresetSelect from 'src/components/AppDialog/MapConfigDialog/TerrainPresetSelect';
 import { Button } from 'src/components/ui/button';
@@ -22,12 +22,12 @@ import {
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import CountryModePanel from './CountryModePanel';
 import DisplayModePanel from './DisplayModePanel';
+import EthnicRegionsPanel from './EthnicRegionsPanel';
 import GeneratePanel from './GeneratePanel';
 import LogisticsGamePanel from './LogisticsGamePanel';
 import NationsPanel from './NationsPanel';
 import SeaLevelPanel from './SeaLevelPanel';
 import TerrainRatioPanel from './TerrainRatioPanel';
-import EthnicRegionsPanel from './EthnicRegionsPanel';
 
 const T_MAP_CONFIG_ACTIVE_PANEL_KEY = 'map-config-active-panel';
 const T_ALLOWED_PANELS = new Set(['terrain', 'generation', 'display', 'nations', 'ethnic']);
@@ -77,14 +77,14 @@ export default function MapConfigDialog() {
           </Select>
 
           <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-            {activePanel === 'terrain' ? (
+            {activePanel === 'terrain' && (
               <div className="space-y-4">
                 <TerrainPresetSelect />
                 <TerrainRatioPanel />
               </div>
-            ) : null}
+            )}
 
-            {activePanel === 'generation' ? (
+            {activePanel === 'generation' && (
               <div className="space-y-4">
                 <GeneratePanel />
                 <CellPanel />
@@ -92,9 +92,9 @@ export default function MapConfigDialog() {
                 <CountryModePanel />
                 <LogisticsGamePanel />
               </div>
-            ) : null}
+            )}
 
-            {activePanel === 'display' ? (
+            {activePanel === 'display' && (
               <div className="space-y-4">
                 <DisplayModePanel />
                 <Button
@@ -105,19 +105,19 @@ export default function MapConfigDialog() {
                   Reset to Default Config
                 </Button>
               </div>
-            ) : null}
+            )}
 
-            {activePanel === 'nations' ? (
+            {activePanel === 'nations' && (
               <div className="space-y-4">
                 <NationsPanel />
               </div>
-            ) : null}
+            )}
 
-            {activePanel === 'ethnic' ? (
+            {activePanel === 'ethnic' && (
               <div className="space-y-4">
                 <EthnicRegionsPanel />
               </div>
-            ) : null}
+            )}
           </div>
         </div>
       </DialogContent>

@@ -1503,7 +1503,7 @@ function buildEthnicRegions(cells: TMapCell[], nationOwner: Int32Array, seed: st
   const ethnicOwner = buildEthnicField(cells, nationOwner, seedCells, seed, config);
   const ethnicGroups: TEthnicGroup[] = seedCells.map((coreCellId, id) => ({
     id,
-    name: createRegionalName(seed, 'ethnic', id, 'People of'),
+    name: createRegionalName(seed, 'ethnic', id),
     coreCellId,
   }));
   enforceCountryEthnicDominance(cells, nationOwner, ethnicOwner, config);

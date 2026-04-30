@@ -9,3 +9,7 @@ export function generateAppMetadata(title: string): Metadata {
 export function getTerrainColor(terrain: TTerrainBand) {
   return TERRAIN_COLORS[terrain];
 }
+
+export function toPercent(count: number, total: number) {
+  return Math.round((count / Math.max(1, total)) * 100);
+}

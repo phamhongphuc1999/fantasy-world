@@ -50,11 +50,13 @@ export function rebalanceTerrainRatioAfterChange(
   changedKey: TTerrainRatioKey,
   nextValue: number
 ): TTerrainRatioMap {
-  const clampedNext = clamp(nextValue, MIN_RATIO, 0.92);
-  const totalRemaining = 1 - clampedNext;
   const otherKeys = TERRAIN_RATIO_FIELDS.map((field) => field.key).filter(
     (key) => key !== changedKey
   );
+  const minOtherTotal = otherKeys.length * MIN_RATIO;
+  const safeMaxForChanged = Math.max(MIN_RATIO, 1 - minOtherTotal);
+  const clampedNext = clamp(nextValue, MIN_RATIO, Math.min(0.92, safeMaxForChanged));
+  const totalRemaining = Math.max(minOtherTotal, 1 - clampedNext);
 
   const currentOtherSum = otherKeys.reduce((acc, key) => acc + current[key], 0);
   const nextRatios = { ...current, [changedKey]: clampedNext };
@@ -62,12 +64,34 @@ export function rebalanceTerrainRatioAfterChange(
   if (currentOtherSum <= 0) {
     const even = totalRemaining / otherKeys.length;
     for (const key of otherKeys) nextRatios[key] = even;
-    return normalizeTerrainRatios(nextRatios);
+  } else {
+    for (const key of otherKeys) {
+      nextRatios[key] = (current[key] / currentOtherSum) * totalRemaining;
+    }
   }
 
+  // Keep changed key stable; only rebalance others with min floor.
   for (const key of otherKeys) {
-    nextRatios[key] = (current[key] / currentOtherSum) * totalRemaining;
+    nextRatios[key] = Math.max(MIN_RATIO, nextRatios[key]);
+  }
+  let currentOtherTotal = otherKeys.reduce((acc, key) => acc + nextRatios[key], 0);
+  if (currentOtherTotal <= 0) {
+    const even = totalRemaining / otherKeys.length;
+    for (const key of otherKeys) nextRatios[key] = even;
+    currentOtherTotal = totalRemaining;
+  }
+  const scale = totalRemaining / currentOtherTotal;
+  for (const key of otherKeys) {
+    nextRatios[key] *= scale;
   }
 
-  return normalizeTerrainRatios(nextRatios);
+  // Final tiny floating fix; do not move changed key.
+  const otherTotalAfterScale = otherKeys.reduce((acc, key) => acc + nextRatios[key], 0);
+  const drift = totalRemaining - otherTotalAfterScale;
+  if (Math.abs(drift) > 1e-9 && otherKeys.length > 0) {
+    const key = otherKeys[otherKeys.length - 1] as TTerrainRatioKey;
+    nextRatios[key] = Math.max(MIN_RATIO, nextRatios[key] + drift);
+  }
+
+  return nextRatios;
 }

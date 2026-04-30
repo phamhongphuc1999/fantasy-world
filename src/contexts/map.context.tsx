@@ -5,6 +5,7 @@ import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
 import { buildGeopolitics } from 'src/services/map/buildGeopolitics';
 import { buildHydrology } from 'src/services/map/buildHydrology';
 import { buildMesh } from 'src/services/map/buildMesh';
+import { buildPopulation } from 'src/services/map/buildPopulation';
 import { buildTopography } from 'src/services/map/buildTopography';
 import { createSeededRandom } from 'src/services/map/seededRandom';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
@@ -60,8 +61,9 @@ export default function MapProvider({ children }: TProps) {
     });
     const topographyMesh = buildTopography({ mesh: baseMesh, seed, seaLevel, terrainPreset });
     const hydrologyMesh = buildHydrology({ mesh: topographyMesh, seaLevel, terrainRatios });
+    const populationMesh = buildPopulation({ mesh: hydrologyMesh, seed });
     return buildGeopolitics({
-      mesh: hydrologyMesh,
+      mesh: populationMesh,
       seed,
       customCountryMode,
       customCountryCount,

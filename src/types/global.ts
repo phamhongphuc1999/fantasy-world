@@ -91,6 +91,7 @@ export interface THydrologyCellData {
   temperature: number;
   precipitation: number;
   rainShadow: number;
+  population: number;
   nationId: number | null;
   zoneType: TZoneType;
 }
@@ -129,6 +130,7 @@ export interface TMapCell {
   temperature: number;
   precipitation: number;
   rainShadow: number;
+  population: number;
   nationId: number | null;
   provinceId: number | null;
   ethnicGroupId: number | null;
@@ -167,3 +169,30 @@ export interface TMapExplorerState {
   hoverIndex: number | null;
   hoverClientPoint: { x: number; y: number } | null;
 }
+
+export type TTerrainStatistic = {
+  terrain: string;
+  count: number;
+  percent: number;
+};
+
+export type TEthnicStatistic = {
+  ethnicId: number;
+  name: string;
+  count: number;
+  percent: number;
+  population: number;
+  populationPercent: number;
+};
+
+export type TEthnicRegionRow = {
+  id: number;
+  name: string;
+  coreCellId: number;
+  landCells: number;
+  nationCount: number;
+  regionPopulation: number;
+  nationPopulation: number;
+  nationPopulationPercent: number;
+  terrainStats: string;
+};

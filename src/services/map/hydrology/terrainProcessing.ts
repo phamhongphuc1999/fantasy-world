@@ -1,6 +1,5 @@
 import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { TMapCell, TTerrainBand, TTerrainRatioMap } from 'src/types/global';
-
 import { clamp, getNeighborAverageElevation, isWaterTerrain } from './common';
 
 type TTerrainBalance = typeof MAP_HYDROLOGY_CONFIG.terrainBalance;
@@ -558,6 +557,29 @@ function rebalanceTerrainDistribution(cells: TMapCell[], terrainBalance: TTerrai
     ['plains', 'hills'],
     (cell) => cell.precipitation - Math.abs(cell.temperature - 0.52) - cell.rainShadow * 0.35
   );
+  convertDeficitFromDonors(
+    'swamp',
+    target.swampMinShare,
+    ['plains', 'valley', 'forest'],
+    (cell) =>
+      cell.precipitation + Math.max(0, 0.62 - cell.elevation) + Math.max(0, cell.flow - 2.5) * 0.02
+  );
+  convertDeficitFromDonors(
+    'desert',
+    target.desertMinShare,
+    ['plains', 'hills', 'plateau', 'forest'],
+    (cell) =>
+      cell.temperature * 1.6 +
+      cell.rainShadow * 1.25 +
+      Math.max(0, 0.5 - cell.precipitation) * 1.4 +
+      Math.max(0, cell.elevation - 0.35) * 0.35
+  );
+  convertDeficitFromDonors(
+    'plains',
+    target.plainsMinShare,
+    ['hills', 'forest', 'plateau', 'valley', 'swamp'],
+    (cell) => 1 - cell.elevation + cell.precipitation * 0.25
+  );
 }
 
 function antiAliasTerrains(cells: TMapCell[]) {
@@ -663,7 +685,7 @@ function mergeSmallTerrainClusters(cells: TMapCell[], seaLevel: number) {
 export {
   antiAliasTerrains,
   mergeSmallTerrainClusters,
-  regionalizeLandTerrains,
   rebalanceTerrainDistribution,
+  regionalizeLandTerrains,
   toTerrainBalance,
 };
