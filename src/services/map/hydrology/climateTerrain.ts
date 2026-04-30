@@ -1,6 +1,5 @@
 import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { TMapCell, TTerrainBand } from 'src/types/global';
-
 import { clamp } from './common';
 
 export function buildWaterInfluence(cells: TMapCell[]): Float32Array {
@@ -29,7 +28,6 @@ export function buildWaterInfluence(cells: TMapCell[]): Float32Array {
       nextInfluence[cellIndex] =
         total / (cell.neighbors.length + MAP_HYDROLOGY_CONFIG.waterInfluenceSelfWeight);
     }
-
     waterInfluence.set(nextInfluence);
   }
 
@@ -48,7 +46,6 @@ export function getRainShadow(cell: TMapCell, cells: TMapCell[]) {
       obstruction += elevationDelta;
     }
   }
-
   return clamp(obstruction * MAP_HYDROLOGY_CONFIG.rainShadowScale, 0, 1);
 }
 

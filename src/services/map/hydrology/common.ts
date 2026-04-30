@@ -17,7 +17,6 @@ export function getNeighborAverageElevation(cell: TMapCell, cells: TMapCell[]) {
   for (const neighborId of cell.neighbors) {
     total += cells[neighborId].elevation;
   }
-
   return total / cell.neighbors.length;
 }
 

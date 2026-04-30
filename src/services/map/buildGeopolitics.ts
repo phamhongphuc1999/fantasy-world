@@ -15,6 +15,8 @@ interface TBuildGeopoliticsOptions {
   customCountryCount: number;
 }
 const CAPITAL_VIEWPORT_MARGIN = 14;
+type TBorderLevelKey = 'country' | 'province';
+type TBorderLevelProfile = (typeof MAP_GEOPOLITICAL_CONFIG.borderLevels)[TBorderLevelKey];
 
 function edgeNoise(seedHash: number, leftId: number, rightId: number) {
   const low = Math.min(leftId, rightId);
@@ -28,10 +30,6 @@ function isLand(cell: TMapCell) {
   return !cell.isWater;
 }
 
-function isRiverBarrier(left: TMapCell, right: TMapCell) {
-  return left.isRiver || right.isRiver;
-}
-
 function isRidgeBarrier(left: TMapCell, right: TMapCell) {
   const ruggedLeft =
     left.terrain === 'mountains' || left.terrain === 'hills' || left.terrain === 'volcanic';
@@ -40,23 +38,62 @@ function isRidgeBarrier(left: TMapCell, right: TMapCell) {
   return ruggedLeft && ruggedRight;
 }
 
-function isSoftNaturalBarrier(left: TMapCell, right: TMapCell) {
-  const softTerrain = new Set(['forest', 'swamp', 'tundra', 'badlands']);
-  const leftSoft = softTerrain.has(left.terrain);
-  const rightSoft = softTerrain.has(right.terrain);
-  return leftSoft || rightSoft;
+function getTerrainCrossCost(cell: TMapCell, profile: TBorderLevelProfile) {
+  const terrainCost = profile.terrainCost[cell.terrain as keyof typeof profile.terrainCost];
+  return terrainCost ?? 1.2;
 }
 
-function getRiverBarrierPenalty(left: TMapCell, right: TMapCell) {
-  if (!isRiverBarrier(left, right)) return 0;
-  const riverStrength = Math.max(left.flow, right.flow);
-  return MAP_GEOPOLITICAL_CONFIG.barrierCost.river + Math.log2(riverStrength + 1) * 1.25;
+function getNaturalBarrierPenalty(left: TMapCell, right: TMapCell, profile: TBorderLevelProfile) {
+  let penalty = 0;
+  if (left.isRiver || right.isRiver) {
+    penalty +=
+      profile.featurePenalty.riverCross + Math.log2(Math.max(left.flow, right.flow) + 1) * 0.7;
+  }
+  if (left.isLake || right.isLake || left.isWater || right.isWater) {
+    penalty += profile.featurePenalty.lakeCross;
+  }
+  if (isRidgeBarrier(left, right)) {
+    penalty += profile.featurePenalty.ridgeCross + Math.abs(left.elevation - right.elevation) * 6;
+  }
+  return penalty;
 }
 
-function getRidgeBarrierPenalty(left: TMapCell, right: TMapCell) {
-  if (!isRidgeBarrier(left, right)) return 0;
-  const relief = Math.abs(left.elevation - right.elevation);
-  return MAP_GEOPOLITICAL_CONFIG.barrierCost.ridge + relief * 9;
+function isShorelineEdge(left: TMapCell, right: TMapCell) {
+  return left.isWater !== right.isWater || left.isLake !== right.isLake;
+}
+
+function countOwnedNeighbors(
+  cells: TMapCell[],
+  owner: Int32Array,
+  cellId: number,
+  ownerId: number
+) {
+  let count = 0;
+  for (const neighborId of cells[cellId].neighbors) {
+    if (owner[neighborId] === ownerId) count += 1;
+  }
+  return count;
+}
+
+function getBoundaryStepCost(
+  cells: TMapCell[],
+  owner: Int32Array,
+  currentId: number,
+  neighborId: number,
+  ownerId: number,
+  seedHash: number,
+  profile: TBorderLevelProfile
+) {
+  const currentCell = cells[currentId];
+  const neighbor = cells[neighborId];
+  let step = getTerrainCrossCost(neighbor, profile);
+  step += getNaturalBarrierPenalty(currentCell, neighbor, profile);
+  if (isShorelineEdge(currentCell, neighbor)) step += profile.featurePenalty.shorelineEdgeBias;
+  const sameOwnerNeighbors = countOwnedNeighbors(cells, owner, neighborId, ownerId);
+  step += (2 - Math.min(2, sameOwnerNeighbors)) * profile.smoothness.jaggedPenalty;
+  const noise = (edgeNoise(seedHash, currentId, neighborId) - 0.5) * 2;
+  step += noise * profile.smoothness.edgeNoiseWeight;
+  return Math.max(0.25, step);
 }
 
 function getNationCount(mode: TCustomCountryMode, customCountryCount: number, seed: string) {
@@ -134,6 +171,7 @@ function buildLandNations(
   customCountryMode: TCustomCountryMode,
   customCountryCount: number
 ) {
+  const profile = MAP_GEOPOLITICAL_CONFIG.borderLevels.country;
   const nationCount = getNationCount(customCountryMode, customCountryCount, seed);
   const seeds = selectNationSeeds(cells, nationCount);
   const owner = new Int32Array(cells.length);
@@ -160,23 +198,19 @@ function buildLandNations(
     for (const neighborId of currentCell.neighbors) {
       const neighbor = cells[neighborId];
       if (!isLand(neighbor)) continue;
-
-      const terrainCost =
-        MAP_GEOPOLITICAL_CONFIG.terrainCost[
-          neighbor.terrain as keyof typeof MAP_GEOPOLITICAL_CONFIG.terrainCost
-        ] || 1.2;
-      let stepCost = terrainCost;
+      let stepCost = getBoundaryStepCost(
+        cells,
+        owner,
+        current.cellId,
+        neighborId,
+        current.nationId,
+        seedHash,
+        profile
+      );
       if (customCountryMode === 'dominant') {
         stepCost *= current.nationId === 0 ? 0.72 : 1.18;
       }
-      stepCost += getRiverBarrierPenalty(currentCell, neighbor);
-      stepCost += getRidgeBarrierPenalty(currentCell, neighbor);
-      if (isSoftNaturalBarrier(currentCell, neighbor)) {
-        stepCost += MAP_GEOPOLITICAL_CONFIG.barrierCost.biomeBreak;
-      }
-
-      const noise = (edgeNoise(seedHash, current.cellId, neighborId) - 0.5) * 2;
-      stepCost += noise * MAP_GEOPOLITICAL_CONFIG.frontierNoiseWeight;
+      stepCost += MAP_GEOPOLITICAL_CONFIG.frontierNoiseWeight * 0.15;
       const nextCost = current.cost + Math.max(0.2, stepCost);
 
       if (nextCost < cost[neighborId]) {
@@ -680,20 +714,6 @@ function getProvinceSeedScore(cell: TMapCell) {
   return 1.2 + cell.suitability * 0.8;
 }
 
-function terrainProvinceCost(cell: TMapCell) {
-  if (cell.terrain === 'plains') return 1;
-  if (cell.terrain === 'valley') return 1.2;
-  if (cell.terrain === 'coast') return 1.6;
-  if (cell.terrain === 'forest') return 2.8;
-  if (cell.terrain === 'hills') return 7.5;
-  if (cell.terrain === 'plateau') return 9.5;
-  if (cell.terrain === 'swamp') return 14;
-  if (cell.terrain === 'desert' || cell.terrain === 'badlands') return 18;
-  if (cell.terrain === 'mountains') return 70;
-  if (cell.terrain === 'volcanic') return 95;
-  return 3.2;
-}
-
 function assignNationProvincesBySeeds(
   cells: TMapCell[],
   owner: Int32Array,
@@ -703,6 +723,7 @@ function assignNationProvincesBySeeds(
   startProvinceId: number,
   noiseHash: number
 ) {
+  const profile = MAP_GEOPOLITICAL_CONFIG.borderLevels.province;
   const localCost = new Float64Array(cells.length);
   localCost.fill(Number.POSITIVE_INFINITY);
   const frontier: Array<{ cellId: number; provinceId: number; cost: number }> = [];
@@ -724,14 +745,15 @@ function assignNationProvincesBySeeds(
       if (owner[neighborId] !== nationId) continue;
       if (!isLand(cells[neighborId])) continue;
 
-      let step = terrainProvinceCost(cells[neighborId]);
-      if (cells[current.cellId].isRiver || cells[neighborId].isRiver || cells[neighborId].isLake) {
-        step += 55;
-      }
-      if (isRidgeBarrier(cells[current.cellId], cells[neighborId])) {
-        step += 68;
-      }
-      step += (edgeNoise(noiseHash, current.cellId, neighborId) - 0.5) * 0.2;
+      const step = getBoundaryStepCost(
+        cells,
+        provinceOwner,
+        current.cellId,
+        neighborId,
+        current.provinceId,
+        noiseHash,
+        profile
+      );
 
       const nextCost = current.cost + Math.max(0.25, step);
       if (nextCost < localCost[neighborId]) {
@@ -913,6 +935,76 @@ function enforceProvinceContiguity(
   }
 }
 
+function collectTerrainClusters(cells: TMapCell[], terrain: 'mountains') {
+  const visited = new Set<number>();
+  const clusters: number[][] = [];
+  for (const cell of cells) {
+    if (cell.terrain !== terrain || cell.isWater || visited.has(cell.id)) continue;
+    const queue = [cell.id];
+    const cluster: number[] = [];
+    visited.add(cell.id);
+    while (queue.length > 0) {
+      const current = queue.pop() as number;
+      cluster.push(current);
+      for (const neighborId of cells[current].neighbors) {
+        if (visited.has(neighborId)) continue;
+        if (cells[neighborId].terrain !== terrain || cells[neighborId].isWater) continue;
+        visited.add(neighborId);
+        queue.push(neighborId);
+      }
+    }
+    clusters.push(cluster);
+  }
+  return clusters;
+}
+
+function limitMountainClusterSplit(
+  cells: TMapCell[],
+  owner: Int32Array,
+  level: TBorderLevelKey,
+  nationOwner?: Int32Array
+) {
+  const profile = MAP_GEOPOLITICAL_CONFIG.borderLevels[level];
+  const clusters = collectTerrainClusters(cells, 'mountains');
+  for (const cluster of clusters) {
+    if (cluster.length < profile.fragmentation.largeMountainClusterMinCells) continue;
+    const byOwner = new Map<number, number[]>();
+    for (const cellId of cluster) {
+      const ownerId = owner[cellId];
+      if (ownerId < 0) continue;
+      if (!byOwner.has(ownerId)) byOwner.set(ownerId, []);
+      (byOwner.get(ownerId) as number[]).push(cellId);
+    }
+    const ownerEntries = Array.from(byOwner.entries()).sort((a, b) => b[1].length - a[1].length);
+    const allowed = new Set(
+      ownerEntries.slice(0, profile.fragmentation.maxMountainOwnersPerCluster).map(([id]) => id)
+    );
+    for (const [ownerId, cellsToMove] of ownerEntries) {
+      if (allowed.has(ownerId)) continue;
+      for (const cellId of cellsToMove) {
+        const counts = new Map<number, number>();
+        for (const neighborId of cells[cellId].neighbors) {
+          const candidateId = owner[neighborId];
+          if (candidateId < 0 || !allowed.has(candidateId)) continue;
+          if (nationOwner && nationOwner[neighborId] !== nationOwner[cellId]) continue;
+          counts.set(candidateId, (counts.get(candidateId) || 0) + 1);
+        }
+        let bestOwnerId = ownerId;
+        let bestCount = -1;
+        for (const [candidateId, count] of counts) {
+          if (count > bestCount) {
+            bestCount = count;
+            bestOwnerId = candidateId;
+          }
+        }
+        if (bestOwnerId !== ownerId && bestCount >= profile.fragmentation.clusterSplitPenalty) {
+          owner[cellId] = bestOwnerId;
+        }
+      }
+    }
+  }
+}
+
 export function buildGeopolitics({
   mesh,
   seed,
@@ -921,14 +1013,17 @@ export function buildGeopolitics({
 }: TBuildGeopoliticsOptions): TMapMeshWithDelaunay {
   const owner = buildLandNations(mesh.cells, seed, customCountryMode, customCountryCount);
   alignNaturalTerrainClusters(mesh.cells, owner);
+  limitMountainClusterSplit(mesh.cells, owner, 'country');
   enforceMinimumNationArea(mesh.cells, owner);
   enforceMainlandContiguity(mesh.cells, owner);
   alignNaturalTerrainClusters(mesh.cells, owner);
+  limitMountainClusterSplit(mesh.cells, owner, 'country');
   fillUnclaimedLand(mesh.cells, owner);
   ensureAllLandClaimed(mesh.cells, owner);
 
   const { waterOwner, zoneType } = assignMaritimeZones(mesh.cells, owner, seed);
   const provinceOwner = buildNationProvinces(mesh.cells, owner, seed);
+  limitMountainClusterSplit(mesh.cells, provinceOwner, 'province', owner);
   enforceProvinceContiguity(mesh.cells, owner, provinceOwner);
   const nations = pickEconomicAndCapital(mesh.cells, owner, seed, mesh.width, mesh.height);
 

@@ -26,7 +26,6 @@ function getAverageNeighborElevation(cell: TMapCell, mesh: TMapMesh) {
   for (const neighborId of cell.neighbors) {
     total += mesh.cells[neighborId].elevation;
   }
-
   return total / cell.neighbors.length;
 }
 
