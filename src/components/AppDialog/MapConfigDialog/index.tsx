@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Settings2 } from 'lucide-react';
 import CellPanel from 'src/components/AppDialog/MapConfigDialog/CellPanel';
 import TerrainPresetSelect from 'src/components/AppDialog/MapConfigDialog/TerrainPresetSelect';
@@ -29,9 +29,23 @@ import SeaLevelPanel from './SeaLevelPanel';
 import TerrainRatioPanel from './TerrainRatioPanel';
 import EthnicRegionsPanel from './EthnicRegionsPanel';
 
+const T_MAP_CONFIG_ACTIVE_PANEL_KEY = 'map-config-active-panel';
+const T_ALLOWED_PANELS = new Set(['terrain', 'generation', 'display', 'nations', 'ethnic']);
+
 export default function MapConfigDialog() {
   const { resetToDefaults } = useMapExplorerStore();
   const [activePanel, setActivePanel] = useState('terrain');
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(T_MAP_CONFIG_ACTIVE_PANEL_KEY);
+    if (!stored || !T_ALLOWED_PANELS.has(stored)) return;
+    setActivePanel(stored);
+  }, []);
+
+  useEffect(() => {
+    if (!T_ALLOWED_PANELS.has(activePanel)) return;
+    window.localStorage.setItem(T_MAP_CONFIG_ACTIVE_PANEL_KEY, activePanel);
+  }, [activePanel]);
 
   return (
     <Dialog>
@@ -44,11 +58,11 @@ export default function MapConfigDialog() {
           <Settings2 className="size-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="h-dvh max-w-none translate-y-0 rounded-none border-none bg-slate-900/55 p-4 text-white backdrop-blur-md sm:max-w-none md:top-auto md:right-4 md:bottom-4 md:left-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-95 md:translate-y-0 md:rounded-xl md:border md:border-white/15 md:bg-slate-950/45 md:p-5">
+      <DialogContent className="flex h-dvh max-w-none translate-y-0 flex-col rounded-none border-none bg-slate-900/55 p-4 text-white backdrop-blur-md sm:max-w-none md:top-auto md:right-4 md:bottom-4 md:left-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-95 md:translate-y-0 md:rounded-xl md:border md:border-white/15 md:bg-slate-950/45 md:p-5">
         <DialogHeader>
           <DialogTitle>Map Configuration</DialogTitle>
         </DialogHeader>
-        <div className="overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col">
           <Select value={activePanel} onValueChange={setActivePanel}>
             <SelectTrigger className="mt-1 w-full border-white/15 bg-slate-950/70 text-slate-100">
               <SelectValue />
@@ -62,47 +76,49 @@ export default function MapConfigDialog() {
             </SelectContent>
           </Select>
 
-          {activePanel === 'terrain' ? (
-            <div className="mt-3 space-y-4 overflow-y-auto pr-1">
-              <TerrainPresetSelect />
-              <TerrainRatioPanel />
-            </div>
-          ) : null}
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+            {activePanel === 'terrain' ? (
+              <div className="space-y-4">
+                <TerrainPresetSelect />
+                <TerrainRatioPanel />
+              </div>
+            ) : null}
 
-          {activePanel === 'generation' ? (
-            <div className="mt-3 space-y-4 overflow-y-auto pr-1">
-              <GeneratePanel />
-              <CellPanel />
-              <SeaLevelPanel />
-              <CountryModePanel />
-              <LogisticsGamePanel />
-            </div>
-          ) : null}
+            {activePanel === 'generation' ? (
+              <div className="space-y-4">
+                <GeneratePanel />
+                <CellPanel />
+                <SeaLevelPanel />
+                <CountryModePanel />
+                <LogisticsGamePanel />
+              </div>
+            ) : null}
 
-          {activePanel === 'display' ? (
-            <div className="mt-3 space-y-4 overflow-y-auto pr-1">
-              <DisplayModePanel />
-              <Button
-                type="button"
-                onClick={resetToDefaults}
-                className="w-full rounded-xl border border-rose-300/30 bg-rose-400/15 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-400/25"
-              >
-                Reset to Default Config
-              </Button>
-            </div>
-          ) : null}
+            {activePanel === 'display' ? (
+              <div className="space-y-4">
+                <DisplayModePanel />
+                <Button
+                  type="button"
+                  onClick={resetToDefaults}
+                  className="w-full rounded-xl border border-rose-300/30 bg-rose-400/15 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-400/25"
+                >
+                  Reset to Default Config
+                </Button>
+              </div>
+            ) : null}
 
-          {activePanel === 'nations' ? (
-            <div className="mt-3 space-y-4 overflow-y-auto pr-1">
-              <NationsPanel />
-            </div>
-          ) : null}
+            {activePanel === 'nations' ? (
+              <div className="space-y-4">
+                <NationsPanel />
+              </div>
+            ) : null}
 
-          {activePanel === 'ethnic' ? (
-            <div className="mt-3 space-y-4 overflow-y-auto pr-1">
-              <EthnicRegionsPanel />
-            </div>
-          ) : null}
+            {activePanel === 'ethnic' ? (
+              <div className="space-y-4">
+                <EthnicRegionsPanel />
+              </div>
+            ) : null}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

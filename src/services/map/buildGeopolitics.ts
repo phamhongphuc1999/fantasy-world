@@ -1168,6 +1168,17 @@ function enforceCountryEthnicDominance(
   ethnicOwner: Int32Array,
   config: TEthnicConfig
 ) {
+  function isTransnationalBridgeCell(cellId: number, ethnicId: number) {
+    const nationId = nationOwner[cellId];
+    if (nationId < 0) return false;
+    for (const neighborId of cells[cellId].neighbors) {
+      if (!isLand(cells[neighborId])) continue;
+      if (nationOwner[neighborId] === nationId) continue;
+      if (ethnicOwner[neighborId] === ethnicId) return true;
+    }
+    return false;
+  }
+
   const nationIds = Array.from(new Set(nationOwner)).filter((nationId) => nationId >= 0);
   for (const nationId of nationIds) {
     const nationCells = cells
@@ -1188,7 +1199,7 @@ function enforceCountryEthnicDominance(
 
     const dominantTarget = Math.max(
       config.dominantShareMin,
-      Math.min(config.dominantShareMax, 0.58 + (nationCells.length > 700 ? 0.1 : 0))
+      Math.min(config.dominantShareMax, 0.54 + (nationCells.length > 700 ? 0.04 : 0))
     );
     const secondaryTarget = Math.max(
       config.secondaryShareMin,
@@ -1212,6 +1223,7 @@ function enforceCountryEthnicDominance(
       let need = dominantNeed - currentDominant;
       for (const cellId of outsiders) {
         if (need <= 0) break;
+        if (isTransnationalBridgeCell(cellId, ethnicOwner[cellId])) continue;
         ethnicOwner[cellId] = dominantId;
         need -= 1;
       }
@@ -1235,6 +1247,7 @@ function enforceCountryEthnicDominance(
         let need = secondaryNeed - currentSecondary;
         for (const cellId of secondaryCandidates) {
           if (need <= 0) break;
+          if (isTransnationalBridgeCell(cellId, ethnicOwner[cellId])) continue;
           ethnicOwner[cellId] = secondaryId;
           need -= 1;
         }
@@ -1360,6 +1373,128 @@ function enforceCrossBorderEthnicContinuity(
   }
 }
 
+function expandEthnicDeepCrossBorder(
+  cells: TMapCell[],
+  nationOwner: Int32Array,
+  ethnicOwner: Int32Array,
+  seed: string,
+  config: TEthnicConfig
+) {
+  const random = createSeededRandom(`${seed}:ethnic:deep-cross-border`);
+  const iterations = Math.max(2, Math.floor(3 + config.crossBorderBlend * 4));
+  const maxDepth = Math.max(2, Math.floor(3 + config.crossBorderBlend * 3));
+
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const next = Int32Array.from(ethnicOwner);
+    for (let cellId = 0; cellId < cells.length; cellId += 1) {
+      if (!isLand(cells[cellId])) continue;
+      const nationId = nationOwner[cellId];
+      if (nationId < 0) continue;
+
+      const borderEthnicCounts = new Map<number, number>();
+      for (const neighborId of cells[cellId].neighbors) {
+        if (!isLand(cells[neighborId])) continue;
+        if (nationOwner[neighborId] === nationId) continue;
+        const ethnicId = ethnicOwner[neighborId];
+        if (ethnicId < 0) continue;
+        borderEthnicCounts.set(ethnicId, (borderEthnicCounts.get(ethnicId) || 0) + 1);
+      }
+      if (borderEthnicCounts.size === 0) continue;
+
+      let bestEthnicId = ethnicOwner[cellId];
+      let bestScore = -Infinity;
+      for (const [ethnicId, borderCount] of borderEthnicCounts) {
+        let depthSupport = 0;
+        const visited = new Set<number>([cellId]);
+        let frontier = [cellId];
+        for (let depth = 0; depth < maxDepth; depth += 1) {
+          const nextFrontier: number[] = [];
+          for (const currentId of frontier) {
+            for (const localNeighborId of cells[currentId].neighbors) {
+              if (visited.has(localNeighborId)) continue;
+              if (!isLand(cells[localNeighborId])) continue;
+              if (nationOwner[localNeighborId] !== nationId) continue;
+              visited.add(localNeighborId);
+              nextFrontier.push(localNeighborId);
+              if (ethnicOwner[localNeighborId] === ethnicId) depthSupport += 1;
+            }
+          }
+          frontier = nextFrontier;
+          if (frontier.length === 0) break;
+        }
+        const terrainBias =
+          cells[cellId].terrain === 'mountains' || cells[cellId].terrain === 'hills' ? 0.3 : 0;
+        const noise = (random() - 0.5) * 0.35;
+        const score =
+          borderCount * (1.4 + config.crossBorderBlend) +
+          depthSupport * (0.55 + config.crossBorderBlend * 0.4) +
+          terrainBias +
+          noise;
+        if (score > bestScore) {
+          bestScore = score;
+          bestEthnicId = ethnicId;
+        }
+      }
+
+      if (bestEthnicId !== ethnicOwner[cellId] && bestScore >= 2.1) {
+        next[cellId] = bestEthnicId;
+      }
+    }
+    ethnicOwner.set(next);
+  }
+}
+
+function ensureEthnicMultiNationPresence(
+  cells: TMapCell[],
+  nationOwner: Int32Array,
+  ethnicOwner: Int32Array,
+  ethnicGroups: TEthnicGroup[]
+) {
+  for (const group of ethnicGroups) {
+    const nationIds = new Set<number>();
+    for (const cell of cells) {
+      if (!isLand(cell)) continue;
+      if (ethnicOwner[cell.id] !== group.id) continue;
+      const nationId = nationOwner[cell.id];
+      if (nationId >= 0) nationIds.add(nationId);
+    }
+    if (nationIds.size >= 2) continue;
+
+    const candidateBorders: number[] = [];
+    for (const cell of cells) {
+      if (!isLand(cell)) continue;
+      if (ethnicOwner[cell.id] !== group.id) continue;
+      const cellNationId = nationOwner[cell.id];
+      if (cellNationId < 0) continue;
+      for (const neighborId of cell.neighbors) {
+        if (!isLand(cells[neighborId])) continue;
+        if (nationOwner[neighborId] === cellNationId) continue;
+        candidateBorders.push(neighborId);
+      }
+    }
+    if (candidateBorders.length === 0) continue;
+
+    let painted = 0;
+    const queue = [...new Set(candidateBorders)];
+    const visited = new Set<number>(queue);
+    while (queue.length > 0 && painted < 18) {
+      const currentId = queue.shift() as number;
+      if (!isLand(cells[currentId])) continue;
+      if (ethnicOwner[currentId] !== group.id) {
+        ethnicOwner[currentId] = group.id;
+        painted += 1;
+      }
+      for (const neighborId of cells[currentId].neighbors) {
+        if (visited.has(neighborId)) continue;
+        if (!isLand(cells[neighborId])) continue;
+        if (nationOwner[neighborId] !== nationOwner[currentId]) continue;
+        visited.add(neighborId);
+        queue.push(neighborId);
+      }
+    }
+  }
+}
+
 function buildEthnicRegions(cells: TMapCell[], nationOwner: Int32Array, seed: string) {
   const config = MAP_GEOPOLITICAL_CONFIG.ethnic;
   const nationCount = Array.from(new Set(nationOwner)).filter((nationId) => nationId >= 0).length;
@@ -1372,9 +1507,12 @@ function buildEthnicRegions(cells: TMapCell[], nationOwner: Int32Array, seed: st
     coreCellId,
   }));
   enforceCountryEthnicDominance(cells, nationOwner, ethnicOwner, config);
+  expandEthnicDeepCrossBorder(cells, nationOwner, ethnicOwner, seed, config);
   enforceCrossBorderEthnicContinuity(cells, nationOwner, ethnicOwner, config);
   addEthnicFragmentation(cells, ethnicOwner, ethnicGroups, seed, config);
+  expandEthnicDeepCrossBorder(cells, nationOwner, ethnicOwner, seed, config);
   enforceCrossBorderEthnicContinuity(cells, nationOwner, ethnicOwner, config);
+  ensureEthnicMultiNationPresence(cells, nationOwner, ethnicOwner, ethnicGroups);
   smoothEthnicRegions(cells, ethnicOwner, config);
   return { ethnicOwner, ethnicGroups };
 }

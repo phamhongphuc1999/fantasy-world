@@ -205,6 +205,10 @@ function validateRivers(
     if (b.chain.length !== a.chain.length) return b.chain.length - a.chain.length;
     return b.peakFlow - a.peakFlow;
   });
+  const preferredMinLength = Math.max(
+    MAP_HYDROLOGY_CONFIG.riverMinLength + 3,
+    MAP_HYDROLOGY_CONFIG.relaxedRiverMinLength + 4
+  );
   const selectedChains: number[][] = [];
   const selectedSource = new Set<number>();
   const usedCells = new Set<number>();
@@ -241,9 +245,15 @@ function validateRivers(
   }
 
   const remaining = sortedCandidates.filter((candidate) => !selectedSource.has(candidate.sourceId));
+  const preferredRemaining = remaining.filter(
+    (candidate) => candidate.chain.length >= preferredMinLength
+  );
+  const shortRemaining = remaining.filter(
+    (candidate) => candidate.chain.length < preferredMinLength
+  );
   let selectedSmall = 0;
 
-  for (const candidate of remaining) {
+  for (const candidate of preferredRemaining) {
     if (selectedSmall >= targetSmall) break;
 
     let overlapCount = 0;
@@ -258,6 +268,25 @@ function validateRivers(
     selectedChains.push(candidate.chain);
     selectedSmall += 1;
     for (const cellId of candidate.chain) usedCells.add(cellId);
+  }
+
+  if (selectedSmall < targetSmall) {
+    for (const candidate of shortRemaining) {
+      if (selectedSmall >= targetSmall) break;
+
+      let overlapCount = 0;
+      for (const cellId of candidate.chain) {
+        if (usedCells.has(cellId)) overlapCount += 1;
+      }
+      const overlapRatio = overlapCount / candidate.chain.length;
+      const maxOverlapRatio =
+        candidate.joinsRiverCellId !== null ? MAP_HYDROLOGY_CONFIG.tributaryMaxOverlapRatio : 0.8;
+      if (overlapRatio > maxOverlapRatio) continue;
+
+      selectedChains.push(candidate.chain);
+      selectedSmall += 1;
+      for (const cellId of candidate.chain) usedCells.add(cellId);
+    }
   }
 
   if (selectedChains.length < minimumRiverCount) {
