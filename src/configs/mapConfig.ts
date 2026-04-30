@@ -66,6 +66,8 @@ export const MAP_EXPLORER_DEFAULT_CONFIG: {
     showRivers: false,
     showCountryBorders: false,
     showProvinceBorders: false,
+    showEthnicRegions: false,
+    showRegionNames: false,
   },
 };
 
@@ -419,5 +421,19 @@ export const MAP_GEOPOLITICAL_CONFIG = {
     smallNationMinLand: 450,
     mediumNationMinLand: 900,
     maxHubsPerNation: 3,
+  },
+  ethnic: {
+    majorGroupCountMin: 6,
+    majorGroupCountMax: 12,
+    dominantShareMin: 0.5,
+    dominantShareMax: 0.8,
+    secondaryShareMin: 0.1,
+    secondaryShareMax: 0.3,
+    crossBorderBlend: 0.72,
+    fragmentationLevel: 0.38,
+    terrainInfluenceStrength: 1,
+    distancePenalty: 0.045,
+    smoothingPasses: 1,
+    minorityClusterMinCells: 5,
   },
 };

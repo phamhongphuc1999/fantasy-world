@@ -12,6 +12,7 @@ export type TCellDescription = {
   rainShadow: string;
   nationId: string;
   provinceId: string;
+  ethnicGroupId: string;
   zoneType: string;
 };
 
@@ -70,6 +71,7 @@ export function describeCell(cell: TMapCell, mesh: TMapMesh): TCellDescription {
     rainShadow: `${rainShadowPercent}%`,
     nationId: cell.nationId !== null ? String(cell.nationId) : 'None',
     provinceId: cell.provinceId !== null ? String(cell.provinceId) : 'None',
+    ethnicGroupId: cell.ethnicGroupId !== null ? String(cell.ethnicGroupId) : 'None',
     zoneType: cell.zoneType,
   };
 }

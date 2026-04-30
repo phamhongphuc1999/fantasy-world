@@ -37,6 +37,8 @@ export type TMapDisplaySettings = {
   showRivers: boolean;
   showCountryBorders: boolean;
   showProvinceBorders: boolean;
+  showEthnicRegions: boolean;
+  showRegionNames: boolean;
 };
 
 export type TCustomCountryMode = 'dominant' | 'balanced';
@@ -59,6 +61,12 @@ export type TNation = {
   capital_coords: TPoint | null;
   economicHubCellIds: number[];
   economic_hubs_coords: TPoint[];
+};
+
+export type TEthnicGroup = {
+  id: number;
+  name: string;
+  coreCellId: number;
 };
 
 export type TTerrainPresetOption = {
@@ -123,6 +131,7 @@ export interface TMapCell {
   rainShadow: number;
   nationId: number | null;
   provinceId: number | null;
+  ethnicGroupId: number | null;
   zoneType: TZoneType;
   isCapital: boolean;
   isEconomicHub: boolean;
@@ -135,6 +144,7 @@ export interface TMapMesh {
   edges: TMapEdge[];
   vertices: TMapVertex[];
   nations: TNation[];
+  ethnicGroups: TEthnicGroup[];
 }
 
 export type TMapMeshWithDelaunay = TMapMesh & {

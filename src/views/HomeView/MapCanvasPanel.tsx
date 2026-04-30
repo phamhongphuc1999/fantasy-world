@@ -7,9 +7,11 @@ import {
   drawCellShape,
   drawCountryFill,
   drawCurvedRiverSegment,
+  drawEthnicFill,
   drawGrayBorders,
   drawLogisticsRouteOverlay,
   drawProvinceBorders,
+  drawRegionNames,
   drawSiteMarker,
   drawUrbanHierarchy,
   getCanvasPoint,
@@ -35,7 +37,7 @@ export default function MapCanvasPanel() {
     recalculateRoute,
   } = useLogisticsGameStore();
   const { mesh, handlePointerMove } = useMapContext();
-  const { cells, width, height } = mesh;
+  const { cells, width, height, nations, ethnicGroups } = mesh;
 
   useEffect(() => {
     const canvas = baseCanvasRef.current;
@@ -54,7 +56,10 @@ export default function MapCanvasPanel() {
       drawCellShape(context, cell, getTerrainColor(cell.terrain), 0.95, 'transparent', 0);
     }
 
-    const showUniformLand = !displaySettings.showTerrain && !displaySettings.showCountryBorders;
+    const showUniformLand =
+      !displaySettings.showTerrain &&
+      !displaySettings.showCountryBorders &&
+      !displaySettings.showEthnicRegions;
 
     if (displaySettings.showTerrain) {
       for (const cell of cells) {
@@ -72,6 +77,9 @@ export default function MapCanvasPanel() {
 
     if (displaySettings.showCountryBorders)
       drawCountryFill(context, cells, displaySettings.showTerrain);
+    if (displaySettings.showEthnicRegions) {
+      drawEthnicFill(context, cells, displaySettings.showTerrain);
+    }
 
     if (displaySettings.showRivers) {
       for (const cell of cells) {
@@ -101,6 +109,14 @@ export default function MapCanvasPanel() {
       drawProvinceBorders(context, cells);
     }
 
+    if (displaySettings.showRegionNames) {
+      if (displaySettings.showEthnicRegions) {
+        drawRegionNames(context, cells, nations, ethnicGroups, 'ethnic');
+      } else if (displaySettings.showCountryBorders) {
+        drawRegionNames(context, cells, nations, ethnicGroups, 'nation');
+      }
+    }
+
     if (displaySettings.showTerrain && cells.length <= T_SITE_MARKER_LIMIT) {
       for (const cell of cells) {
         drawSiteMarker(context, cell, 1.4, cell.isWater ? '#dbeafe' : '#fef3c7', 0.22);
@@ -119,6 +135,8 @@ export default function MapCanvasPanel() {
     routeCellIds,
     startCellId,
     width,
+    nations,
+    ethnicGroups,
   ]);
 
   useEffect(() => {

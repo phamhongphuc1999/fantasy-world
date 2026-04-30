@@ -1,7 +1,8 @@
+/* eslint-disable quotes */
 import { type MouseEvent } from 'react';
 import { NATION_COLOR_PALETTE } from 'src/configs/mapConfig';
 import { getTerrainColor } from 'src/services';
-import { TMapCell } from 'src/types/global';
+import { TEthnicGroup, TMapCell, TNation } from 'src/types/global';
 
 function drawPolygon(context: CanvasRenderingContext2D, polygon: TMapCell['polygon']) {
   if (polygon.length === 0) return;
@@ -119,6 +120,12 @@ function getNationPaletteColor(nationId: number | null) {
   return NATION_COLOR_PALETTE[paletteIndex];
 }
 
+function getEthnicPaletteColor(ethnicGroupId: number | null) {
+  if (ethnicGroupId === null) return '#334155';
+  const paletteIndex = Math.abs(ethnicGroupId) % NATION_COLOR_PALETTE.length;
+  return NATION_COLOR_PALETTE[paletteIndex];
+}
+
 export function drawCountryFill(
   context: CanvasRenderingContext2D,
   cells: TMapCell[],
@@ -128,6 +135,23 @@ export function drawCountryFill(
   for (const cell of cells) {
     if (!isLandCell(cell)) continue;
     const fillColor = getNationPaletteColor(cell.nationId);
+    drawPolygon(context, cell.polygon);
+    context.fillStyle = fillColor;
+    context.globalAlpha = fillOpacity;
+    context.fill();
+    context.globalAlpha = 1;
+  }
+}
+
+export function drawEthnicFill(
+  context: CanvasRenderingContext2D,
+  cells: TMapCell[],
+  showTerrain: boolean
+) {
+  const fillOpacity = showTerrain ? 0.3 : 0.86;
+  for (const cell of cells) {
+    if (!isLandCell(cell)) continue;
+    const fillColor = getEthnicPaletteColor(cell.ethnicGroupId);
     drawPolygon(context, cell.polygon);
     context.fillStyle = fillColor;
     context.globalAlpha = fillOpacity;
@@ -368,5 +392,50 @@ export function drawLogisticsRouteOverlay(
     context.globalAlpha = 0.95;
     context.fill();
     context.globalAlpha = 1;
+  }
+}
+
+type TLabelMode = 'nation' | 'ethnic';
+
+export function drawRegionNames(
+  context: CanvasRenderingContext2D,
+  cells: TMapCell[],
+  nations: TNation[],
+  ethnicGroups: TEthnicGroup[],
+  mode: TLabelMode
+) {
+  const regions = mode === 'nation' ? nations : ethnicGroups;
+  const idKey = mode === 'nation' ? 'nationId' : 'ethnicGroupId';
+  const positions = new Map<number, { x: number; y: number; count: number }>();
+
+  for (const cell of cells) {
+    if (!isLandCell(cell)) continue;
+    const regionId = cell[idKey] as number | null;
+    if (regionId === null || regionId < 0) continue;
+    const current = positions.get(regionId);
+    if (!current) {
+      positions.set(regionId, { x: cell.site[0], y: cell.site[1], count: 1 });
+      continue;
+    }
+    current.x += cell.site[0];
+    current.y += cell.site[1];
+    current.count += 1;
+  }
+
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.font = "600 13px 'Trebuchet MS', 'Segoe UI', sans-serif";
+  context.lineWidth = 3.2;
+  context.strokeStyle = 'rgba(2, 6, 23, 0.82)';
+  context.fillStyle = 'rgba(241, 245, 249, 0.95)';
+
+  for (const region of regions) {
+    const pos = positions.get(region.id);
+    if (!pos || pos.count < 12) continue;
+    const x = pos.x / pos.count;
+    const y = pos.y / pos.count;
+    const name = region.name;
+    context.strokeText(name, x, y);
+    context.fillText(name, x, y);
   }
 }

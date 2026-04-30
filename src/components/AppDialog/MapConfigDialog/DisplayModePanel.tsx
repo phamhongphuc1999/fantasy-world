@@ -52,6 +52,16 @@ export default function DisplayModePanel() {
           onChange={(checked) => setDisplayLayer('showCountryBorders', checked)}
         />
         <LayerToggle
+          label="Ethnic Regions"
+          checked={displaySettings.showEthnicRegions}
+          onChange={(checked) => setDisplayLayer('showEthnicRegions', checked)}
+        />
+        <LayerToggle
+          label="Show Names"
+          checked={displaySettings.showRegionNames}
+          onChange={(checked) => setDisplayLayer('showRegionNames', checked)}
+        />
+        <LayerToggle
           label="Province Borders"
           checked={displaySettings.showProvinceBorders}
           disabled={!displaySettings.showCountryBorders}

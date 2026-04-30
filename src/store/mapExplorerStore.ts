@@ -161,9 +161,14 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
       migrate: (persistedState) => {
         const state = persistedState as Partial<TMapExplorerState> | undefined;
         if (!state) return DEFAULT_STATE;
+        const displaySettings = {
+          ...DEFAULT_STATE.displaySettings,
+          ...(state.displaySettings ?? {}),
+        };
         return {
           ...DEFAULT_STATE,
           ...state,
+          displaySettings,
           terrainRatiosDraft:
             state.terrainRatiosDraft ?? state.terrainRatios ?? DEFAULT_STATE.terrainRatios,
         };

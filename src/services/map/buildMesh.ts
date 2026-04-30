@@ -149,11 +149,12 @@ export function buildMesh({
       rainShadow: 0,
       nationId: null,
       provinceId: null,
+      ethnicGroupId: null,
       zoneType: 'international-waters',
       isCapital: false,
       isEconomicHub: false,
     };
   });
 
-  return { width, height, cells, edges, vertices, nations: [], delaunay };
+  return { width, height, cells, edges, vertices, nations: [], ethnicGroups: [], delaunay };
 }

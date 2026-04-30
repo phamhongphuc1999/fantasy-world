@@ -142,6 +142,7 @@ export function buildHydrology({
       suitability: 0,
       nationId: null,
       provinceId: null,
+      ethnicGroupId: null,
       zoneType: 'international-waters' as const,
       isCapital: false,
       isEconomicHub: false,

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Settings2 } from 'lucide-react';
 import CellPanel from 'src/components/AppDialog/MapConfigDialog/CellPanel';
 import TerrainPresetSelect from 'src/components/AppDialog/MapConfigDialog/TerrainPresetSelect';
@@ -11,17 +12,26 @@ import {
   DialogTitle,
   DialogTrigger,
 } from 'src/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from 'src/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from 'src/components/ui/select';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import CountryModePanel from './CountryModePanel';
 import DisplayModePanel from './DisplayModePanel';
 import GeneratePanel from './GeneratePanel';
 import LogisticsGamePanel from './LogisticsGamePanel';
+import NationsPanel from './NationsPanel';
 import SeaLevelPanel from './SeaLevelPanel';
 import TerrainRatioPanel from './TerrainRatioPanel';
+import EthnicRegionsPanel from './EthnicRegionsPanel';
 
 export default function MapConfigDialog() {
   const { resetToDefaults } = useMapExplorerStore();
+  const [activePanel, setActivePanel] = useState('terrain');
 
   return (
     <Dialog>
@@ -38,38 +48,62 @@ export default function MapConfigDialog() {
         <DialogHeader>
           <DialogTitle>Map Configuration</DialogTitle>
         </DialogHeader>
+        <div className="overflow-hidden">
+          <Select value={activePanel} onValueChange={setActivePanel}>
+            <SelectTrigger className="mt-1 w-full border-white/15 bg-slate-950/70 text-slate-100">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="border border-white/15 bg-slate-950 text-slate-100">
+              <SelectItem value="terrain">Terrain</SelectItem>
+              <SelectItem value="generation">Generation</SelectItem>
+              <SelectItem value="display">Display</SelectItem>
+              <SelectItem value="nations">Nations</SelectItem>
+              <SelectItem value="ethnic">Ethnic</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Tabs defaultValue="terrain" className="overflow-hidden md:max-h-[calc(100dvh-9rem)]">
-          <TabsList className="grid w-full grid-cols-3 bg-slate-950/70">
-            <TabsTrigger value="terrain">Terrain</TabsTrigger>
-            <TabsTrigger value="generation">Generation</TabsTrigger>
-            <TabsTrigger value="display">Display</TabsTrigger>
-          </TabsList>
+          {activePanel === 'terrain' ? (
+            <div className="mt-3 space-y-4 overflow-y-auto pr-1">
+              <TerrainPresetSelect />
+              <TerrainRatioPanel />
+            </div>
+          ) : null}
 
-          <TabsContent value="terrain" className="mt-3 space-y-4 overflow-y-auto pr-1">
-            <TerrainPresetSelect />
-            <TerrainRatioPanel />
-          </TabsContent>
+          {activePanel === 'generation' ? (
+            <div className="mt-3 space-y-4 overflow-y-auto pr-1">
+              <GeneratePanel />
+              <CellPanel />
+              <SeaLevelPanel />
+              <CountryModePanel />
+              <LogisticsGamePanel />
+            </div>
+          ) : null}
 
-          <TabsContent value="generation" className="mt-3 space-y-4 overflow-y-auto pr-1">
-            <GeneratePanel />
-            <CellPanel />
-            <SeaLevelPanel />
-            <CountryModePanel />
-            <LogisticsGamePanel />
-          </TabsContent>
+          {activePanel === 'display' ? (
+            <div className="mt-3 space-y-4 overflow-y-auto pr-1">
+              <DisplayModePanel />
+              <Button
+                type="button"
+                onClick={resetToDefaults}
+                className="w-full rounded-xl border border-rose-300/30 bg-rose-400/15 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-400/25"
+              >
+                Reset to Default Config
+              </Button>
+            </div>
+          ) : null}
 
-          <TabsContent value="display" className="mt-3 space-y-4 overflow-y-auto pr-1">
-            <DisplayModePanel />
-            <Button
-              type="button"
-              onClick={resetToDefaults}
-              className="w-full rounded-xl border border-rose-300/30 bg-rose-400/15 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-400/25"
-            >
-              Reset to Default Config
-            </Button>
-          </TabsContent>
-        </Tabs>
+          {activePanel === 'nations' ? (
+            <div className="mt-3 space-y-4 overflow-y-auto pr-1">
+              <NationsPanel />
+            </div>
+          ) : null}
+
+          {activePanel === 'ethnic' ? (
+            <div className="mt-3 space-y-4 overflow-y-auto pr-1">
+              <EthnicRegionsPanel />
+            </div>
+          ) : null}
+        </div>
       </DialogContent>
     </Dialog>
   );
