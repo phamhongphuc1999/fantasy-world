@@ -11,5 +11,5 @@ export function getTerrainColor(terrain: TTerrainBand) {
 }
 
 export function toPercent(count: number, total: number) {
-  return Math.round((count / Math.max(1, total)) * 100);
+  return parseFloat(((count / Math.max(1, total)) * 100).toFixed(2));
 }

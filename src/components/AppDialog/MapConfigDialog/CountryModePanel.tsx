@@ -98,7 +98,7 @@ export default function CountryModePanel() {
             Apply
           </button>
         </div>
-        {error ? <p className="text-xs text-rose-300">{error}</p> : null}
+        {error && <p className="text-xs text-rose-300">{error}</p>}
       </div>
 
       <p className="text-xs text-slate-300">{helperText}</p>

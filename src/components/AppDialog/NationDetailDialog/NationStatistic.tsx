@@ -29,30 +29,29 @@ export default function NationStatistic({
             <div key={item.terrain} className="flex items-center justify-between gap-2">
               <span>{item.terrain}</span>
               <span>
-                {item.count} cells · {item.percent}%
+                {item.count} cells ({item.percent}%)
               </span>
             </div>
           ))}
         </div>
       </section>
-
       <section className="rounded-lg border border-white/10 bg-slate-900/60 p-3">
         <h4 className="text-xs font-semibold tracking-wide text-slate-300 uppercase">
           Ethnic Coverage
         </h4>
         <div className="mt-2 space-y-1 text-slate-200">
           {ethnicStats.map((item) => (
-            <div key={item.ethnicId} className="flex items-center justify-between gap-2">
-              <span>{item.name}</span>
+            <div key={item.ethnicId}>
+              <span className="font-bold">{item.name}: </span>
               <span>
-                {item.count} cells · {item.percent}% · Pop {item.population.toLocaleString()} (
-                {item.populationPercent}%)
+                {item.count} cells ({item.percent}%), <span className="font-bold">Pop</span>{' '}
+                {item.population.toLocaleString()} ({item.populationPercent}%)
               </span>
             </div>
           ))}
-          {ethnicStats.length === 0 ? (
+          {ethnicStats.length === 0 && (
             <div className="text-slate-400">No ethnic data in this nation.</div>
-          ) : null}
+          )}
         </div>
       </section>
       <section className="rounded-lg border border-white/10 bg-slate-900/60 p-3 text-slate-200">

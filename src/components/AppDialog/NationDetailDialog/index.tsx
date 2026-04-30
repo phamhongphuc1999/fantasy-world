@@ -24,7 +24,7 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
   if (!nation || !data) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[min(34rem,calc(100vw-1rem))] border border-white/15 bg-slate-950/95 text-slate-100">
+        <DialogContent className="max-w-[min(52rem,calc(100vw-1rem))] border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md sm:max-w-[min(52rem,calc(100vw-1rem))]">
           <DialogHeader>
             <DialogTitle>Nation Detail</DialogTitle>
             <DialogDescription className="text-slate-300">No nation selected.</DialogDescription>
@@ -36,9 +36,9 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl border border-white/15 bg-slate-950/95 text-slate-100">
+      <DialogContent className="border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md sm:max-w-[45vw]">
         <DialogHeader>
-          <DialogTitle>{nation.name}</DialogTitle>
+          <DialogTitle className="font-bold">{nation.name}</DialogTitle>
           <DialogDescription className="text-slate-300">
             Nation #{nation.id} · Land Cells: {data.nationCells.length} · Capital:{' '}
             {nation.capitalCellId !== null ? `#${nation.capitalCellId}` : 'None'}

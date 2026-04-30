@@ -1,6 +1,16 @@
 'use client';
 
-import { createContext, ReactNode, useCallback, useContext, useMemo, useRef } from 'react';
+import { Delaunay } from 'd3-delaunay';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
 import { buildGeopolitics } from 'src/services/map/buildGeopolitics';
 import { buildHydrology } from 'src/services/map/buildHydrology';
@@ -13,6 +23,7 @@ import { TMapMeshWithDelaunay } from 'src/types/global';
 
 export type TMapContextType = {
   mesh: TMapMeshWithDelaunay;
+  isGenerating: boolean;
   handlePointerMove: (x: number, y: number) => void;
   handleApplySeed: () => void;
   handleRandomizeSeed: () => void;
@@ -21,7 +32,17 @@ export type TMapContextType = {
 };
 
 const mapContextDefault: TMapContextType = {
-  mesh: {} as TMapMeshWithDelaunay,
+  mesh: {
+    width: MAP_VIEWPORT_CONFIG.width,
+    height: MAP_VIEWPORT_CONFIG.height,
+    cells: [],
+    edges: [],
+    vertices: [],
+    nations: [],
+    ethnicGroups: [],
+    delaunay: Delaunay.from([[0, 0]]),
+  },
+  isGenerating: true,
   handlePointerMove: () => {},
   handleApplySeed: () => {},
   handleRandomizeSeed: () => {},
@@ -37,6 +58,7 @@ interface TProps {
 
 export default function MapProvider({ children }: TProps) {
   const randomizeCountRef = useRef(0);
+  const generationIdRef = useRef(0);
   const {
     seed,
     seedDraft,
@@ -52,22 +74,38 @@ export default function MapProvider({ children }: TProps) {
     setHoverIndex,
   } = useMapExplorerStore();
 
-  const mesh = useMemo(() => {
-    const baseMesh = buildMesh({
-      width: MAP_VIEWPORT_CONFIG.width,
-      height: MAP_VIEWPORT_CONFIG.height,
-      seed,
-      cellCount,
-    });
-    const topographyMesh = buildTopography({ mesh: baseMesh, seed, seaLevel, terrainPreset });
-    const hydrologyMesh = buildHydrology({ mesh: topographyMesh, seaLevel, terrainRatios });
-    const populationMesh = buildPopulation({ mesh: hydrologyMesh, seed });
-    return buildGeopolitics({
-      mesh: populationMesh,
-      seed,
-      customCountryMode,
-      customCountryCount,
-    });
+  const [mesh, setMesh] = useState<TMapMeshWithDelaunay>(mapContextDefault.mesh);
+  const [isGenerating, setIsGenerating] = useState(true);
+
+  useEffect(() => {
+    generationIdRef.current += 1;
+    const generationId = generationIdRef.current;
+    setIsGenerating(true);
+
+    const timer = window.setTimeout(() => {
+      const baseMesh = buildMesh({
+        width: MAP_VIEWPORT_CONFIG.width,
+        height: MAP_VIEWPORT_CONFIG.height,
+        seed,
+        cellCount,
+      });
+      const topographyMesh = buildTopography({ mesh: baseMesh, seed, seaLevel, terrainPreset });
+      const hydrologyMesh = buildHydrology({ mesh: topographyMesh, seaLevel, terrainRatios });
+      const populationMesh = buildPopulation({ mesh: hydrologyMesh, seed });
+      const nextMesh = buildGeopolitics({
+        mesh: populationMesh,
+        seed,
+        customCountryMode,
+        customCountryCount,
+      });
+      if (generationId !== generationIdRef.current) return;
+      setMesh(nextMesh);
+      setIsGenerating(false);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [
     cellCount,
     customCountryCount,
@@ -80,10 +118,11 @@ export default function MapProvider({ children }: TProps) {
 
   const handlePointerMove = useCallback(
     (x: number, y: number) => {
+      if (mesh.cells.length === 0) return;
       const i = mesh.delaunay.find(x, y);
       setHoverIndex(i);
     },
-    [mesh.delaunay, setHoverIndex]
+    [mesh.cells.length, mesh.delaunay, setHoverIndex]
   );
 
   const handleApplySeed = useCallback(() => {
@@ -119,6 +158,7 @@ export default function MapProvider({ children }: TProps) {
   const contextData = useMemo<TMapContextType>(() => {
     return {
       mesh,
+      isGenerating,
       handlePointerMove,
       handleApplySeed,
       handleRandomizeSeed,
@@ -127,6 +167,7 @@ export default function MapProvider({ children }: TProps) {
     };
   }, [
     mesh,
+    isGenerating,
     handlePointerMove,
     handleApplySeed,
     handleRandomizeSeed,

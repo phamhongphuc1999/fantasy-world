@@ -131,9 +131,7 @@ export default function NationsPanel(_props: TProps) {
           </div>
         ))}
 
-        {nationRows.length === 0 ? (
-          <p className="text-xs text-slate-400">No nations generated.</p>
-        ) : null}
+        {nationRows.length === 0 && <p className="text-xs text-slate-400">No nations generated.</p>}
       </div>
     </div>
   );

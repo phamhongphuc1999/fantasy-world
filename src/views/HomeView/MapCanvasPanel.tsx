@@ -39,7 +39,7 @@ export default function MapCanvasPanel() {
     handleMapCellClick,
     recalculateRoute,
   } = useLogisticsGameStore();
-  const { mesh, handlePointerMove } = useMapContext();
+  const { mesh, isGenerating, handlePointerMove } = useMapContext();
   const { cells, width, height, nations, ethnicGroups } = mesh;
 
   useEffect(() => {
@@ -151,7 +151,6 @@ export default function MapCanvasPanel() {
     if (!context) return;
 
     context.clearRect(0, 0, width, height);
-
     const hoveredCell = hoverIndex !== null ? cells[hoverIndex] : null;
 
     if (hoveredCell) {
@@ -202,6 +201,13 @@ export default function MapCanvasPanel() {
             setNationDialogOpen(true);
           }}
         />
+        {isGenerating && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/55 backdrop-blur-[1px]">
+            <div className="rounded-xl border border-white/15 bg-slate-900/85 px-4 py-2 text-sm text-slate-100">
+              Generating map...
+            </div>
+          </div>
+        )}
       </div>
       <NationDetailDialog
         open={nationDialogOpen}

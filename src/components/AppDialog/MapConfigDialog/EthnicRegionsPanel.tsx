@@ -149,9 +149,7 @@ export default function EthnicRegionsPanel(_props: TProps) {
           </div>
         ))}
 
-        {rows.length === 0 ? (
-          <p className="text-xs text-slate-400">No ethnic groups generated.</p>
-        ) : null}
+        {rows.length === 0 && <p className="text-xs text-slate-400">No ethnic groups generated.</p>}
       </div>
     </div>
   );
