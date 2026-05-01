@@ -260,7 +260,8 @@ export function buildLandNations(
   customCountryCount: number
 ) {
   const profile = MAP_GEOPOLITICAL_CONFIG.borderLevels.country;
-  const nationCount = getNationCount(customCountryMode, customCountryCount, seed);
+  const landCellCount = cells.filter(isLand).length;
+  const nationCount = getNationCount(customCountryMode, customCountryCount, seed, landCellCount);
   const connectivity = buildConnectivityContext(cells);
   const seeds = selectNationSeeds(cells, nationCount, seed, connectivity);
   const owner = new Int32Array(cells.length);
@@ -384,6 +385,20 @@ export function enforceMinimumNationArea(cells: TMapCell[], owner: Int32Array) {
         if (count > bestCount) {
           bestCount = count;
           bestNationId = candidateNationId;
+        }
+      }
+      if (bestNationId < 0) {
+        const point = cells[cellId].site;
+        let bestDistance = Number.POSITIVE_INFINITY;
+        for (const candidateCellId of landCellIds) {
+          const candidateNationId = owner[candidateCellId];
+          if (candidateNationId < 0 || candidateNationId === nationId) continue;
+          const candidatePoint = cells[candidateCellId].site;
+          const distance = Math.hypot(point[0] - candidatePoint[0], point[1] - candidatePoint[1]);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestNationId = candidateNationId;
+          }
         }
       }
       if (bestNationId >= 0) owner[cellId] = bestNationId;

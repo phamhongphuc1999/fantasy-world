@@ -9,7 +9,11 @@ import {
   ensureAllLandClaimed,
   fillUnclaimedLand,
 } from './nations';
-import { buildNationProvinces, enforceProvinceContiguity } from './provinces';
+import {
+  buildNationProvinces,
+  enforceMinimumProvinceArea,
+  enforceProvinceContiguity,
+} from './provinces';
 import { assignMaritimeZones, limitMountainClusterSplit } from './shared';
 
 type TBuildGeopoliticsOptions = {
@@ -34,11 +38,16 @@ export function buildGeopolitics({
   limitMountainClusterSplit(mesh.cells, owner, 'country');
   fillUnclaimedLand(mesh.cells, owner);
   ensureAllLandClaimed(mesh.cells, owner);
+  enforceMinimumNationArea(mesh.cells, owner);
+  ensureAllLandClaimed(mesh.cells, owner);
 
   const { waterOwner, zoneType } = assignMaritimeZones(mesh.cells);
   const provinceOwner = buildNationProvinces(mesh.cells, owner, seed);
   limitMountainClusterSplit(mesh.cells, provinceOwner, 'province', owner);
   enforceProvinceContiguity(mesh.cells, owner, provinceOwner);
+  enforceMinimumProvinceArea(mesh.cells, owner, provinceOwner);
+  enforceProvinceContiguity(mesh.cells, owner, provinceOwner);
+  enforceMinimumProvinceArea(mesh.cells, owner, provinceOwner);
   const { ethnicOwner, ethnicGroups } = buildEthnicRegions(mesh.cells, owner, seed);
   const nations = pickEconomicAndCapital(mesh.cells, owner, seed, mesh.width, mesh.height);
 

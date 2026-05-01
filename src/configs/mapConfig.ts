@@ -348,7 +348,7 @@ export const MAP_GEOPOLITICAL_CONFIG = {
   nationCountMax: 7,
   targetLandCellsPerNation: 620,
   minNationLandRatio: 0,
-  minNationLandCells: 20,
+  minNationLandCells: 10,
   territorialRadiusMinCells: 3,
   territorialRadiusMaxCells: 3,
   narrowStraitThresholdCells: 6,

@@ -212,12 +212,18 @@ export function assignMaritimeZones(cells: TMapCell[]) {
   return { waterOwner, zoneType };
 }
 
-export function getNationCount(mode: TCustomCountryMode, customCountryCount: number, seed: string) {
+export function getNationCount(
+  mode: TCustomCountryMode,
+  customCountryCount: number,
+  seed: string,
+  landCellCount: number
+) {
+  const maxNations = Math.max(1, Math.min(40, Math.floor(landCellCount / 10 / 2)));
   if (mode === 'balanced') {
-    return Math.min(40, Math.max(2, Math.floor(customCountryCount)));
+    return Math.min(maxNations, Math.max(2, Math.floor(customCountryCount)));
   }
   const random = createSeededRandom(`${seed}:custom-country-dominant-count`);
-  return 2 + Math.floor(random() * 4);
+  return Math.min(maxNations, 2 + Math.floor(random() * 4));
 }
 
 export function makeFrontierHash(seed: string, suffix: string) {
