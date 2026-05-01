@@ -218,9 +218,12 @@ export function getNationCount(
   seed: string,
   landCellCount: number
 ) {
-  const maxNations = Math.max(1, Math.min(40, Math.floor(landCellCount / 10 / 2)));
+  if (landCellCount <= 0) return 0;
+  const maxNationsByMinLandRule = Math.floor(landCellCount / 10) - 2;
+  const maxNations = Math.max(1, Math.min(40, maxNationsByMinLandRule));
   if (mode === 'balanced') {
-    return Math.min(maxNations, Math.max(2, Math.floor(customCountryCount)));
+    const requested = Math.max(2, Math.floor(customCountryCount));
+    return Math.min(requested, maxNations);
   }
   const random = createSeededRandom(`${seed}:custom-country-dominant-count`);
   return Math.min(maxNations, 2 + Math.floor(random() * 4));

@@ -1,4 +1,5 @@
 import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { createSeededRandom } from 'src/services/map/seededRandom';
 import { TCustomCountryMode, TMapCell } from 'src/types/global';
 import {
   getBoundaryStepCost,
@@ -115,6 +116,156 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function tryGrowNationToMinimum(
+  cells: TMapCell[],
+  owner: Int32Array,
+  nationId: number,
+  sizeByNation: Map<number, number>,
+  minNationCells: number
+) {
+  let currentSize = sizeByNation.get(nationId) || 0;
+  if (currentSize >= minNationCells) return true;
+
+  const nationCellIds = new Set<number>();
+  for (let cellId = 0; cellId < cells.length; cellId += 1) {
+    if (owner[cellId] === nationId && isLand(cells[cellId])) nationCellIds.add(cellId);
+  }
+  if (nationCellIds.size === 0) return false;
+
+  while (currentSize < minNationCells) {
+    let bestCandidateCellId = -1;
+    let bestDonorNationId = -1;
+    let bestScore = -Infinity;
+
+    for (const nationCellId of nationCellIds) {
+      for (const neighborId of cells[nationCellId].neighbors) {
+        if (!isLand(cells[neighborId])) continue;
+        if (owner[neighborId] === nationId) continue;
+        const donorNationId = owner[neighborId];
+        if (donorNationId < 0) continue;
+        const donorSize = sizeByNation.get(donorNationId) || 0;
+        if (donorSize <= minNationCells) continue;
+
+        let sharedBorder = 0;
+        for (const nearId of cells[neighborId].neighbors) {
+          if (owner[nearId] === nationId) sharedBorder += 1;
+        }
+        const score = sharedBorder * 10 - cells[neighborId].elevation * 0.1;
+        if (score > bestScore) {
+          bestScore = score;
+          bestCandidateCellId = neighborId;
+          bestDonorNationId = donorNationId;
+        }
+      }
+    }
+
+    if (bestCandidateCellId < 0 || bestDonorNationId < 0) break;
+    owner[bestCandidateCellId] = nationId;
+    nationCellIds.add(bestCandidateCellId);
+    currentSize += 1;
+    sizeByNation.set(nationId, currentSize);
+    sizeByNation.set(
+      bestDonorNationId,
+      Math.max(0, (sizeByNation.get(bestDonorNationId) || 0) - 1)
+    );
+  }
+
+  return currentSize >= minNationCells;
+}
+
+function getNeighborNationIds(cells: TMapCell[], owner: Int32Array, nationId: number) {
+  const neighbors = new Set<number>();
+  for (let cellId = 0; cellId < cells.length; cellId += 1) {
+    if (!isLand(cells[cellId])) continue;
+    if (owner[cellId] !== nationId) continue;
+    for (const neighborId of cells[cellId].neighbors) {
+      if (!isLand(cells[neighborId])) continue;
+      const neighborNationId = owner[neighborId];
+      if (neighborNationId >= 0 && neighborNationId !== nationId) neighbors.add(neighborNationId);
+    }
+  }
+  return Array.from(neighbors);
+}
+
+function transferBorderCell(
+  cells: TMapCell[],
+  owner: Int32Array,
+  sizeByNation: Map<number, number>,
+  fromNationId: number,
+  toNationId: number
+) {
+  let bestCellId = -1;
+  let bestScore = -1;
+
+  for (let cellId = 0; cellId < cells.length; cellId += 1) {
+    if (!isLand(cells[cellId])) continue;
+    if (owner[cellId] !== fromNationId) continue;
+
+    let touchesTarget = false;
+    let targetNeighborCount = 0;
+    for (const neighborId of cells[cellId].neighbors) {
+      if (!isLand(cells[neighborId])) continue;
+      if (owner[neighborId] === toNationId) {
+        touchesTarget = true;
+        targetNeighborCount += 1;
+      }
+    }
+    if (!touchesTarget) continue;
+
+    if (targetNeighborCount > bestScore) {
+      bestScore = targetNeighborCount;
+      bestCellId = cellId;
+    }
+  }
+
+  if (bestCellId < 0) return false;
+  owner[bestCellId] = toNationId;
+  sizeByNation.set(fromNationId, Math.max(0, (sizeByNation.get(fromNationId) || 0) - 1));
+  sizeByNation.set(toNationId, (sizeByNation.get(toNationId) || 0) + 1);
+  return true;
+}
+
+function borrowCellForNation(
+  cells: TMapCell[],
+  owner: Int32Array,
+  sizeByNation: Map<number, number>,
+  targetNationId: number,
+  minNationCells: number,
+  visited: Set<number>,
+  donorFloor = minNationCells
+): boolean {
+  const neighborNationIds = getNeighborNationIds(cells, owner, targetNationId).sort(
+    (left, right) => {
+      return (sizeByNation.get(right) || 0) - (sizeByNation.get(left) || 0);
+    }
+  );
+
+  for (const neighborNationId of neighborNationIds) {
+    const neighborSize = sizeByNation.get(neighborNationId) || 0;
+    if (neighborSize > donorFloor) {
+      if (transferBorderCell(cells, owner, sizeByNation, neighborNationId, targetNationId))
+        return true;
+      continue;
+    }
+    if (visited.has(neighborNationId)) continue;
+    visited.add(neighborNationId);
+    const grown = borrowCellForNation(
+      cells,
+      owner,
+      sizeByNation,
+      neighborNationId,
+      minNationCells,
+      visited,
+      donorFloor
+    );
+    if (grown && (sizeByNation.get(neighborNationId) || 0) > donorFloor) {
+      if (transferBorderCell(cells, owner, sizeByNation, neighborNationId, targetNationId))
+        return true;
+    }
+  }
+  return false;
+}
+
 function getSeedSuitability(cellId: number, cells: TMapCell[]) {
   const cell = cells[cellId];
   if (!isLand(cell)) return -1000;
@@ -142,21 +293,30 @@ function selectNationSeeds(
   cells: TMapCell[],
   nationCount: number,
   seed: string,
-  connectivity: TConnectivityContext
+  connectivity: TConnectivityContext,
+  minComponentSize = 1
 ) {
-  const candidates = cells
+  const allLandCandidates = cells
     .map((_, cellId) => ({
       cellId,
       score: getSeedSuitability(cellId, cells),
       componentId: connectivity.componentByCellId[cellId],
     }))
-    .filter((entry) => entry.score > 0)
+    .filter((entry) => isLand(cells[entry.cellId]))
     .sort((a, b) => b.score - a.score);
+  const candidates =
+    minComponentSize > 1
+      ? allLandCandidates.filter(
+          (entry) => (connectivity.componentSizes[entry.componentId] || 0) >= minComponentSize
+        )
+      : allLandCandidates;
+  const sourceCandidates =
+    candidates.length >= nationCount || minComponentSize <= 1 ? candidates : allLandCandidates;
 
-  if (candidates.length === 0) return [];
-  const seeds: number[] = [candidates[0].cellId];
+  if (sourceCandidates.length === 0) return [];
+  const seeds: number[] = [sourceCandidates[0].cellId];
   const seededLargeComponentIds = new Set<number>();
-  const firstComponentId = connectivity.componentByCellId[candidates[0].cellId];
+  const firstComponentId = connectivity.componentByCellId[sourceCandidates[0].cellId];
   if (connectivity.largeComponentIds.has(firstComponentId)) {
     seededLargeComponentIds.add(firstComponentId);
   }
@@ -167,7 +327,7 @@ function selectNationSeeds(
     let bestScore = -Infinity;
     let bestComponentId = -1;
 
-    for (const candidate of candidates) {
+    for (const candidate of sourceCandidates) {
       if (seeds.includes(candidate.cellId)) continue;
       if (candidate.componentId < 0) continue;
 
@@ -218,6 +378,16 @@ function selectNationSeeds(
         totalScore -= 0.7;
       }
 
+      // In balanced mode we still want seeds on small islands occasionally,
+      // but avoid over-seeding tiny components which later collapse to min-size nations.
+      if (minComponentSize > 1) {
+        if (componentSize < minComponentSize + 4) {
+          totalScore -= (minComponentSize + 4 - componentSize) * 0.45;
+        } else if (componentSize < minComponentSize + 16) {
+          totalScore -= (minComponentSize + 16 - componentSize) * 0.18;
+        }
+      }
+
       if (!isLargeComponent && !alreadySeededInComponent && nearestSeededComponentId >= 0) {
         const nearestSize = connectivity.componentSizes[nearestSeededComponentId] || 1;
         const sizeSimilarity =
@@ -263,11 +433,21 @@ export function buildLandNations(
   const landCellCount = cells.filter(isLand).length;
   const nationCount = getNationCount(customCountryMode, customCountryCount, seed, landCellCount);
   const connectivity = buildConnectivityContext(cells);
-  const seeds = selectNationSeeds(cells, nationCount, seed, connectivity);
+  const minSeedComponentSize =
+    customCountryMode === 'balanced' ? MAP_GEOPOLITICAL_CONFIG.minNationLandCells + 6 : 1;
+  const seeds = selectNationSeeds(cells, nationCount, seed, connectivity, minSeedComponentSize);
   const owner = new Int32Array(cells.length);
   const cost = new Float64Array(cells.length);
   owner.fill(-1);
   cost.fill(Number.POSITIVE_INFINITY);
+  const nationExpansionBias = Array.from({ length: seeds.length }, (_, nationId) => {
+    if (customCountryMode !== 'balanced') return 1;
+    const random = createSeededRandom(`${seed}:nation-expansion-bias:${nationId}`);
+    const roll = random();
+    if (roll < 0.2) return 0.7 + random() * 0.18;
+    if (roll < 0.75) return 0.9 + random() * 0.22;
+    return 1.12 + random() * 0.26;
+  });
 
   const frontier: Array<{ cellId: number; nationId: number; cost: number }> = [];
   for (let nationId = 0; nationId < seeds.length; nationId += 1) {
@@ -300,6 +480,7 @@ export function buildLandNations(
       if (customCountryMode === 'dominant') {
         stepCost *= current.nationId === 0 ? 0.72 : 1.18;
       }
+      stepCost *= nationExpansionBias[current.nationId] || 1;
       stepCost += MAP_GEOPOLITICAL_CONFIG.frontierNoiseWeight * 0.15;
       const nextCost = current.cost + Math.max(0.2, stepCost);
 
@@ -356,7 +537,11 @@ export function alignNaturalTerrainClusters(cells: TMapCell[], owner: Int32Array
   }
 }
 
-export function enforceMinimumNationArea(cells: TMapCell[], owner: Int32Array) {
+export function enforceMinimumNationArea(
+  cells: TMapCell[],
+  owner: Int32Array,
+  minNationCountToPreserve = 0
+) {
   const landCellIds = cells.filter(isLand).map((cell) => cell.id);
   const minNationCells = Math.max(
     MAP_GEOPOLITICAL_CONFIG.minNationLandCells,
@@ -369,39 +554,190 @@ export function enforceMinimumNationArea(cells: TMapCell[], owner: Int32Array) {
     sizeByNation.set(owner[cellId], (sizeByNation.get(owner[cellId]) || 0) + 1);
   }
 
-  const smallNationIds = Array.from(sizeByNation.entries())
-    .filter(([, size]) => size < minNationCells)
-    .map(([nationId]) => nationId);
+  let activeNationCount = sizeByNation.size;
+  const maxRebalancePasses = Math.max(1, sizeByNation.size);
 
-  for (const nationId of smallNationIds) {
-    const nationCells = landCellIds.filter((cellId) => owner[cellId] === nationId);
-    for (const cellId of nationCells) {
-      const neighborCounts = getNationNeighborCounts(cells, owner, cellId);
-      let bestNationId = -1;
-      let bestCount = 0;
+  for (let rebalancePass = 0; rebalancePass < maxRebalancePasses; rebalancePass += 1) {
+    let changedInPass = false;
+    const smallNationIds = Array.from(sizeByNation.entries())
+      .filter(([, size]) => size < minNationCells)
+      .sort((a, b) => a[1] - b[1])
+      .map(([nationId]) => nationId);
 
-      for (const [candidateNationId, count] of neighborCounts) {
-        if (candidateNationId === nationId) continue;
-        if (count > bestCount) {
-          bestCount = count;
-          bestNationId = candidateNationId;
+    if (smallNationIds.length === 0) break;
+
+    for (const nationId of smallNationIds) {
+      const reachedMinimum = tryGrowNationToMinimum(
+        cells,
+        owner,
+        nationId,
+        sizeByNation,
+        minNationCells
+      );
+      if (reachedMinimum) {
+        changedInPass = true;
+        continue;
+      }
+      if (minNationCountToPreserve > 0) {
+        let borrowed = false;
+        while ((sizeByNation.get(nationId) || 0) < minNationCells) {
+          const visited = new Set<number>([nationId]);
+          const grew = borrowCellForNation(
+            cells,
+            owner,
+            sizeByNation,
+            nationId,
+            minNationCells,
+            visited
+          );
+          if (!grew) break;
+          borrowed = true;
+        }
+        if ((sizeByNation.get(nationId) || 0) >= minNationCells) {
+          if (borrowed) changedInPass = true;
+          continue;
         }
       }
-      if (bestNationId < 0) {
-        const point = cells[cellId].site;
-        let bestDistance = Number.POSITIVE_INFINITY;
-        for (const candidateCellId of landCellIds) {
-          const candidateNationId = owner[candidateCellId];
-          if (candidateNationId < 0 || candidateNationId === nationId) continue;
-          const candidatePoint = cells[candidateCellId].site;
-          const distance = Math.hypot(point[0] - candidatePoint[0], point[1] - candidatePoint[1]);
-          if (distance < bestDistance) {
-            bestDistance = distance;
+
+      if (activeNationCount <= minNationCountToPreserve) continue;
+
+      const nationCells = landCellIds.filter((cellId) => owner[cellId] === nationId);
+      let movedAnyCell = false;
+      for (const cellId of nationCells) {
+        const neighborCounts = getNationNeighborCounts(cells, owner, cellId);
+        let bestNationId = -1;
+        let bestCount = 0;
+
+        for (const [candidateNationId, count] of neighborCounts) {
+          if (candidateNationId === nationId) continue;
+          if (count > bestCount) {
+            bestCount = count;
             bestNationId = candidateNationId;
           }
         }
+        if (bestNationId < 0) {
+          const point = cells[cellId].site;
+          let bestDistance = Number.POSITIVE_INFINITY;
+          for (const candidateCellId of landCellIds) {
+            const candidateNationId = owner[candidateCellId];
+            if (candidateNationId < 0 || candidateNationId === nationId) continue;
+            const candidatePoint = cells[candidateCellId].site;
+            const distance = Math.hypot(point[0] - candidatePoint[0], point[1] - candidatePoint[1]);
+            if (distance < bestDistance) {
+              bestDistance = distance;
+              bestNationId = candidateNationId;
+            }
+          }
+        }
+        if (bestNationId >= 0) {
+          owner[cellId] = bestNationId;
+          movedAnyCell = true;
+          changedInPass = true;
+        }
       }
-      if (bestNationId >= 0) owner[cellId] = bestNationId;
+      if (movedAnyCell) {
+        activeNationCount -= 1;
+      }
+    }
+    if (!changedInPass) break;
+  }
+}
+
+export function diversifySmallNationSizes(cells: TMapCell[], owner: Int32Array, seed: string) {
+  const minNationCells = MAP_GEOPOLITICAL_CONFIG.minNationLandCells;
+  const sizeByNation = new Map<number, number>();
+  for (const cell of cells) {
+    if (!isLand(cell)) continue;
+    const nationId = owner[cell.id];
+    if (nationId < 0) continue;
+    sizeByNation.set(nationId, (sizeByNation.get(nationId) || 0) + 1);
+  }
+
+  let donorPool = 0;
+  let totalLandCells = 0;
+  for (const size of sizeByNation.values()) {
+    totalLandCells += size;
+    donorPool += Math.max(0, size - minNationCells);
+  }
+  if (donorPool <= 0) return;
+
+  const random = createSeededRandom(`${seed}:nation-size-diversify:v3`);
+  const nationCount = Math.max(1, sizeByNation.size);
+  const averageSize = totalLandCells / nationCount;
+  const hardCapTargetSize = Math.max(minNationCells + 12, Math.floor(averageSize * 1.85));
+  const allNationIds = Array.from(sizeByNation.keys());
+  const shuffledNationIds = allNationIds.sort(() => random() - 0.5);
+  const smallNationIds = allNationIds
+    .filter((nationId) => (sizeByNation.get(nationId) || 0) <= minNationCells + 3)
+    .sort((leftId, rightId) => (sizeByNation.get(leftId) || 0) - (sizeByNation.get(rightId) || 0));
+
+  // Phase 0: specifically reduce "stuck at exactly 10 cells" nations first.
+  const exactFloorNationIds = shuffledNationIds.filter(
+    (nationId) => (sizeByNation.get(nationId) || 0) === minNationCells
+  );
+  for (const nationId of exactFloorNationIds) {
+    if (donorPool <= 0) break;
+    const targetSize = Math.min(hardCapTargetSize, minNationCells + 2 + Math.floor(random() * 5));
+    while ((sizeByNation.get(nationId) || 0) < targetSize && donorPool > 0) {
+      const visited = new Set<number>([nationId]);
+      const grew = borrowCellForNation(
+        cells,
+        owner,
+        sizeByNation,
+        nationId,
+        minNationCells,
+        visited
+      );
+      if (!grew) break;
+      donorPool -= 1;
+    }
+  }
+
+  // Phase 1: lift many tiny nations out of the 10-13 bucket.
+  for (const nationId of smallNationIds) {
+    if (donorPool <= 0) break;
+    if (random() < 0.1) continue;
+    // const startSize = sizeByNation.get(nationId) || minNationCells;
+    const targetSize = Math.min(hardCapTargetSize, 13 + Math.floor(random() * 12));
+
+    while ((sizeByNation.get(nationId) || 0) < targetSize && donorPool > 0) {
+      const visited = new Set<number>([nationId]);
+      const grew = borrowCellForNation(
+        cells,
+        owner,
+        sizeByNation,
+        nationId,
+        minNationCells,
+        visited
+      );
+      if (!grew) break;
+      donorPool -= 1;
+    }
+  }
+
+  // Phase 2: randomly pick some nations to become medium-sized (20+), without extreme outliers.
+  for (const nationId of shuffledNationIds) {
+    if (donorPool <= 0) break;
+    if (random() < 0.7) continue;
+    const currentSize = sizeByNation.get(nationId) || minNationCells;
+    if (currentSize >= hardCapTargetSize) continue;
+
+    const mediumTarget = 20 + Math.floor(random() * 30);
+    const targetSize = Math.min(hardCapTargetSize, mediumTarget);
+    if (targetSize <= currentSize) continue;
+
+    while ((sizeByNation.get(nationId) || 0) < targetSize && donorPool > 0) {
+      const visited = new Set<number>([nationId]);
+      const grew = borrowCellForNation(
+        cells,
+        owner,
+        sizeByNation,
+        nationId,
+        minNationCells,
+        visited
+      );
+      if (!grew) break;
+      donorPool -= 1;
     }
   }
 }

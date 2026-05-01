@@ -4,6 +4,7 @@ import { buildEthnicRegions } from './ethnic';
 import {
   alignNaturalTerrainClusters,
   buildLandNations,
+  diversifySmallNationSizes,
   enforceMainlandContiguity,
   enforceMinimumNationArea,
   ensureAllLandClaimed,
@@ -14,7 +15,7 @@ import {
   enforceMinimumProvinceArea,
   enforceProvinceContiguity,
 } from './provinces';
-import { assignMaritimeZones, limitMountainClusterSplit } from './shared';
+import { assignMaritimeZones, getNationCount, isLand, limitMountainClusterSplit } from './shared';
 
 type TBuildGeopoliticsOptions = {
   mesh: TMapMeshWithDelaunay;
@@ -29,17 +30,30 @@ export function buildGeopolitics({
   customCountryMode,
   customCountryCount,
 }: TBuildGeopoliticsOptions): TMapMeshWithDelaunay {
+  const landCellCount = mesh.cells.filter(isLand).length;
+  const targetNationCount = getNationCount(
+    customCountryMode,
+    customCountryCount,
+    seed,
+    landCellCount
+  );
+  const preserveNationCount = customCountryMode === 'balanced' ? targetNationCount : 0;
   const owner = buildLandNations(mesh.cells, seed, customCountryMode, customCountryCount);
   alignNaturalTerrainClusters(mesh.cells, owner);
   limitMountainClusterSplit(mesh.cells, owner, 'country');
-  enforceMinimumNationArea(mesh.cells, owner);
+  enforceMinimumNationArea(mesh.cells, owner, preserveNationCount);
   enforceMainlandContiguity(mesh.cells, owner);
   alignNaturalTerrainClusters(mesh.cells, owner);
   limitMountainClusterSplit(mesh.cells, owner, 'country');
   fillUnclaimedLand(mesh.cells, owner);
   ensureAllLandClaimed(mesh.cells, owner);
-  enforceMinimumNationArea(mesh.cells, owner);
+  enforceMinimumNationArea(mesh.cells, owner, preserveNationCount);
   ensureAllLandClaimed(mesh.cells, owner);
+  if (customCountryMode === 'balanced') {
+    diversifySmallNationSizes(mesh.cells, owner, seed);
+    enforceMinimumNationArea(mesh.cells, owner, preserveNationCount);
+    ensureAllLandClaimed(mesh.cells, owner);
+  }
 
   const { waterOwner, zoneType } = assignMaritimeZones(mesh.cells);
   const provinceOwner = buildNationProvinces(mesh.cells, owner, seed);
