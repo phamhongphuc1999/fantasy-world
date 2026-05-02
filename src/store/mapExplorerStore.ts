@@ -1,12 +1,12 @@
 'use client';
 
-import { MAP_EXPLORER_DEFAULT_CONFIG } from 'src/configs/mapConfig';
+import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
 import {
   normalizeTerrainRatios,
   rebalanceTerrainRatioAfterChange,
 } from 'src/services/map/terrainRatios';
 import {
-  TCustomCountryMode,
+  TNationMode,
   TMapDisplaySettings,
   TMapExplorerState,
   TTerrainRatioKey,
@@ -23,8 +23,8 @@ type TMapExplorerActions = {
   setSeaLevelDraft: (seaLevelDraft: number) => void;
   applySeaLevel: () => void;
   setTerrainPreset: (terrainPreset: TTerrainPreset) => void;
-  setCustomCountryMode: (customCountryMode: TCustomCountryMode) => void;
-  setCustomCountryCount: (customCountryCount: number) => boolean;
+  setNationMode: (nationMode: TNationMode) => void;
+  setNationCount: (nationCount: number) => boolean;
   setTerrainRatioDraft: (terrain: TTerrainRatioKey, ratio: number) => void;
   applyTerrainRatios: () => void;
   cancelTerrainRatios: () => void;
@@ -40,24 +40,24 @@ type TMapExplorerActions = {
 type TMapExplorerStore = TMapExplorerState & TMapExplorerActions;
 
 const DEFAULT_STATE: TMapExplorerState = {
-  seed: MAP_EXPLORER_DEFAULT_CONFIG.seed,
-  seedDraft: MAP_EXPLORER_DEFAULT_CONFIG.seed,
-  cellCount: MAP_EXPLORER_DEFAULT_CONFIG.cellCount,
-  seaLevel: MAP_EXPLORER_DEFAULT_CONFIG.seaLevel,
-  seaLevelDraft: MAP_EXPLORER_DEFAULT_CONFIG.seaLevel,
-  terrainPreset: MAP_EXPLORER_DEFAULT_CONFIG.terrainPreset,
-  customCountryMode: MAP_EXPLORER_DEFAULT_CONFIG.customCountryMode,
-  customCountryCount: MAP_EXPLORER_DEFAULT_CONFIG.customCountryCount,
-  terrainRatios: MAP_EXPLORER_DEFAULT_CONFIG.terrainRatios,
-  terrainRatiosDraft: MAP_EXPLORER_DEFAULT_CONFIG.terrainRatios,
-  displaySettings: MAP_EXPLORER_DEFAULT_CONFIG.displaySettings,
+  seed: DEFAULT_CONFIG.seed,
+  seedDraft: DEFAULT_CONFIG.seed,
+  cellCount: DEFAULT_CONFIG.cellCount,
+  seaLevel: DEFAULT_CONFIG.seaLevel,
+  seaLevelDraft: DEFAULT_CONFIG.seaLevel,
+  terrainPreset: DEFAULT_CONFIG.terrainPreset,
+  nationMode: DEFAULT_CONFIG.nationMode,
+  nationCount: DEFAULT_CONFIG.nationCount,
+  terrainRatios: DEFAULT_CONFIG.terrainRatios,
+  terrainRatiosDraft: DEFAULT_CONFIG.terrainRatios,
+  displaySettings: DEFAULT_CONFIG.displaySettings,
   hoverVisualizationEnabled: true,
   hoverIndex: null,
   hoverClientPoint: null,
 };
 
 function migrateLegacyTerrainRatios(raw?: Partial<Record<string, number>>) {
-  if (!raw) return MAP_EXPLORER_DEFAULT_CONFIG.terrainRatios;
+  if (!raw) return DEFAULT_CONFIG.terrainRatios;
   const plainValue = raw.plains ?? raw.plain;
   return normalizeTerrainRatios({
     plains: plainValue,
@@ -97,12 +97,12 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
       setTerrainPreset(terrainPreset: TTerrainPreset) {
         set({ terrainPreset, hoverIndex: null });
       },
-      setCustomCountryMode(customCountryMode: TCustomCountryMode) {
-        set({ customCountryMode, hoverIndex: null });
+      setNationMode(nationMode: TNationMode) {
+        set({ nationMode, hoverIndex: null });
       },
-      setCustomCountryCount(customCountryCount: number) {
-        if (customCountryCount < 2 || customCountryCount > 40) return false;
-        set({ customCountryCount, hoverIndex: null });
+      setNationCount(nationCount: number) {
+        if (nationCount < 2 || nationCount > 40) return false;
+        set({ nationCount, hoverIndex: null });
         return true;
       },
       setTerrainRatioDraft(terrain: TTerrainRatioKey, ratio: number) {
@@ -152,11 +152,7 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         set({ hoverIndex: null, hoverClientPoint: null });
       },
       resetToDefaults() {
-        set({
-          ...DEFAULT_STATE,
-          hoverIndex: null,
-          hoverClientPoint: null,
-        });
+        set({ ...DEFAULT_STATE, hoverIndex: null, hoverClientPoint: null });
       },
     }),
     {
@@ -168,8 +164,8 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         seaLevel: state.seaLevel,
         seaLevelDraft: state.seaLevelDraft,
         terrainPreset: state.terrainPreset,
-        customCountryMode: state.customCountryMode,
-        customCountryCount: state.customCountryCount,
+        nationMode: state.nationMode,
+        nationCount: state.nationCount,
         terrainRatios: state.terrainRatios,
         terrainRatiosDraft: state.terrainRatiosDraft,
         displaySettings: state.displaySettings,
@@ -189,13 +185,7 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         const terrainRatiosDraft = migrateLegacyTerrainRatios(
           state.terrainRatiosDraft as unknown as Partial<Record<string, number>> | undefined
         );
-        return {
-          ...DEFAULT_STATE,
-          ...state,
-          displaySettings,
-          terrainRatios,
-          terrainRatiosDraft,
-        };
+        return { ...DEFAULT_STATE, ...state, displaySettings, terrainRatios, terrainRatiosDraft };
       },
     }
   )

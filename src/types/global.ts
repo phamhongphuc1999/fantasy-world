@@ -41,7 +41,7 @@ export type TMapDisplaySettings = {
   showRegionNames: boolean;
 };
 
-export type TCustomCountryMode = 'dominant' | 'balanced';
+export type TNationMode = 'dominant' | 'balanced';
 
 export type TTerrainRatioKey =
   | 'plains'
@@ -162,8 +162,8 @@ export interface TMapExplorerState {
   seaLevel: number;
   seaLevelDraft: number;
   terrainPreset: TTerrainPreset;
-  customCountryMode: TCustomCountryMode;
-  customCountryCount: number;
+  nationMode: TNationMode;
+  nationCount: number;
   terrainRatios: TTerrainRatioMap;
   terrainRatiosDraft: TTerrainRatioMap;
   displaySettings: TMapDisplaySettings;

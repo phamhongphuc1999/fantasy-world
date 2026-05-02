@@ -1,5 +1,5 @@
 import {
-  TCustomCountryMode,
+  TNationMode,
   TMapDisplaySettings,
   TTerrainPreset,
   TTerrainRatioMap,
@@ -36,13 +36,13 @@ export const NATION_COLOR_PALETTE = [
   '#deb887', // burlywood
 ];
 
-export const MAP_EXPLORER_DEFAULT_CONFIG: {
+export const DEFAULT_CONFIG: {
   seed: string;
   cellCount: number;
   seaLevel: number;
   terrainPreset: TTerrainPreset;
-  customCountryMode: TCustomCountryMode;
-  customCountryCount: number;
+  nationMode: TNationMode;
+  nationCount: number;
   terrainRatios: TTerrainRatioMap;
   displaySettings: TMapDisplaySettings;
 } = {
@@ -50,8 +50,8 @@ export const MAP_EXPLORER_DEFAULT_CONFIG: {
   cellCount: 10000,
   seaLevel: 0.5,
   terrainPreset: 'balanced',
-  customCountryMode: 'balanced',
-  customCountryCount: 8,
+  nationMode: 'balanced',
+  nationCount: 8,
   terrainRatios: {
     plains: 0.35,
     forest: 0.2,
@@ -344,8 +344,6 @@ export const MAP_HYDROLOGY_CONFIG = {
 };
 
 export const MAP_GEOPOLITICAL_CONFIG = {
-  nationCountMin: 3,
-  nationCountMax: 7,
   targetLandCellsPerNation: 620,
   minNationLandRatio: 0,
   minNationLandCells: 10,

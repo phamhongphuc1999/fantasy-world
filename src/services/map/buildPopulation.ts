@@ -1,5 +1,7 @@
 import { createSeededRandom } from 'src/services/map/seededRandom';
 import { TMapMeshWithDelaunay, TTerrainBand } from 'src/types/global';
+import { clamp } from './core/math';
+import { TFifoQueue } from './core/queue';
 
 interface TBuildPopulationOptions {
   mesh: TMapMeshWithDelaunay;
@@ -35,10 +37,6 @@ function terrainCityFactor(terrain: TTerrainBand) {
   return 0.4;
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
 function populationMultiplier(
   cell: TMapMeshWithDelaunay['cells'][number],
   cells: TMapMeshWithDelaunay['cells']
@@ -58,7 +56,7 @@ function populationMultiplier(
 function buildWaterAccessibility(cells: TMapMeshWithDelaunay['cells']) {
   const distances = new Int32Array(cells.length);
   distances.fill(-1);
-  const queue: number[] = [];
+  const queue = new TFifoQueue<number>();
 
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     const terrain = cells[cellId].terrain;
@@ -66,16 +64,16 @@ function buildWaterAccessibility(cells: TMapMeshWithDelaunay['cells']) {
       terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea';
     if (!isMarineWater) continue;
     distances[cellId] = 0;
-    queue.push(cellId);
+    queue.enqueue(cellId);
   }
 
-  while (queue.length > 0) {
-    const currentId = queue.shift() as number;
+  while (queue.size > 0) {
+    const currentId = queue.dequeue() as number;
     const nextDistance = distances[currentId] + 1;
     for (const neighborId of cells[currentId].neighbors) {
       if (distances[neighborId] >= 0) continue;
       distances[neighborId] = nextDistance;
-      queue.push(neighborId);
+      queue.enqueue(neighborId);
     }
   }
 
@@ -165,8 +163,8 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
     }
   }
 
+  const next = new Float64Array(score.length);
   for (let pass = 0; pass < 2; pass += 1) {
-    const next = Float64Array.from(score);
     for (let cellId = 0; cellId < cells.length; cellId += 1) {
       if (cells[cellId].isWater) {
         next[cellId] = 0;

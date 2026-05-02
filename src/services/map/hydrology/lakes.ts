@@ -1,4 +1,5 @@
 import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { TFifoQueue } from 'src/services/map/core/queue';
 import { TMapCell, TTerrainBand } from 'src/types/global';
 
 const T_COAST_OUTLET = MAP_HYDROLOGY_CONFIG.coastOutletId;
@@ -20,11 +21,12 @@ function expandLakes(cells: TMapCell[], flow: Float32Array, downstream: Int32Arr
       2 + Math.floor(Math.log2(flow[seedId] + 1) * 2)
     );
     let expanded = 1;
-    const queue = [seedId];
+    const queue = new TFifoQueue<number>();
+    queue.enqueue(seedId);
     const visited = new Set<number>([seedId]);
 
-    while (queue.length > 0 && expanded < targetMax) {
-      const currentId = queue.shift() as number;
+    while (queue.size > 0 && expanded < targetMax) {
+      const currentId = queue.dequeue() as number;
       const currentCell = cells[currentId];
 
       for (const neighborId of currentCell.neighbors) {
@@ -49,7 +51,7 @@ function expandLakes(cells: TMapCell[], flow: Float32Array, downstream: Int32Arr
         neighbor.biome = 'Freshwater Lake';
         neighbor.suitability = 0.12;
         expanded += 1;
-        queue.push(neighborId);
+        queue.enqueue(neighborId);
 
         if (expanded >= targetMax) break;
       }
@@ -68,16 +70,18 @@ function expandLakes(cells: TMapCell[], flow: Float32Array, downstream: Int32Arr
 function buildLakeRegions(cells: TMapCell[]) {
   const visited = new Uint8Array(cells.length);
   const regions: number[][] = [];
+  const stack: number[] = [];
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     if (visited[cellIndex] === 1 || !cells[cellIndex].isLake) continue;
 
-    const queue = [cellIndex];
+    stack.length = 0;
+    stack.push(cellIndex);
     const region: number[] = [];
     visited[cellIndex] = 1;
 
-    while (queue.length > 0) {
-      const current = queue.pop() as number;
+    while (stack.length > 0) {
+      const current = stack.pop() as number;
       region.push(current);
 
       for (const neighborId of cells[current].neighbors) {
@@ -85,7 +89,7 @@ function buildLakeRegions(cells: TMapCell[]) {
         if (!cells[neighborId].isLake) continue;
 
         visited[neighborId] = 1;
-        queue.push(neighborId);
+        stack.push(neighborId);
       }
     }
     regions.push(region);
@@ -110,22 +114,22 @@ function touchesMapBoundary(cell: TMapCell, width: number, height: number) {
 
 function buildOceanConnectedWaterMask(cells: TMapCell[], width: number, height: number) {
   const oceanConnected = new Uint8Array(cells.length);
-  const queue: number[] = [];
+  const stack: number[] = [];
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     if (!cells[cellIndex].isWater) continue;
     if (!touchesMapBoundary(cells[cellIndex], width, height)) continue;
     oceanConnected[cellIndex] = 1;
-    queue.push(cellIndex);
+    stack.push(cellIndex);
   }
-  while (queue.length > 0) {
-    const current = queue.pop();
+  while (stack.length > 0) {
+    const current = stack.pop();
     if (current === undefined) continue;
     for (const neighborId of cells[current].neighbors) {
       if (oceanConnected[neighborId] === 1) continue;
       if (!cells[neighborId].isWater) continue;
       oceanConnected[neighborId] = 1;
-      queue.push(neighborId);
+      stack.push(neighborId);
     }
   }
   return oceanConnected;
@@ -141,6 +145,7 @@ function classifyEnclosedWaterBodies(
   const oceanConnected = buildOceanConnectedWaterMask(cells, width, height);
   const threshold = seaLevel + MAP_HYDROLOGY_CONFIG.enclosedWaterElevationBuffer;
   const visited = new Uint8Array(cells.length);
+  const stack: number[] = [];
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     if (visited[cellIndex] === 1) continue;
@@ -150,13 +155,14 @@ function classifyEnclosedWaterBodies(
     if (!isEnclosedSeedCandidate) continue;
     if (cells[cellIndex].elevation > threshold) continue;
 
-    const queue = [cellIndex];
+    stack.length = 0;
+    stack.push(cellIndex);
     const component: number[] = [];
     visited[cellIndex] = 1;
     let minElevation = cells[cellIndex].elevation;
 
-    while (queue.length > 0) {
-      const current = queue.pop();
+    while (stack.length > 0) {
+      const current = stack.pop();
       if (current === undefined) continue;
       const currentCell = cells[current];
       component.push(current);
@@ -167,7 +173,7 @@ function classifyEnclosedWaterBodies(
         if (oceanConnected[neighborId] === 1) continue;
         if (cells[neighborId].elevation > threshold) continue;
         visited[neighborId] = 1;
-        queue.push(neighborId);
+        stack.push(neighborId);
       }
     }
 
@@ -271,17 +277,19 @@ function buildLakeSizeMap(cells: TMapCell[]) {
 function buildPlainsRegionSizeMap(cells: TMapCell[]) {
   const regionSizeByCell = new Int32Array(cells.length);
   const visited = new Uint8Array(cells.length);
+  const stack: number[] = [];
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     if (visited[cellIndex] === 1) continue;
     if (cells[cellIndex].terrain !== 'plains') continue;
 
-    const queue: number[] = [cellIndex];
+    stack.length = 0;
+    stack.push(cellIndex);
     const region: number[] = [];
     visited[cellIndex] = 1;
 
-    while (queue.length > 0) {
-      const current = queue.pop();
+    while (stack.length > 0) {
+      const current = stack.pop();
       if (current === undefined) continue;
       region.push(current);
 
@@ -289,7 +297,7 @@ function buildPlainsRegionSizeMap(cells: TMapCell[]) {
         if (visited[neighborId] === 1) continue;
         if (cells[neighborId].terrain !== 'plains') continue;
         visited[neighborId] = 1;
-        queue.push(neighborId);
+        stack.push(neighborId);
       }
     }
     for (const id of region) {

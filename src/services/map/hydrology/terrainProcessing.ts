@@ -97,6 +97,7 @@ function getNeighborTerrainCounts(cell: TMapCell, cells: TMapCell[]) {
 function findSmallTerrainRegions(cells: TMapCell[], minRegionSize: number) {
   const visited = new Uint8Array(cells.length);
   const regions: number[][] = [];
+  const stack: number[] = [];
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     if (visited[cellIndex] === 1) continue;
@@ -104,12 +105,13 @@ function findSmallTerrainRegions(cells: TMapCell[], minRegionSize: number) {
     const seedCell = cells[cellIndex];
     if (isWaterTerrain(seedCell.terrain)) continue;
 
-    const queue = [cellIndex];
+    stack.length = 0;
+    stack.push(cellIndex);
     const region: number[] = [];
     visited[cellIndex] = 1;
 
-    while (queue.length > 0) {
-      const current = queue.pop() as number;
+    while (stack.length > 0) {
+      const current = stack.pop() as number;
       region.push(current);
 
       for (const neighborId of cells[current].neighbors) {
@@ -118,7 +120,7 @@ function findSmallTerrainRegions(cells: TMapCell[], minRegionSize: number) {
         if (isWaterTerrain(cells[neighborId].terrain)) continue;
 
         visited[neighborId] = 1;
-        queue.push(neighborId);
+        stack.push(neighborId);
       }
     }
 
@@ -620,18 +622,20 @@ function antiAliasTerrains(cells: TMapCell[]) {
 
 function mergeSmallTerrainClusters(cells: TMapCell[], seaLevel: number) {
   const visited = new Uint8Array(cells.length);
+  const stack: number[] = [];
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     if (visited[cellIndex] === 1) continue;
     const terrain = cells[cellIndex].terrain;
     if (isWaterTerrain(terrain)) continue;
 
-    const queue = [cellIndex];
+    stack.length = 0;
+    stack.push(cellIndex);
     const region: number[] = [];
     visited[cellIndex] = 1;
 
-    while (queue.length > 0) {
-      const current = queue.pop();
+    while (stack.length > 0) {
+      const current = stack.pop();
       if (current === undefined) continue;
       region.push(current);
 
@@ -640,7 +644,7 @@ function mergeSmallTerrainClusters(cells: TMapCell[], seaLevel: number) {
         if (cells[neighborId].terrain !== terrain) continue;
         if (isWaterTerrain(cells[neighborId].terrain)) continue;
         visited[neighborId] = 1;
-        queue.push(neighborId);
+        stack.push(neighborId);
       }
     }
 

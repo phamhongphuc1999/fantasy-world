@@ -3,7 +3,8 @@ import { TMapCell, TTerrainBand } from 'src/types/global';
 import { clamp } from './common';
 
 export function buildWaterInfluence(cells: TMapCell[]): Float32Array {
-  const waterInfluence = new Float32Array(cells.length);
+  let waterInfluence = new Float32Array(cells.length);
+  let nextInfluence = new Float32Array(cells.length);
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     waterInfluence[cellIndex] = cells[cellIndex].isWater ? 1 : 0;
@@ -14,11 +15,12 @@ export function buildWaterInfluence(cells: TMapCell[]): Float32Array {
     iteration < MAP_HYDROLOGY_CONFIG.waterInfluenceIterations;
     iteration += 1
   ) {
-    const nextInfluence = Float32Array.from(waterInfluence);
-
     for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
       const cell = cells[cellIndex];
-      if (cell.neighbors.length === 0) continue;
+      if (cell.neighbors.length === 0) {
+        nextInfluence[cellIndex] = waterInfluence[cellIndex] as number;
+        continue;
+      }
 
       let total = waterInfluence[cellIndex] * MAP_HYDROLOGY_CONFIG.waterInfluenceSelfWeight;
       for (const neighborId of cell.neighbors) {
@@ -28,7 +30,9 @@ export function buildWaterInfluence(cells: TMapCell[]): Float32Array {
       nextInfluence[cellIndex] =
         total / (cell.neighbors.length + MAP_HYDROLOGY_CONFIG.waterInfluenceSelfWeight);
     }
-    waterInfluence.set(nextInfluence);
+    const tmp = waterInfluence;
+    waterInfluence = nextInfluence;
+    nextInfluence = tmp;
   }
 
   return waterInfluence;

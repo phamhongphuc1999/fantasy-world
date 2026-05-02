@@ -1,6 +1,6 @@
 import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
-import { TCustomCountryMode, TMapCell, TTerrainBand, TZoneType } from 'src/types/global';
+import { TNationMode, TMapCell, TTerrainBand, TZoneType } from 'src/types/global';
 
 export const CAPITAL_VIEWPORT_MARGIN = 14;
 export type TBorderLevelKey = 'country' | 'province';
@@ -213,8 +213,8 @@ export function assignMaritimeZones(cells: TMapCell[]) {
 }
 
 export function getNationCount(
-  mode: TCustomCountryMode,
-  customCountryCount: number,
+  mode: TNationMode,
+  nationCount: number,
   seed: string,
   landCellCount: number
 ) {
@@ -222,7 +222,7 @@ export function getNationCount(
   const maxNationsByMinLandRule = Math.floor(landCellCount / 10) - 2;
   const maxNations = Math.max(1, Math.min(40, maxNationsByMinLandRule));
   if (mode === 'balanced') {
-    const requested = Math.max(2, Math.floor(customCountryCount));
+    const requested = Math.max(2, Math.floor(nationCount));
     return Math.min(requested, maxNations);
   }
   const random = createSeededRandom(`${seed}:custom-country-dominant-count`);

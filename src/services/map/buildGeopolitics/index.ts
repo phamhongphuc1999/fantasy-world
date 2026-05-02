@@ -1,4 +1,4 @@
-import { TCustomCountryMode, TMapMeshWithDelaunay } from 'src/types/global';
+import { TNationMode, TMapMeshWithDelaunay } from 'src/types/global';
 import { pickEconomicAndCapital } from './capitals';
 import { buildEthnicRegions } from './ethnic';
 import {
@@ -20,25 +20,20 @@ import { assignMaritimeZones, getNationCount, isLand, limitMountainClusterSplit 
 type TBuildGeopoliticsOptions = {
   mesh: TMapMeshWithDelaunay;
   seed: string;
-  customCountryMode: TCustomCountryMode;
-  customCountryCount: number;
+  nationMode: TNationMode;
+  nationCount: number;
 };
 
 export function buildGeopolitics({
   mesh,
   seed,
-  customCountryMode,
-  customCountryCount,
+  nationMode,
+  nationCount,
 }: TBuildGeopoliticsOptions): TMapMeshWithDelaunay {
   const landCellCount = mesh.cells.filter(isLand).length;
-  const targetNationCount = getNationCount(
-    customCountryMode,
-    customCountryCount,
-    seed,
-    landCellCount
-  );
-  const preserveNationCount = customCountryMode === 'balanced' ? targetNationCount : 0;
-  const owner = buildLandNations(mesh.cells, seed, customCountryMode, customCountryCount);
+  const targetNationCount = getNationCount(nationMode, nationCount, seed, landCellCount);
+  const preserveNationCount = nationMode === 'balanced' ? targetNationCount : 0;
+  const owner = buildLandNations(mesh.cells, seed, nationMode, nationCount);
   alignNaturalTerrainClusters(mesh.cells, owner);
   limitMountainClusterSplit(mesh.cells, owner, 'country');
   enforceMinimumNationArea(mesh.cells, owner, preserveNationCount);
@@ -49,7 +44,7 @@ export function buildGeopolitics({
   ensureAllLandClaimed(mesh.cells, owner);
   enforceMinimumNationArea(mesh.cells, owner, preserveNationCount);
   ensureAllLandClaimed(mesh.cells, owner);
-  if (customCountryMode === 'balanced') {
+  if (nationMode === 'balanced') {
     diversifySmallNationSizes(mesh.cells, owner, seed);
     enforceMinimumNationArea(mesh.cells, owner, preserveNationCount);
     ensureAllLandClaimed(mesh.cells, owner);

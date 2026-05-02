@@ -7,10 +7,10 @@ import {
   SelectValue,
 } from 'src/components/ui/select';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TCustomCountryMode } from 'src/types/global';
+import { TNationMode } from 'src/types/global';
 
 type TModeOption = {
-  value: TCustomCountryMode;
+  value: TNationMode;
   label: string;
 };
 
@@ -20,17 +20,16 @@ const MODE_OPTIONS: TModeOption[] = [
 ];
 
 export default function CountryModePanel() {
-  const { customCountryMode, customCountryCount, setCustomCountryMode, setCustomCountryCount } =
-    useMapExplorerStore();
-  const [draftCount, setDraftCount] = useState(String(customCountryCount));
+  const { nationMode, nationCount, setNationMode, setNationCount } = useMapExplorerStore();
+  const [draftCount, setDraftCount] = useState(String(nationCount));
   const [error, setError] = useState('');
 
   const helperText = useMemo(() => {
-    if (customCountryMode === 'dominant') {
+    if (nationMode === 'dominant') {
       return 'Creates one clearly dominant large country, with total countries <= 5.';
     }
     return 'Creates exactly the country count you entered (2-40), with relatively balanced sizes.';
-  }, [customCountryMode]);
+  }, [nationMode]);
 
   function handleApplyCount() {
     const nextValue = Number(draftCount);
@@ -44,7 +43,7 @@ export default function CountryModePanel() {
       return;
     }
 
-    const success = setCustomCountryCount(nextValue);
+    const success = setNationCount(nextValue);
     if (!success) {
       setError('Country count must be an integer between 2 and 40.');
       return;
@@ -61,10 +60,7 @@ export default function CountryModePanel() {
 
       <div className="space-y-2">
         <label className="text-xs text-slate-300">Country generation type</label>
-        <Select
-          value={customCountryMode}
-          onValueChange={(value) => setCustomCountryMode(value as TCustomCountryMode)}
-        >
+        <Select value={nationMode} onValueChange={(value) => setNationMode(value as TNationMode)}>
           <SelectTrigger>
             <SelectValue placeholder="Select generation type" />
           </SelectTrigger>

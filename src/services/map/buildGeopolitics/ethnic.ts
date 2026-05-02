@@ -1,4 +1,7 @@
 import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { collectCellComponents } from 'src/services/map/core/components';
+import { TDeterministicMinHeap } from 'src/services/map/core/heap';
+import { TFifoQueue } from 'src/services/map/core/queue';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
 import { TEthnicGroup, TMapCell } from 'src/types/global';
 import { createRegionalName, edgeNoise, isLand } from './shared';
@@ -28,32 +31,12 @@ function ethnicTerrainCost(cell: TMapCell, config: TEthnicConfig) {
 }
 
 function collectLandComponents(cells: TMapCell[]) {
-  const visited = new Uint8Array(cells.length);
-  const components: number[][] = [];
-
-  for (const cell of cells) {
-    if (!isLand(cell) || visited[cell.id] === 1) continue;
-    const queue = [cell.id];
-    const component: number[] = [];
-    visited[cell.id] = 1;
-
-    while (queue.length > 0) {
-      const current = queue.pop() as number;
-      component.push(current);
-
-      for (const neighborId of cells[current].neighbors) {
-        if (visited[neighborId] === 1) continue;
-        if (!isLand(cells[neighborId])) continue;
-        visited[neighborId] = 1;
-        queue.push(neighborId);
-      }
-    }
-
-    components.push(component);
-  }
-
-  components.sort((a, b) => b.length - a.length);
-  return components;
+  return collectCellComponents(
+    cells,
+    (cell) => isLand(cell),
+    (_current, neighbor) => isLand(neighbor),
+    true
+  );
 }
 
 function pickEthnicCoreSeeds(
@@ -104,7 +87,12 @@ function buildEthnicField(
 ) {
   const cost = new Float64Array(cells.length);
   cost.fill(Number.POSITIVE_INFINITY);
-  const frontier: Array<{ cellId: number; ethnicId: number; cost: number; distance: number }> = [];
+  const frontier = new TDeterministicMinHeap<{
+    cellId: number;
+    ethnicId: number;
+    cost: number;
+    distance: number;
+  }>();
   const seedHash = hashSeed(`${seed}:ethnic:frontier`);
 
   for (let localEthnicId = 0; localEthnicId < seedCells.length; localEthnicId += 1) {
@@ -112,12 +100,11 @@ function buildEthnicField(
     const ethnicId = ethnicOffset + localEthnicId;
     ethnicOwner[cellId] = ethnicId;
     cost[cellId] = 0;
-    frontier.push({ cellId, ethnicId, cost: 0, distance: 0 });
+    frontier.push({ cellId, ethnicId, cost: 0, distance: 0 }, 0);
   }
 
-  while (frontier.length > 0) {
-    frontier.sort((a, b) => a.cost - b.cost);
-    const current = frontier.shift() as {
+  while (frontier.size > 0) {
+    const current = frontier.pop() as {
       cellId: number;
       ethnicId: number;
       cost: number;
@@ -155,7 +142,7 @@ function buildEthnicField(
           ethnicId: current.ethnicId,
           cost: nextCost,
           distance: nextDistance,
-        });
+        }, nextCost);
       }
     }
   }
@@ -474,10 +461,14 @@ function ensureEthnicMultiNationPresence(
     if (candidateBorders.length === 0) continue;
 
     let painted = 0;
-    const queue = [...new Set(candidateBorders)];
-    const visited = new Set<number>(queue);
-    while (queue.length > 0 && painted < 18) {
-      const currentId = queue.shift() as number;
+    const uniqueBorderCells = [...new Set(candidateBorders)];
+    const queue = new TFifoQueue<number>();
+    for (const cellId of uniqueBorderCells) {
+      queue.enqueue(cellId);
+    }
+    const visited = new Set<number>(uniqueBorderCells);
+    while (queue.size > 0 && painted < 18) {
+      const currentId = queue.dequeue() as number;
       if (!isLand(cells[currentId])) continue;
       if (ethnicOwner[currentId] !== group.id) {
         ethnicOwner[currentId] = group.id;
@@ -488,7 +479,7 @@ function ensureEthnicMultiNationPresence(
         if (!isLand(cells[neighborId])) continue;
         if (nationOwner[neighborId] !== nationOwner[currentId]) continue;
         visited.add(neighborId);
-        queue.push(neighborId);
+        queue.enqueue(neighborId);
       }
     }
   }

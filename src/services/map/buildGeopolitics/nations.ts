@@ -1,6 +1,8 @@
 import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { TDeterministicMinHeap } from 'src/services/map/core/heap';
+import { clamp } from 'src/services/map/core/math';
 import { createSeededRandom } from 'src/services/map/seededRandom';
-import { TCustomCountryMode, TMapCell } from 'src/types/global';
+import { TNationMode, TMapCell } from 'src/types/global';
 import {
   getBoundaryStepCost,
   getNationCount,
@@ -26,19 +28,21 @@ function buildConnectivityContext(cells: TMapCell[]): TConnectivityContext {
   const componentSizes: number[] = [];
   const boundaryCellsByComponentId: number[][] = [];
   const visited = new Uint8Array(cells.length);
+  const stack: number[] = [];
 
   let componentId = 0;
   for (const cell of cells) {
     if (!isLand(cell) || visited[cell.id] === 1) continue;
 
-    const queue = [cell.id];
+    stack.length = 0;
+    stack.push(cell.id);
     const component: number[] = [];
     const boundaries: number[] = [];
     visited[cell.id] = 1;
     componentByCellId[cell.id] = componentId;
 
-    while (queue.length > 0) {
-      const currentId = queue.pop() as number;
+    while (stack.length > 0) {
+      const currentId = stack.pop() as number;
       component.push(currentId);
 
       let touchesWater = false;
@@ -50,7 +54,7 @@ function buildConnectivityContext(cells: TMapCell[]): TConnectivityContext {
         if (visited[neighborId] === 1) continue;
         visited[neighborId] = 1;
         componentByCellId[neighborId] = componentId;
-        queue.push(neighborId);
+        stack.push(neighborId);
       }
       if (touchesWater) boundaries.push(currentId);
     }
@@ -110,10 +114,6 @@ function estimateWaterCellsBetweenComponents(
       : 1;
 
   return Math.max(0, Math.round(minDistance / Math.max(1, avgNeighborDistance)));
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
 }
 
 function tryGrowNationToMinimum(
@@ -426,22 +426,22 @@ function selectNationSeeds(
 export function buildLandNations(
   cells: TMapCell[],
   seed: string,
-  customCountryMode: TCustomCountryMode,
-  customCountryCount: number
+  nationMode: TNationMode,
+  nationCount: number
 ) {
   const profile = MAP_GEOPOLITICAL_CONFIG.borderLevels.country;
   const landCellCount = cells.filter(isLand).length;
-  const nationCount = getNationCount(customCountryMode, customCountryCount, seed, landCellCount);
+  const numOfNation = getNationCount(nationMode, nationCount, seed, landCellCount);
   const connectivity = buildConnectivityContext(cells);
   const minSeedComponentSize =
-    customCountryMode === 'balanced' ? MAP_GEOPOLITICAL_CONFIG.minNationLandCells + 6 : 1;
-  const seeds = selectNationSeeds(cells, nationCount, seed, connectivity, minSeedComponentSize);
+    nationMode === 'balanced' ? MAP_GEOPOLITICAL_CONFIG.minNationLandCells + 6 : 1;
+  const seeds = selectNationSeeds(cells, numOfNation, seed, connectivity, minSeedComponentSize);
   const owner = new Int32Array(cells.length);
   const cost = new Float64Array(cells.length);
   owner.fill(-1);
   cost.fill(Number.POSITIVE_INFINITY);
   const nationExpansionBias = Array.from({ length: seeds.length }, (_, nationId) => {
-    if (customCountryMode !== 'balanced') return 1;
+    if (nationMode !== 'balanced') return 1;
     const random = createSeededRandom(`${seed}:nation-expansion-bias:${nationId}`);
     const roll = random();
     if (roll < 0.2) return 0.7 + random() * 0.18;
@@ -449,19 +449,18 @@ export function buildLandNations(
     return 1.12 + random() * 0.26;
   });
 
-  const frontier: Array<{ cellId: number; nationId: number; cost: number }> = [];
+  const frontier = new TDeterministicMinHeap<{ cellId: number; nationId: number; cost: number }>();
   for (let nationId = 0; nationId < seeds.length; nationId += 1) {
     const cellId = seeds[nationId];
     owner[cellId] = nationId;
     cost[cellId] = 0;
-    frontier.push({ cellId, nationId, cost: 0 });
+    frontier.push({ cellId, nationId, cost: 0 }, 0);
   }
 
   const seedHash = makeFrontierHash(seed, 'geopolitics:frontier');
 
-  while (frontier.length > 0) {
-    frontier.sort((a, b) => a.cost - b.cost);
-    const current = frontier.shift() as { cellId: number; nationId: number; cost: number };
+  while (frontier.size > 0) {
+    const current = frontier.pop() as { cellId: number; nationId: number; cost: number };
     if (current.cost > cost[current.cellId]) continue;
 
     const currentCell = cells[current.cellId];
@@ -477,7 +476,7 @@ export function buildLandNations(
         seedHash,
         profile
       );
-      if (customCountryMode === 'dominant') {
+      if (nationMode === 'dominant') {
         stepCost *= current.nationId === 0 ? 0.72 : 1.18;
       }
       stepCost *= nationExpansionBias[current.nationId] || 1;
@@ -487,7 +486,7 @@ export function buildLandNations(
       if (nextCost < cost[neighborId]) {
         cost[neighborId] = nextCost;
         owner[neighborId] = current.nationId;
-        frontier.push({ cellId: neighborId, nationId: current.nationId, cost: nextCost });
+        frontier.push({ cellId: neighborId, nationId: current.nationId, cost: nextCost }, nextCost);
       }
     }
   }
@@ -753,15 +752,17 @@ export function enforceMainlandContiguity(cells: TMapCell[], owner: Int32Array) 
 
     const visited = new Set<number>();
     const components: number[][] = [];
+    const stack: number[] = [];
 
     for (const startCellId of nationCells) {
       if (visited.has(startCellId)) continue;
-      const queue = [startCellId];
+      stack.length = 0;
+      stack.push(startCellId);
       const component: number[] = [];
       visited.add(startCellId);
 
-      while (queue.length > 0) {
-        const current = queue.pop() as number;
+      while (stack.length > 0) {
+        const current = stack.pop() as number;
         component.push(current);
 
         for (const neighborId of cells[current].neighbors) {
@@ -769,7 +770,7 @@ export function enforceMainlandContiguity(cells: TMapCell[], owner: Int32Array) 
           if (!isLand(cells[neighborId])) continue;
           if (visited.has(neighborId)) continue;
           visited.add(neighborId);
-          queue.push(neighborId);
+          stack.push(neighborId);
         }
       }
       components.push(component);
