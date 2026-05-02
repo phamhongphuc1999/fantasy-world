@@ -2,7 +2,7 @@ import { applyTerrainPreset } from 'src/services/map/applyTerrainPreset';
 import { classifyTerrain } from 'src/services/map/classifyTerrain';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
 import { MAP_TOPOGRAPHY_CONFIG } from 'src/configs/mapConfig';
-import { TMapMeshWithDelaunay, TTerrainPreset, TTopographyCellData } from 'src/types/global';
+import { TMapMeshWithDelaunay, TTerrainPreset, TTopographyCellData } from 'src/types/map.types';
 
 interface TBuildTopographyOptions {
   mesh: TMapMeshWithDelaunay;
@@ -25,6 +25,13 @@ type TReliefSeed = {
   y: number;
   radius: number;
   amplitude: number;
+};
+
+type TNoiseSampler = {
+  value: (x: number, y: number, seedHash: number) => number;
+  fractal: (x: number, y: number, seedHash: number) => number;
+  ridged: (x: number, y: number, seedHash: number) => number;
+  billow: (x: number, y: number, seedHash: number) => number;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -118,6 +125,15 @@ function sampleBillowyNoise(x: number, y: number, seedHash: number) {
   }
 
   return weight > 0 ? total / weight : 0;
+}
+
+function createNoiseSampler(): TNoiseSampler {
+  return {
+    value: sampleValueNoise,
+    fractal: sampleFractalNoise,
+    ridged: sampleRidgedNoise,
+    billow: sampleBillowyNoise,
+  };
 }
 
 function distanceToSegment(x: number, y: number, line: TBoundaryLine): number {
@@ -257,6 +273,7 @@ export function buildTopography({
   seaLevel,
   terrainPreset,
 }: TBuildTopographyOptions): TMapMeshWithDelaunay {
+  const noise = createNoiseSampler();
   const macroHash = hashSeed(`${seed}:macro`);
   const warpHash = hashSeed(`${seed}:warp`);
   const detailHash = hashSeed(`${seed}:detail`);
@@ -283,13 +300,13 @@ export function buildTopography({
 
     // Domain warping breaks up smooth symmetric contours.
     const warpX =
-      sampleValueNoise(
+      noise.value(
         nx * MAP_TOPOGRAPHY_CONFIG.warp.frequency,
         ny * MAP_TOPOGRAPHY_CONFIG.warp.frequency,
         warpHash
       ) - 0.5;
     const warpY =
-      sampleValueNoise(
+      noise.value(
         nx * MAP_TOPOGRAPHY_CONFIG.warp.frequency,
         ny * MAP_TOPOGRAPHY_CONFIG.warp.frequency,
         warpHash ^ 0x27d4eb2d
@@ -297,13 +314,13 @@ export function buildTopography({
     const warpedPrimaryX = clamp(nx + warpX * MAP_TOPOGRAPHY_CONFIG.warp.strength, 0, 1);
     const warpedPrimaryY = clamp(ny + warpY * MAP_TOPOGRAPHY_CONFIG.warp.strength, 0, 1);
     const warpSecondaryX =
-      sampleValueNoise(
+      noise.value(
         warpedPrimaryX * MAP_TOPOGRAPHY_CONFIG.warp.secondaryFrequency,
         warpedPrimaryY * MAP_TOPOGRAPHY_CONFIG.warp.secondaryFrequency,
         warpHash ^ 0x85ebca6b
       ) - 0.5;
     const warpSecondaryY =
-      sampleValueNoise(
+      noise.value(
         warpedPrimaryX * MAP_TOPOGRAPHY_CONFIG.warp.secondaryFrequency,
         warpedPrimaryY * MAP_TOPOGRAPHY_CONFIG.warp.secondaryFrequency,
         warpHash ^ 0x9e3779b9
@@ -320,17 +337,17 @@ export function buildTopography({
     );
 
     const macroNoise =
-      sampleFractalNoise(warpedX, warpedY, macroHash) / MAP_TOPOGRAPHY_CONFIG.noise.macroDivisor;
+      noise.fractal(warpedX, warpedY, macroHash) / MAP_TOPOGRAPHY_CONFIG.noise.macroDivisor;
     const secondaryNoise =
-      sampleFractalNoise(
+      noise.fractal(
         warpedX * MAP_TOPOGRAPHY_CONFIG.noise.secondaryFrequency,
         warpedY * MAP_TOPOGRAPHY_CONFIG.noise.secondaryFrequency,
         macroHash ^ 0x85ebca6b
       ) / MAP_TOPOGRAPHY_CONFIG.noise.secondaryDivisor;
-    const ridgedNoise = sampleRidgedNoise(warpedX * 1.35, warpedY * 1.35, macroHash ^ 0x27d4eb2d);
-    const billowNoise = sampleBillowyNoise(warpedX * 1.15, warpedY * 1.15, macroHash ^ 0x165667b1);
-    const erosionMask = sampleFractalNoise(warpedX * 2.8, warpedY * 2.8, detailHash ^ 0x7feb352d);
-    const coastNoise = sampleValueNoise(
+    const ridgedNoise = noise.ridged(warpedX * 1.35, warpedY * 1.35, macroHash ^ 0x27d4eb2d);
+    const billowNoise = noise.billow(warpedX * 1.15, warpedY * 1.15, macroHash ^ 0x165667b1);
+    const erosionMask = noise.fractal(warpedX * 2.8, warpedY * 2.8, detailHash ^ 0x7feb352d);
+    const coastNoise = noise.value(
       warpedX * MAP_TOPOGRAPHY_CONFIG.noise.coastFrequency,
       warpedY * MAP_TOPOGRAPHY_CONFIG.noise.coastFrequency,
       detailHash
@@ -349,7 +366,7 @@ export function buildTopography({
 
       const jaggedness =
         MAP_TOPOGRAPHY_CONFIG.noise.jaggedBase +
-        sampleValueNoise(
+        noise.value(
           warpedX * MAP_TOPOGRAPHY_CONFIG.noise.jaggedFrequency,
           warpedY * MAP_TOPOGRAPHY_CONFIG.noise.jaggedFrequency,
           detailHash ^ cellIndex

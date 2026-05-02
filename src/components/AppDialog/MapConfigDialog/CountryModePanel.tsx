@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from 'src/components/ui/select';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TNationMode } from 'src/types/global';
+import { TNationMode } from 'src/types/map.types';
 
 type TModeOption = {
   value: TNationMode;

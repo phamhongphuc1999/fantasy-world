@@ -1,35 +1,18 @@
-import { TMapMeshWithDelaunay, TNationMode, TTerrainPreset, TTerrainRatioMap } from 'src/types/global';
-
+import {
+  TMapGenerationConfig,
+  TMapGenerationStages,
+  TMapMeshWithDelaunay,
+} from 'src/types/map.types';
 import { buildGeopolitics } from './buildGeopolitics';
 import { buildHydrology } from './buildHydrology';
 import { buildMesh } from './buildMesh';
 import { buildPopulation } from './buildPopulation';
 import { buildTopography } from './buildTopography';
 
-export type TMapGeneratorConfig = {
-  width: number;
-  height: number;
-  seed: string;
-  cellCount: number;
-  seaLevel: number;
-  terrainPreset: TTerrainPreset;
-  terrainRatios: TTerrainRatioMap;
-  nationMode: TNationMode;
-  nationCount: number;
-};
-
-export type TMapGenerationStages = {
-  mesh: TMapMeshWithDelaunay;
-  topography: TMapMeshWithDelaunay;
-  hydrology: TMapMeshWithDelaunay;
-  population: TMapMeshWithDelaunay;
-  geopolitics: TMapMeshWithDelaunay;
-};
-
 export class MapGenerator {
-  private readonly config: TMapGeneratorConfig;
+  private readonly config: TMapGenerationConfig;
 
-  constructor(config: TMapGeneratorConfig) {
+  constructor(config: TMapGenerationConfig) {
     this.config = config;
   }
 
@@ -89,4 +72,3 @@ export class MapGenerator {
     return geopolitics;
   }
 }
-

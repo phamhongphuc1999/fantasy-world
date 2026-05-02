@@ -1,4 +1,4 @@
-import { TEthnicStatistic, TNation, TTerrainStatistic } from 'src/types/global';
+import { TEthnicStatistic, TNation, TTerrainStatistic } from 'src/types/map.types';
 
 interface TProps {
   nation: TNation;

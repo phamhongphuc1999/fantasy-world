@@ -1,21 +1,4 @@
-import { TMapCell, TMapMesh } from 'src/types/global';
-
-export type TCellDescription = {
-  terrainType: string;
-  elevation: string;
-  biome: string;
-  flow: string;
-  suitability: string;
-  population: string;
-  riverState: string;
-  temperature: string;
-  precipitation: string;
-  rainShadow: string;
-  nationId: string;
-  provinceId: string;
-  ethnicGroupId: string;
-  zoneType: string;
-};
+import { TCellDescription, TMapCell, TMapMesh } from 'src/types/map.types';
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));

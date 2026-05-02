@@ -1,4 +1,4 @@
-import { TMapCell, TTerrainBand } from 'src/types/global';
+import { TMapCell, TTerrainBand } from 'src/types/map.types';
 
 export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));

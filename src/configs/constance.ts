@@ -1,4 +1,5 @@
-import { TSiteMetadata, TTerrainBand, TTerrainPresetOption } from 'src/types/global';
+import type { TSiteMetadata } from 'src/types/global';
+import type { TTerrainBand, TTerrainPresetOption } from 'src/types/map.types';
 import { ImageAsset } from './ImageAssets';
 
 export const APP_NAME = 'Fantasy World';

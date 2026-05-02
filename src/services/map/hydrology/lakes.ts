@@ -1,6 +1,6 @@
 import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { TFifoQueue } from 'src/services/map/core/queue';
-import { TMapCell, TTerrainBand } from 'src/types/global';
+import { TMapCell, TTerrainBand } from 'src/types/map.types';
 
 const T_COAST_OUTLET = MAP_HYDROLOGY_CONFIG.coastOutletId;
 function expandLakes(cells: TMapCell[], flow: Float32Array, downstream: Int32Array) {

@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from 'src/components/ui/dialog';
 import useNationStatistic from 'src/hooks/useNationStatistic';
-import { TMapMeshWithDelaunay } from 'src/types/global';
+import { TMapMeshWithDelaunay } from 'src/types/map.types';
 import NationStatistic from './NationStatistic';
 
 type TProps = {

@@ -23,7 +23,9 @@ export class TDeterministicMinHeap<T> {
     let index = startIndex;
     while (index > 0) {
       const parent = Math.floor((index - 1) / 2);
-      if (this.compare(this.items[index] as THeapItem<T>, this.items[parent] as THeapItem<T>) >= 0) {
+      if (
+        this.compare(this.items[index] as THeapItem<T>, this.items[parent] as THeapItem<T>) >= 0
+      ) {
         break;
       }
       this.swap(index, parent);
@@ -78,4 +80,3 @@ export class TDeterministicMinHeap<T> {
     return this.items.length;
   }
 }
-

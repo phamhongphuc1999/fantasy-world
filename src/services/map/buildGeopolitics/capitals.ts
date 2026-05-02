@@ -1,8 +1,8 @@
 import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
-import { collectCellComponents } from 'src/services/map/core/components';
+import { collectConnectedComponents } from 'src/services/map/core/graph';
 import { TFifoQueue } from 'src/services/map/core/queue';
 import { createSeededRandom } from 'src/services/map/seededRandom';
-import { TMapCell, TNation } from 'src/types/global';
+import { TMapCell, TNation } from 'src/types/map.types';
 import { CAPITAL_VIEWPORT_MARGIN, createRegionalName, isLand } from './shared';
 
 function getLandDistanceMap(
@@ -34,7 +34,7 @@ function getLandDistanceMap(
 }
 
 function getNationComponents(cells: TMapCell[], owner: Int32Array, nationId: number) {
-  return collectCellComponents(
+  return collectConnectedComponents(
     cells,
     (cell) => owner[cell.id] === nationId && isLand(cell),
     (_current, neighbor) => owner[neighbor.id] === nationId && isLand(neighbor),

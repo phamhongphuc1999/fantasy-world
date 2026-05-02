@@ -1,5 +1,5 @@
 import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
-import { TMapCell, TTerrainBand, TTerrainRatioMap } from 'src/types/global';
+import { TMapCell, TTerrainBand, TTerrainRatioMap } from 'src/types/map.types';
 import { clamp, getNeighborAverageElevation, isWaterTerrain } from './common';
 
 type TTerrainBalance = typeof MAP_HYDROLOGY_CONFIG.terrainBalance;

@@ -1,12 +1,9 @@
-import { TMapCell } from 'src/types/global';
+import { TMapCell } from 'src/types/map.types';
 
-type TCellPredicate = (cell: TMapCell) => boolean;
-type TNeighborPredicate = (current: TMapCell, neighbor: TMapCell) => boolean;
-
-export function collectCellComponents(
+export function collectConnectedComponents(
   cells: TMapCell[],
-  shouldInclude: TCellPredicate,
-  canTraverse: TNeighborPredicate,
+  shouldInclude: (cell: TMapCell) => boolean,
+  canTraverse: (current: TMapCell, neighbor: TMapCell) => boolean,
   sortBySizeDesc = false
 ) {
   const visited = new Uint8Array(cells.length);

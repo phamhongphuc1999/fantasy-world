@@ -1,5 +1,5 @@
 import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
-import { TTerrainRatioKey, TTerrainRatioMap } from 'src/types/global';
+import { TTerrainRatioKey, TTerrainRatioMap } from 'src/types/map.types';
 
 export const TERRAIN_RATIO_FIELDS: Array<{ key: TTerrainRatioKey; label: string }> = [
   { key: 'plains', label: 'Plains' },

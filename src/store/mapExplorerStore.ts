@@ -11,7 +11,7 @@ import {
   TMapExplorerState,
   TTerrainRatioKey,
   TTerrainPreset,
-} from 'src/types/global';
+} from 'src/types/map.types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 

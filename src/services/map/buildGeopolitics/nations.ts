@@ -1,8 +1,10 @@
 import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
-import { TDeterministicMinHeap } from 'src/services/map/core/heap';
+import { runMultiSourceExpansion } from 'src/services/map/core/expansionEngine';
 import { clamp } from 'src/services/map/core/math';
+import { sortStableDescByScore } from 'src/services/map/core/sort';
 import { createSeededRandom } from 'src/services/map/seededRandom';
-import { TNationMode, TMapCell } from 'src/types/global';
+import { TMapCell, TNationMode } from 'src/types/map.types';
+import { getNationSeedSuitability } from './nationCostPolicy';
 import {
   getBoundaryStepCost,
   getNationCount,
@@ -266,29 +268,6 @@ function borrowCellForNation(
   return false;
 }
 
-function getSeedSuitability(cellId: number, cells: TMapCell[]) {
-  const cell = cells[cellId];
-  if (!isLand(cell)) return -1000;
-
-  let score = 0;
-  if (cell.terrain === 'plains') score += 2.3;
-  if (cell.terrain === 'valley') score += 1.9;
-  if (cell.terrain === 'forest') score += 0.6;
-  if (cell.terrain === 'mountains' || cell.terrain === 'volcanic') score -= 2.8;
-  if (cell.terrain === 'desert' || cell.terrain === 'badlands') score -= 1.8;
-
-  if (cell.isRiver) score += 1.8;
-  if (cell.isLake) score += 1.3;
-
-  for (const neighborId of cell.neighbors) {
-    const neighbor = cells[neighborId];
-    if (neighbor.isWater && !neighbor.isLake) score += 0.22;
-    if (neighbor.isRiver || neighbor.isLake) score += 0.35;
-  }
-  score += cell.suitability * 1.1;
-  return score;
-}
-
 function selectNationSeeds(
   cells: TMapCell[],
   nationCount: number,
@@ -296,14 +275,15 @@ function selectNationSeeds(
   connectivity: TConnectivityContext,
   minComponentSize = 1
 ) {
-  const allLandCandidates = cells
-    .map((_, cellId) => ({
-      cellId,
-      score: getSeedSuitability(cellId, cells),
-      componentId: connectivity.componentByCellId[cellId],
-    }))
-    .filter((entry) => isLand(cells[entry.cellId]))
-    .sort((a, b) => b.score - a.score);
+  const allLandCandidates = sortStableDescByScore(
+    cells
+      .map((_, cellId) => ({
+        cellId,
+        score: getNationSeedSuitability(cellId, cells),
+        componentId: connectivity.componentByCellId[cellId],
+      }))
+      .filter((entry) => isLand(cells[entry.cellId]))
+  );
   const candidates =
     minComponentSize > 1
       ? allLandCandidates.filter(
@@ -449,47 +429,49 @@ export function buildLandNations(
     return 1.12 + random() * 0.26;
   });
 
-  const frontier = new TDeterministicMinHeap<{ cellId: number; nationId: number; cost: number }>();
+  const seedStates: Array<{ cellId: number; nationId: number; cost: number }> = [];
   for (let nationId = 0; nationId < seeds.length; nationId += 1) {
     const cellId = seeds[nationId];
     owner[cellId] = nationId;
     cost[cellId] = 0;
-    frontier.push({ cellId, nationId, cost: 0 }, 0);
+    seedStates.push({ cellId, nationId, cost: 0 });
   }
 
   const seedHash = makeFrontierHash(seed, 'geopolitics:frontier');
 
-  while (frontier.size > 0) {
-    const current = frontier.pop() as { cellId: number; nationId: number; cost: number };
-    if (current.cost > cost[current.cellId]) continue;
+  runMultiSourceExpansion({
+    seeds: seedStates,
+    getPriority: (state) => state.cost,
+    isStale: (state) => state.cost > cost[state.cellId],
+    expand: (current, push) => {
+      const currentCell = cells[current.cellId];
+      for (const neighborId of currentCell.neighbors) {
+        const neighbor = cells[neighborId];
+        if (!isLand(neighbor)) continue;
+        let stepCost = getBoundaryStepCost(
+          cells,
+          owner,
+          current.cellId,
+          neighborId,
+          current.nationId,
+          seedHash,
+          profile
+        );
+        if (nationMode === 'dominant') {
+          stepCost *= current.nationId === 0 ? 0.72 : 1.18;
+        }
+        stepCost *= nationExpansionBias[current.nationId] || 1;
+        stepCost += MAP_GEOPOLITICAL_CONFIG.frontierNoiseWeight * 0.15;
+        const nextCost = current.cost + Math.max(0.2, stepCost);
 
-    const currentCell = cells[current.cellId];
-    for (const neighborId of currentCell.neighbors) {
-      const neighbor = cells[neighborId];
-      if (!isLand(neighbor)) continue;
-      let stepCost = getBoundaryStepCost(
-        cells,
-        owner,
-        current.cellId,
-        neighborId,
-        current.nationId,
-        seedHash,
-        profile
-      );
-      if (nationMode === 'dominant') {
-        stepCost *= current.nationId === 0 ? 0.72 : 1.18;
+        if (nextCost < cost[neighborId]) {
+          cost[neighborId] = nextCost;
+          owner[neighborId] = current.nationId;
+          push({ cellId: neighborId, nationId: current.nationId, cost: nextCost });
+        }
       }
-      stepCost *= nationExpansionBias[current.nationId] || 1;
-      stepCost += MAP_GEOPOLITICAL_CONFIG.frontierNoiseWeight * 0.15;
-      const nextCost = current.cost + Math.max(0.2, stepCost);
-
-      if (nextCost < cost[neighborId]) {
-        cost[neighborId] = nextCost;
-        owner[neighborId] = current.nationId;
-        frontier.push({ cellId: neighborId, nationId: current.nationId, cost: nextCost }, nextCost);
-      }
-    }
-  }
+    },
+  });
   return owner;
 }
 

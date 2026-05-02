@@ -1,5 +1,5 @@
 import { MAP_TERRAIN_CLASSIFICATION_CONFIG } from 'src/configs/mapConfig';
-import { TTerrainBand } from 'src/types/global';
+import { TTerrainBand } from 'src/types/map.types';
 
 export function classifyTerrain(elevation: number, seaLevel: number): TTerrainBand {
   if (elevation < seaLevel - MAP_TERRAIN_CLASSIFICATION_CONFIG.deepWaterOffset) {

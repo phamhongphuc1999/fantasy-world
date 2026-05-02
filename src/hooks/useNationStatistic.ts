@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { toPercent } from 'src/services';
-import { TMapMeshWithDelaunay } from 'src/types/global';
+import { TMapMeshWithDelaunay } from 'src/types/map.types';
 
 export default function useNationStatistic(nationId: number | null, mesh: TMapMeshWithDelaunay) {
   const nation = useMemo(() => {

@@ -1,5 +1,5 @@
 import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
-import { TMapCell } from 'src/types/global';
+import { TMapCell } from 'src/types/map.types';
 import { buildLakeSizeMap, buildPlainsRegionSizeMap } from './lakes';
 
 const T_COAST_OUTLET = MAP_HYDROLOGY_CONFIG.coastOutletId;

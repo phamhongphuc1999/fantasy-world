@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { NATION_COLOR_PALETTE } from 'src/configs/mapConfig';
 import { useMapContext } from 'src/contexts/map.context';
-import { TMapCell } from 'src/types/global';
+import { TMapCell } from 'src/types/map.types';
 
 type TProps = Record<string, never>;
 

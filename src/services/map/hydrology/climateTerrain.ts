@@ -1,5 +1,5 @@
 import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
-import { TMapCell, TTerrainBand } from 'src/types/global';
+import { TMapCell, TTerrainBand } from 'src/types/map.types';
 import { clamp } from './common';
 
 export function buildWaterInfluence(cells: TMapCell[]): Float32Array {

@@ -2,7 +2,7 @@
 import { type MouseEvent } from 'react';
 import { NATION_COLOR_PALETTE } from 'src/configs/mapConfig';
 import { getTerrainColor } from 'src/services';
-import { TEthnicGroup, TMapCell, TNation } from 'src/types/global';
+import { TEthnicGroup, TMapCell, TNation } from 'src/types/map.types';
 
 function drawPolygon(context: CanvasRenderingContext2D, polygon: TMapCell['polygon']) {
   if (polygon.length === 0) return;

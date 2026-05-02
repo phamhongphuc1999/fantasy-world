@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_CONFIG, MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
-import { TMapMeshWithDelaunay } from 'src/types/global';
-import { runMapGenerationStages, TGenerationConfig } from './runMapGeneration';
+import { TMapGenerationConfig, TMapMeshWithDelaunay } from 'src/types/map.types';
+import { runMapGenerationStages } from './runMapGeneration';
 
 type TStageSignature = {
   cells: number;
@@ -94,7 +94,7 @@ function toStageSignature(mesh: TMapMeshWithDelaunay): TStageSignature {
   };
 }
 
-function toPipelineSignature(config: TGenerationConfig): TPipelineSignature {
+function toPipelineSignature(config: TMapGenerationConfig): TPipelineSignature {
   const stages = runMapGenerationStages(config);
   return {
     mesh: toStageSignature(stages.mesh),
@@ -105,7 +105,7 @@ function toPipelineSignature(config: TGenerationConfig): TPipelineSignature {
   };
 }
 
-function makeConfig(seed: string): TGenerationConfig {
+function makeConfig(seed: string): TMapGenerationConfig {
   return {
     width: MAP_VIEWPORT_CONFIG.width,
     height: MAP_VIEWPORT_CONFIG.height,

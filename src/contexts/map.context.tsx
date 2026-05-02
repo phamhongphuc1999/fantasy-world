@@ -15,17 +15,7 @@ import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
 import { MapGenerator } from 'src/services/map/map.generator';
 import { createSeededRandom } from 'src/services/map/seededRandom';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TMapMeshWithDelaunay } from 'src/types/global';
-
-export type TMapContextType = {
-  mesh: TMapMeshWithDelaunay;
-  isGenerating: boolean;
-  handlePointerMove: (x: number, y: number) => void;
-  handleApplySeed: () => void;
-  handleRandomizeSeed: () => void;
-  handleCellCountChange: (nextValue: number) => void;
-  handleSeaLevelDraftChange: (nextValue: number) => void;
-};
+import { TMapContextType, TMapMeshWithDelaunay } from 'src/types/map.types';
 
 const mapContextDefault: TMapContextType = {
   mesh: {

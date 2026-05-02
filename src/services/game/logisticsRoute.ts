@@ -1,6 +1,6 @@
-import { TMapCell } from 'src/types/global';
+import { TMapCell } from 'src/types/map.types';
 
-export type TLogisticsRouteResult = {
+type TLogisticsRouteResult = {
   pathCellIds: number[];
   totalCost: number;
   distance: number;
@@ -8,7 +8,7 @@ export type TLogisticsRouteResult = {
   score: number;
 };
 
-export type TLogisticsRouteInput = {
+type TLogisticsRouteInput = {
   cells: TMapCell[];
   startCellId: number;
   goalCellId: number;

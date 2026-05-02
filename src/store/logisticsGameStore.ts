@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { buildRoadEdgeKey, findLogisticsRoute } from 'src/services/game/logisticsRoute';
-import { TMapMeshWithDelaunay } from 'src/types/global';
+import { TMapMeshWithDelaunay } from 'src/types/map.types';
 
 type TLogisticsState = {
   enabled: boolean;

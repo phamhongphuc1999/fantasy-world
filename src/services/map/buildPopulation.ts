@@ -1,5 +1,5 @@
 import { createSeededRandom } from 'src/services/map/seededRandom';
-import { TMapMeshWithDelaunay, TTerrainBand } from 'src/types/global';
+import { TMapMeshWithDelaunay, TTerrainBand } from 'src/types/map.types';
 import { clamp } from './core/math';
 import { TFifoQueue } from './core/queue';
 

@@ -3,7 +3,7 @@ import {
   TMapDisplaySettings,
   TTerrainPreset,
   TTerrainRatioMap,
-} from 'src/types/global';
+} from 'src/types/map.types';
 
 export const NATION_COLOR_PALETTE = [
   '#e6194b', // red

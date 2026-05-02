@@ -8,7 +8,7 @@ import {
   smoothElevations,
 } from 'src/services/map/terrainShapeUtils';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
-import { TMapMesh, TTerrainPreset } from 'src/types/global';
+import { TMapMesh, TTerrainPreset } from 'src/types/map.types';
 
 interface TApplyTerrainPresetOptions {
   mesh: TMapMesh;

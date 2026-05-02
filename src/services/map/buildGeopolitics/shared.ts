@@ -1,10 +1,43 @@
 import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
-import { TNationMode, TMapCell, TTerrainBand, TZoneType } from 'src/types/global';
+import {
+  TBorderLevelKey,
+  TMapCell,
+  TNationMode,
+  TTerrainBand,
+  TZoneType,
+} from 'src/types/map.types';
 
 export const CAPITAL_VIEWPORT_MARGIN = 14;
-export type TBorderLevelKey = 'country' | 'province';
 export type TBorderLevelProfile = (typeof MAP_GEOPOLITICAL_CONFIG.borderLevels)[TBorderLevelKey];
+
+const starts = [
+  'Al',
+  'Bel',
+  'Cor',
+  'Dor',
+  'El',
+  'Fal',
+  'Gal',
+  'Har',
+  'Is',
+  'Kor',
+  'Lor',
+  'Mar',
+  'Nor',
+  'Or',
+  'Pel',
+  'Quel',
+  'Riv',
+  'Sel',
+  'Tor',
+  'Val',
+  'Wen',
+  'Yar',
+  'Zor',
+];
+const mids = ['a', 'e', 'i', 'o', 'u', 'ae', 'ia', 'oa', 'ei'];
+const ends = ['dor', 'land', 'ria', 'mar', 'vale', 'stan', 'mere', 'gard', 'wyn', 'crest'];
 
 export function edgeNoise(seedHash: number, leftId: number, rightId: number) {
   const low = Math.min(leftId, rightId);
@@ -16,33 +49,6 @@ export function edgeNoise(seedHash: number, leftId: number, rightId: number) {
 
 export function createRegionalName(seed: string, namespace: string, id: number, prefix?: string) {
   const random = createSeededRandom(`${seed}:${namespace}:${id}:name`);
-  const starts = [
-    'Al',
-    'Bel',
-    'Cor',
-    'Dor',
-    'El',
-    'Fal',
-    'Gal',
-    'Har',
-    'Is',
-    'Kor',
-    'Lor',
-    'Mar',
-    'Nor',
-    'Or',
-    'Pel',
-    'Quel',
-    'Riv',
-    'Sel',
-    'Tor',
-    'Val',
-    'Wen',
-    'Yar',
-    'Zor',
-  ];
-  const mids = ['a', 'e', 'i', 'o', 'u', 'ae', 'ia', 'oa', 'ei'];
-  const ends = ['dor', 'land', 'ria', 'mar', 'vale', 'stan', 'mere', 'gard', 'wyn', 'crest'];
   const start = starts[Math.floor(random() * starts.length)] as string;
   const mid = mids[Math.floor(random() * mids.length)] as string;
   const end = ends[Math.floor(random() * ends.length)] as string;
