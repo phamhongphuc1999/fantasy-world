@@ -29,6 +29,27 @@ type TNationAssignment = {
   preserveNationCount: number;
 };
 
+function runNationStabilityPass(
+  cells: TMapMeshWithDelaunay['cells'],
+  owner: Int32Array,
+  preserveNationCount: number
+) {
+  alignNaturalTerrainClusters(cells, owner);
+  limitMountainClusterSplit(cells, owner, 'country');
+  enforceMinimumNationArea(cells, owner, preserveNationCount);
+}
+
+function runNationClaimReconciliationPass(
+  cells: TMapMeshWithDelaunay['cells'],
+  owner: Int32Array,
+  preserveNationCount: number
+) {
+  fillUnclaimedLand(cells, owner);
+  ensureAllLandClaimed(cells, owner);
+  enforceMinimumNationArea(cells, owner, preserveNationCount);
+  ensureAllLandClaimed(cells, owner);
+}
+
 function assignNations(
   mesh: TMapMeshWithDelaunay,
   seed: string,
@@ -49,16 +70,10 @@ function postProcessNations(
   nationMode: TNationMode,
   seed: string
 ) {
-  alignNaturalTerrainClusters(cells, owner);
-  limitMountainClusterSplit(cells, owner, 'country');
-  enforceMinimumNationArea(cells, owner, preserveNationCount);
+  runNationStabilityPass(cells, owner, preserveNationCount);
   enforceMainlandContiguity(cells, owner);
-  alignNaturalTerrainClusters(cells, owner);
-  limitMountainClusterSplit(cells, owner, 'country');
-  fillUnclaimedLand(cells, owner);
-  ensureAllLandClaimed(cells, owner);
-  enforceMinimumNationArea(cells, owner, preserveNationCount);
-  ensureAllLandClaimed(cells, owner);
+  runNationStabilityPass(cells, owner, preserveNationCount);
+  runNationClaimReconciliationPass(cells, owner, preserveNationCount);
   if (nationMode === 'balanced') {
     diversifySmallNationSizes(cells, owner, seed);
     enforceMinimumNationArea(cells, owner, preserveNationCount);

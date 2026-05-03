@@ -175,6 +175,46 @@ function tryGrowNationToMinimum(
   return currentSize >= minNationCells;
 }
 
+function buildNationSizeMapForLandCells(landCellIds: number[], owner: Int32Array) {
+  const sizeByNation = new Map<number, number>();
+  for (const cellId of landCellIds) {
+    if (owner[cellId] < 0) continue;
+    sizeByNation.set(owner[cellId], (sizeByNation.get(owner[cellId]) || 0) + 1);
+  }
+  return sizeByNation;
+}
+
+function getSmallNationIds(sizeByNation: Map<number, number>, minNationCells: number) {
+  return Array.from(sizeByNation.entries())
+    .filter(([, size]) => size < minNationCells)
+    .sort((a, b) => a[1] - b[1])
+    .map(([nationId]) => nationId);
+}
+
+function findNearestForeignNationId(
+  cells: TMapCell[],
+  owner: Int32Array,
+  landCellIds: number[],
+  sourceCellId: number,
+  sourceNationId: number
+) {
+  const point = cells[sourceCellId].site;
+  let bestNationId = -1;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const candidateCellId of landCellIds) {
+    const candidateNationId = owner[candidateCellId];
+    if (candidateNationId < 0 || candidateNationId === sourceNationId) continue;
+    const candidatePoint = cells[candidateCellId].site;
+    const distance = Math.hypot(point[0] - candidatePoint[0], point[1] - candidatePoint[1]);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestNationId = candidateNationId;
+    }
+  }
+  return bestNationId;
+}
+
 function getNeighborNationIds(cells: TMapCell[], owner: Int32Array, nationId: number) {
   const neighbors = new Set<number>();
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
@@ -529,21 +569,14 @@ export function enforceMinimumNationArea(
     Math.floor(landCellIds.length * GEOPOLITICAL_CONFIG.minNationLandRatio)
   );
 
-  const sizeByNation = new Map<number, number>();
-  for (const cellId of landCellIds) {
-    if (owner[cellId] < 0) continue;
-    sizeByNation.set(owner[cellId], (sizeByNation.get(owner[cellId]) || 0) + 1);
-  }
+  const sizeByNation = buildNationSizeMapForLandCells(landCellIds, owner);
 
   let activeNationCount = sizeByNation.size;
   const maxRebalancePasses = Math.max(1, sizeByNation.size);
 
   for (let rebalancePass = 0; rebalancePass < maxRebalancePasses; rebalancePass += 1) {
     let changedInPass = false;
-    const smallNationIds = Array.from(sizeByNation.entries())
-      .filter(([, size]) => size < minNationCells)
-      .sort((a, b) => a[1] - b[1])
-      .map(([nationId]) => nationId);
+    const smallNationIds = getSmallNationIds(sizeByNation, minNationCells);
 
     if (smallNationIds.length === 0) break;
 
@@ -597,18 +630,7 @@ export function enforceMinimumNationArea(
           }
         }
         if (bestNationId < 0) {
-          const point = cells[cellId].site;
-          let bestDistance = Number.POSITIVE_INFINITY;
-          for (const candidateCellId of landCellIds) {
-            const candidateNationId = owner[candidateCellId];
-            if (candidateNationId < 0 || candidateNationId === nationId) continue;
-            const candidatePoint = cells[candidateCellId].site;
-            const distance = Math.hypot(point[0] - candidatePoint[0], point[1] - candidatePoint[1]);
-            if (distance < bestDistance) {
-              bestDistance = distance;
-              bestNationId = candidateNationId;
-            }
-          }
+          bestNationId = findNearestForeignNationId(cells, owner, landCellIds, cellId, nationId);
         }
         if (bestNationId >= 0) {
           owner[cellId] = bestNationId;
