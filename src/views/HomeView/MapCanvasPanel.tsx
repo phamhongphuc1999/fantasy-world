@@ -60,11 +60,9 @@ export default function MapCanvasPanel() {
     }
 
     const showUniformLand =
-      !displaySettings.showTerrain &&
-      !displaySettings.showCountryBorders &&
-      !displaySettings.showEthnicRegions;
+      !displaySettings.terrain && !displaySettings.countryBorders && !displaySettings.ethnicBorders;
 
-    if (displaySettings.showTerrain) {
+    if (displaySettings.terrain) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
         drawCellShape(context, cell, getCellDisplayColor(cell), 0.95, 'transparent', 0);
@@ -78,13 +76,10 @@ export default function MapCanvasPanel() {
       }
     }
 
-    if (displaySettings.showCountryBorders)
-      drawCountryFill(context, cells, displaySettings.showTerrain);
-    if (displaySettings.showEthnicRegions) {
-      drawEthnicFill(context, cells, displaySettings.showTerrain);
-    }
+    if (displaySettings.countryBorders) drawCountryFill(context, cells, displaySettings.terrain);
+    if (displaySettings.ethnicBorders) drawEthnicFill(context, cells, displaySettings.terrain);
 
-    if (displaySettings.showRivers) {
+    if (displaySettings.rivers) {
       for (const cell of cells) {
         if (!cell.isRiver || cell.downstreamId === null) continue;
 
@@ -103,24 +98,22 @@ export default function MapCanvasPanel() {
       }
     }
 
-    if (displaySettings.showCountryBorders) {
+    if (displaySettings.countryBorders) {
       drawGrayBorders(context, cells);
       drawUrbanHierarchy(context, cells);
     }
 
-    if (displaySettings.showCountryBorders && displaySettings.showProvinceBorders) {
+    if (displaySettings.countryBorders && displaySettings.provinceBorders)
       drawProvinceBorders(context, cells);
-    }
 
-    if (displaySettings.showRegionNames) {
-      if (displaySettings.showEthnicRegions) {
+    if (displaySettings.labels) {
+      if (displaySettings.ethnicBorders)
         drawRegionNames(context, cells, nations, ethnicGroups, 'ethnic');
-      } else if (displaySettings.showCountryBorders) {
+      else if (displaySettings.countryBorders)
         drawRegionNames(context, cells, nations, ethnicGroups, 'nation');
-      }
     }
 
-    if (displaySettings.showTerrain && cells.length <= T_SITE_MARKER_LIMIT) {
+    if (displaySettings.terrain && cells.length <= T_SITE_MARKER_LIMIT) {
       for (const cell of cells) {
         drawSiteMarker(context, cell, 1.4, cell.isWater ? '#dbeafe' : '#fef3c7', 0.22);
       }

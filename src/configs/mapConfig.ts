@@ -1,9 +1,4 @@
-import {
-  TMapDisplaySettings,
-  TNationMode,
-  TTerrainPreset,
-  TTerrainRatioMap,
-} from 'src/types/map.types';
+import { TMapDisplaySettings, TTerrainPreset, TTerrainRatioMap } from 'src/types/map.types';
 
 export const NATION_COLOR = [
   '#e6194b', // red
@@ -41,7 +36,6 @@ export const DEFAULT_CONFIG: {
   cellCount: number;
   seaLevel: number;
   terrainPreset: TTerrainPreset;
-  nationMode: TNationMode;
   nationCount: number;
   terrainRatios: TTerrainRatioMap;
   displaySettings: TMapDisplaySettings;
@@ -50,7 +44,6 @@ export const DEFAULT_CONFIG: {
   cellCount: 10000,
   seaLevel: 0.5,
   terrainPreset: 'balanced',
-  nationMode: 'balanced',
   nationCount: 8,
   terrainRatios: {
     plains: 0.35,
@@ -62,12 +55,13 @@ export const DEFAULT_CONFIG: {
     plateau: 0.08,
   },
   displaySettings: {
-    showTerrain: true,
-    showRivers: false,
-    showCountryBorders: false,
-    showProvinceBorders: false,
-    showEthnicRegions: false,
-    showRegionNames: false,
+    terrain: true,
+    rivers: false,
+    countryBorders: false,
+    provinceBorders: false,
+    ethnicBorders: false,
+    labels: false,
+    cellData: false,
   },
 };
 

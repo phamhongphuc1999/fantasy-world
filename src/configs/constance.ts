@@ -40,3 +40,22 @@ export const TERRAIN_COLORS: Record<TTerrainBand, string> = {
   volcanic: '#3b2f2a',
   tundra: '#dfe7ef',
 };
+
+export const TERRAIN_ICONS: Record<TTerrainBand, string> = {
+  'deep-water': '🌊',
+  'shallow-water': '🌊',
+  'inland-sea': '🌊',
+  coast: '🏖️',
+  lake: '🏞️',
+  plains: '🌾',
+  plateau: '🪨',
+  forest: '🌲',
+  desert: '🏜️',
+  badlands: '🪨',
+  swamp: '🐊',
+  valley: '🌿',
+  hills: '⛰️',
+  mountains: '🏔️',
+  volcanic: '🌋',
+  tundra: '❄️',
+};

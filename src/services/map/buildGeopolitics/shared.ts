@@ -1,12 +1,6 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
-import {
-  TBorderLevelKey,
-  TMapCell,
-  TNationMode,
-  TTerrainBand,
-  TZoneType,
-} from 'src/types/map.types';
+import { TBorderLevelKey, TMapCell, TTerrainBand, TZoneType } from 'src/types/map.types';
 
 export const CAPITAL_VIEWPORT_MARGIN = 14;
 export type TBorderLevelProfile = (typeof GEOPOLITICAL_CONFIG.borderLevels)[TBorderLevelKey];
@@ -218,21 +212,12 @@ export function assignMaritimeZones(cells: TMapCell[]) {
   return { waterOwner, zoneType };
 }
 
-export function getNationCount(
-  mode: TNationMode,
-  nationCount: number,
-  seed: string,
-  landCellCount: number
-) {
+export function getNationCount(nationCount: number, landCellCount: number) {
   if (landCellCount <= 0) return 0;
   const maxNationsByMinLandRule = Math.floor(landCellCount / 10) - 2;
   const maxNations = Math.max(1, Math.min(40, maxNationsByMinLandRule));
-  if (mode === 'balanced') {
-    const requested = Math.max(2, Math.floor(nationCount));
-    return Math.min(requested, maxNations);
-  }
-  const random = createSeededRandom(`${seed}:custom-country-dominant-count`);
-  return Math.min(maxNations, 2 + Math.floor(random() * 4));
+  const requested = Math.max(2, Math.floor(nationCount));
+  return Math.min(requested, maxNations);
 }
 
 export function makeFrontierHash(seed: string, suffix: string) {

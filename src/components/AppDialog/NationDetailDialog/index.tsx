@@ -36,7 +36,10 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md sm:max-w-[45vw]">
+      <DialogContent
+        overlayClassName="supports-backdrop-filter:backdrop-blur-none"
+        className="border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md sm:max-w-[45vw]"
+      >
         <DialogHeader>
           <DialogTitle className="font-bold">{nation.name}</DialogTitle>
           <DialogDescription className="text-slate-300">
@@ -51,6 +54,7 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
             numberOfCells={data.nationCells.length}
             terrainStats={data.terrainStats}
             ethnicStats={data.ethnicStats}
+            provinceStats={data.provinces}
           />
         </div>
       </DialogContent>

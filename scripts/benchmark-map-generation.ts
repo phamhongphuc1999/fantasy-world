@@ -16,7 +16,6 @@ const config = {
   seaLevel: DEFAULT_CONFIG.seaLevel,
   terrainPreset: DEFAULT_CONFIG.terrainPreset,
   terrainRatios: DEFAULT_CONFIG.terrainRatios,
-  nationMode: DEFAULT_CONFIG.nationMode,
   nationCount: DEFAULT_CONFIG.nationCount,
 };
 
@@ -83,7 +82,6 @@ for (let round = 0; round < rounds; round += 1) {
     buildGeopolitics({
       mesh: populationPhase.result,
       seed: config.seed,
-      nationMode: config.nationMode,
       nationCount: config.nationCount,
     })
   );

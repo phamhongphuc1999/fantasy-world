@@ -15,7 +15,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export default function HoverCellOverview() {
-  const { hoverClientPoint, hoverIndex, hoverVisualizationEnabled } = useMapExplorerStore();
+  const { hoverClientPoint, hoverIndex, displaySettings } = useMapExplorerStore();
   const { mesh } = useMapContext();
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
@@ -66,7 +66,7 @@ export default function HoverCellOverview() {
     return { left, top };
   }, [hoverClientPoint, viewportSize.height, viewportSize.width]);
 
-  if (!hoverVisualizationEnabled || !description || !cell) return null;
+  if (!displaySettings.cellData || !description || !cell) return null;
 
   return (
     <div className="pointer-events-none fixed z-1000000" style={positionStyle}>

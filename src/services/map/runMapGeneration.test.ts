@@ -114,7 +114,6 @@ function makeConfig(seed: string): TMapGenerationConfig {
     seaLevel: DEFAULT_CONFIG.seaLevel,
     terrainPreset: DEFAULT_CONFIG.terrainPreset,
     terrainRatios: DEFAULT_CONFIG.terrainRatios,
-    nationMode: DEFAULT_CONFIG.nationMode,
     nationCount: DEFAULT_CONFIG.nationCount,
   };
 }

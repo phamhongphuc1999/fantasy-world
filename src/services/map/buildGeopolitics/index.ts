@@ -1,4 +1,4 @@
-import { TMapMeshWithDelaunay, TNationMode } from 'src/types/map.types';
+import { TMapMeshWithDelaunay } from 'src/types/map.types';
 import { pickEconomicAndCapital } from './capitals';
 import { buildEthnicRegions } from './ethnic';
 import {
@@ -19,7 +19,6 @@ import { assignMaritimeZones, getNationCount, isLand, limitMountainClusterSplit 
 type TBuildGeopoliticsOptions = {
   mesh: TMapMeshWithDelaunay;
   seed: string;
-  nationMode: TNationMode;
   nationCount: number;
 };
 
@@ -49,13 +48,12 @@ function runNationClaimReconciliationPass(
 function assignNations(
   mesh: TMapMeshWithDelaunay,
   seed: string,
-  nationMode: TNationMode,
   nationCount: number
 ): TNationAssignment {
   const landCellCount = mesh.cells.filter(isLand).length;
-  const targetNationCount = getNationCount(nationMode, nationCount, seed, landCellCount);
-  const preserveNationCount = nationMode === 'balanced' ? targetNationCount : 0;
-  const owner = buildLandNations(mesh.cells, seed, nationMode, nationCount);
+  const targetNationCount = getNationCount(nationCount, landCellCount);
+  const preserveNationCount = targetNationCount;
+  const owner = buildLandNations(mesh.cells, seed, nationCount);
   return { owner, preserveNationCount };
 }
 
@@ -63,17 +61,14 @@ function postProcessNations(
   cells: TMapMeshWithDelaunay['cells'],
   owner: Int32Array,
   preserveNationCount: number,
-  nationMode: TNationMode,
   seed: string
 ) {
   runNationStabilityPass(cells, owner, preserveNationCount);
   enforceMainlandContiguity(cells, owner);
   runNationStabilityPass(cells, owner, preserveNationCount);
   runNationClaimReconciliationPass(cells, owner, preserveNationCount);
-  if (nationMode === 'balanced') {
-    diversifySmallNationSizes(cells, owner, seed);
-    runNationClaimReconciliationPass(cells, owner, preserveNationCount);
-  }
+  diversifySmallNationSizes(cells, owner, seed);
+  runNationClaimReconciliationPass(cells, owner, preserveNationCount);
 }
 
 function assignProvinces(cells: TMapMeshWithDelaunay['cells'], owner: Int32Array, seed: string) {
@@ -146,11 +141,10 @@ function finalizeOwnershipProjection(
 export function buildGeopolitics({
   mesh,
   seed,
-  nationMode,
   nationCount,
 }: TBuildGeopoliticsOptions): TMapMeshWithDelaunay {
-  const { owner, preserveNationCount } = assignNations(mesh, seed, nationMode, nationCount);
-  postProcessNations(mesh.cells, owner, preserveNationCount, nationMode, seed);
+  const { owner, preserveNationCount } = assignNations(mesh, seed, nationCount);
+  postProcessNations(mesh.cells, owner, preserveNationCount, seed);
   const { provinceOwner } = assignProvinces(mesh.cells, owner, seed);
   postProcessProvinces(mesh.cells, owner, provinceOwner);
   const { ethnicOwner, ethnicGroups } = assignEthnic(mesh.cells, owner, seed);

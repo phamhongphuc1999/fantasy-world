@@ -61,8 +61,6 @@ export interface TEthnicGroup {
   coreCellId: number;
 }
 
-export type TNationMode = 'dominant' | 'balanced';
-
 export interface TMapCell {
   id: number;
   site: TPoint;
@@ -110,12 +108,13 @@ export type TMapMeshWithDelaunay = TMapMesh & {
 
 // Map Configuration & UI state
 export interface TMapDisplaySettings {
-  showTerrain: boolean;
-  showRivers: boolean;
-  showCountryBorders: boolean;
-  showProvinceBorders: boolean;
-  showEthnicRegions: boolean;
-  showRegionNames: boolean;
+  terrain: boolean;
+  rivers: boolean;
+  countryBorders: boolean;
+  provinceBorders: boolean;
+  ethnicBorders: boolean;
+  labels: boolean;
+  cellData: boolean;
 }
 
 export type TTerrainRatioKey =
@@ -136,29 +135,14 @@ export interface TTerrainPresetOption {
 
 export interface TMapExplorerState {
   seed: string;
-  seedDraft: string;
   cellCount: number;
   seaLevel: number;
-  seaLevelDraft: number;
   terrainPreset: TTerrainPreset;
-  nationMode: TNationMode;
   nationCount: number;
   terrainRatios: TTerrainRatioMap;
-  terrainRatiosDraft: TTerrainRatioMap;
   displaySettings: TMapDisplaySettings;
-  hoverVisualizationEnabled: boolean;
   hoverIndex: number | null;
   hoverClientPoint: { x: number; y: number } | null;
-}
-
-export interface TMapContextType {
-  mesh: TMapMeshWithDelaunay;
-  isGenerating: boolean;
-  handlePointerMove: (x: number, y: number) => void;
-  handleApplySeed: () => void;
-  handleRandomizeSeed: () => void;
-  handleCellCountChange: (nextValue: number) => void;
-  handleSeaLevelDraftChange: (nextValue: number) => void;
 }
 
 // Statistics & Tables
@@ -166,6 +150,12 @@ export interface TTerrainStatistic {
   terrain: string;
   count: number;
   percent: number;
+}
+
+export interface TProvinceStatistic {
+  provinceId: number;
+  population: number;
+  cellCount: number;
 }
 
 export interface TEthnicStatistic {
@@ -186,7 +176,6 @@ export interface TMapGenerationConfig {
   seaLevel: number;
   terrainPreset: TTerrainPreset;
   terrainRatios: TTerrainRatioMap;
-  nationMode: TNationMode;
   nationCount: number;
 }
 

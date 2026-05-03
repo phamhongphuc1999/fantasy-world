@@ -1,3 +1,4 @@
+import BlurCard from 'src/components/BlurCard';
 import {
   Select,
   SelectContent,
@@ -14,12 +15,7 @@ export default function TerrainPresetSelect() {
   const { terrainPreset, setTerrainPreset } = useMapExplorerStore();
 
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-xs font-medium tracking-[0.18em] text-slate-300 uppercase">
-          Terrain Preset
-        </span>
-      </div>
+    <BlurCard title="Terrain Preset">
       <Select
         value={terrainPreset}
         onValueChange={(value) => setTerrainPreset(value as TTerrainPreset)}
@@ -37,6 +33,6 @@ export default function TerrainPresetSelect() {
           </SelectGroup>
         </SelectContent>
       </Select>
-    </div>
+    </BlurCard>
   );
 }

@@ -13,9 +13,15 @@ import {
 } from 'react';
 import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
 import { MapGenerator } from 'src/services/map/map.generator';
-import { createSeededRandom } from 'src/services/map/seededRandom';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TMapContextType, TMapMeshWithDelaunay } from 'src/types/map.types';
+import { TMapMeshWithDelaunay } from 'src/types/map.types';
+
+interface TMapContextType {
+  mesh: TMapMeshWithDelaunay;
+  isGenerating: boolean;
+  handlePointerMove: (x: number, y: number) => void;
+  handleCellCountChange: (nextValue: number) => void;
+}
 
 const mapContextDefault: TMapContextType = {
   mesh: {
@@ -30,10 +36,7 @@ const mapContextDefault: TMapContextType = {
   },
   isGenerating: true,
   handlePointerMove: () => {},
-  handleApplySeed: () => {},
-  handleRandomizeSeed: () => {},
   handleCellCountChange: () => {},
-  handleSeaLevelDraftChange: () => {},
 };
 
 const MapContext = createContext<TMapContextType>(mapContextDefault);
@@ -43,20 +46,15 @@ interface TProps {
 }
 
 export default function MapProvider({ children }: TProps) {
-  const randomizeCountRef = useRef(0);
   const generationIdRef = useRef(0);
   const {
     seed,
-    seedDraft,
     cellCount,
     seaLevel,
     terrainPreset,
     terrainRatios,
-    nationMode,
     nationCount,
-    setSeed,
     setCellCount,
-    setSeaLevelDraft,
     setHoverIndex,
   } = useMapExplorerStore();
 
@@ -77,7 +75,6 @@ export default function MapProvider({ children }: TProps) {
         seaLevel,
         terrainPreset,
         terrainRatios,
-        nationMode,
         nationCount,
       });
       const nextMesh = generator.generate();
@@ -89,7 +86,7 @@ export default function MapProvider({ children }: TProps) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [cellCount, nationCount, nationMode, seaLevel, seed, terrainPreset, terrainRatios]);
+  }, [cellCount, nationCount, seaLevel, seed, terrainPreset, terrainRatios]);
 
   const handlePointerMove = useCallback(
     (x: number, y: number) => {
@@ -100,20 +97,6 @@ export default function MapProvider({ children }: TProps) {
     [mesh.cells.length, mesh.delaunay, setHoverIndex]
   );
 
-  const handleApplySeed = useCallback(() => {
-    const normalizedSeed = seedDraft.trim() || 'world000';
-    setSeed(normalizedSeed);
-  }, [seedDraft, setSeed]);
-
-  const handleRandomizeSeed = useCallback(() => {
-    randomizeCountRef.current += 1;
-    const random = createSeededRandom(`${seed}:${randomizeCountRef.current}:seed-randomize`);
-    const nextSeed = `world${Math.floor(random() * 1_000_000)
-      .toString()
-      .padStart(6, '0')}`;
-    setSeed(nextSeed);
-  }, [seed, setSeed]);
-
   const handleCellCountChange = useCallback(
     (nextValue: number) => {
       setCellCount(
@@ -123,32 +106,9 @@ export default function MapProvider({ children }: TProps) {
     [setCellCount]
   );
 
-  const handleSeaLevelDraftChange = useCallback(
-    (nextValue: number) => {
-      setSeaLevelDraft(nextValue);
-    },
-    [setSeaLevelDraft]
-  );
-
   const contextData = useMemo<TMapContextType>(() => {
-    return {
-      mesh,
-      isGenerating,
-      handlePointerMove,
-      handleApplySeed,
-      handleRandomizeSeed,
-      handleCellCountChange,
-      handleSeaLevelDraftChange,
-    };
-  }, [
-    mesh,
-    isGenerating,
-    handlePointerMove,
-    handleApplySeed,
-    handleRandomizeSeed,
-    handleCellCountChange,
-    handleSeaLevelDraftChange,
-  ]);
+    return { mesh, isGenerating, handlePointerMove, handleCellCountChange };
+  }, [mesh, isGenerating, handlePointerMove, handleCellCountChange]);
 
   return <MapContext.Provider value={contextData}>{children}</MapContext.Provider>;
 }

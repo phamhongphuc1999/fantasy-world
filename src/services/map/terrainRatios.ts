@@ -45,7 +45,7 @@ export function normalizeTerrainRatios(input: Partial<TTerrainRatioMap>): TTerra
   return normalized;
 }
 
-export function rebalanceTerrainRatioAfterChange(
+export function rebalanceTerrainRatio(
   current: TTerrainRatioMap,
   changedKey: TTerrainRatioKey,
   nextValue: number

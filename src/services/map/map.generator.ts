@@ -53,7 +53,6 @@ export class MapGenerator {
     return buildGeopolitics({
       mesh,
       seed: this.config.seed,
-      nationMode: this.config.nationMode,
       nationCount: this.config.nationCount,
     });
   }

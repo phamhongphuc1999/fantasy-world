@@ -9,7 +9,7 @@ type TLayerToggleProps = {
 
 function LayerToggle({ label, checked, disabled = false, onChange }: TLayerToggleProps) {
   return (
-    <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/55 px-3 py-2">
+    <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950/55 px-3 py-2">
       <span className={disabled ? 'text-slate-500' : 'text-sm text-slate-100'}>{label}</span>
       <input
         type="checkbox"
@@ -23,56 +23,46 @@ function LayerToggle({ label, checked, disabled = false, onChange }: TLayerToggl
 }
 
 export default function DisplayModePanel() {
-  const {
-    displaySettings,
-    hoverVisualizationEnabled,
-    setDisplayLayer,
-    setHoverVisualizationEnabled,
-  } = useMapExplorerStore();
+  const { displaySettings, setDisplayLayer } = useMapExplorerStore();
 
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-      <span className="block text-xs font-medium tracking-[0.18em] text-slate-300 uppercase">
-        Map Layers
-      </span>
-      <div className="space-y-2">
-        <LayerToggle
-          label="Terrain"
-          checked={displaySettings.showTerrain}
-          onChange={(checked) => setDisplayLayer('showTerrain', checked)}
-        />
-        <LayerToggle
-          label="Rivers"
-          checked={displaySettings.showRivers}
-          onChange={(checked) => setDisplayLayer('showRivers', checked)}
-        />
-        <LayerToggle
-          label="Country Borders"
-          checked={displaySettings.showCountryBorders}
-          onChange={(checked) => setDisplayLayer('showCountryBorders', checked)}
-        />
-        <LayerToggle
-          label="Ethnic Regions"
-          checked={displaySettings.showEthnicRegions}
-          onChange={(checked) => setDisplayLayer('showEthnicRegions', checked)}
-        />
-        <LayerToggle
-          label="Show Names"
-          checked={displaySettings.showRegionNames}
-          onChange={(checked) => setDisplayLayer('showRegionNames', checked)}
-        />
-        <LayerToggle
-          label="Province Borders"
-          checked={displaySettings.showProvinceBorders}
-          disabled={!displaySettings.showCountryBorders}
-          onChange={(checked) => setDisplayLayer('showProvinceBorders', checked)}
-        />
-        <LayerToggle
-          label="Show Cell Information"
-          checked={hoverVisualizationEnabled}
-          onChange={setHoverVisualizationEnabled}
-        />
-      </div>
+    <div className="flex flex-wrap gap-2">
+      <LayerToggle
+        label="Terrain"
+        checked={displaySettings.terrain}
+        onChange={(checked) => setDisplayLayer('terrain', checked)}
+      />
+      <LayerToggle
+        label="Rivers"
+        checked={displaySettings.rivers}
+        onChange={(checked) => setDisplayLayer('rivers', checked)}
+      />
+      <LayerToggle
+        label="Country Borders"
+        checked={displaySettings.countryBorders}
+        onChange={(checked) => setDisplayLayer('countryBorders', checked)}
+      />
+      <LayerToggle
+        label="Ethnic Borders"
+        checked={displaySettings.ethnicBorders}
+        onChange={(checked) => setDisplayLayer('ethnicBorders', checked)}
+      />
+      <LayerToggle
+        label="Labels"
+        checked={displaySettings.labels}
+        onChange={(checked) => setDisplayLayer('labels', checked)}
+      />
+      <LayerToggle
+        label="Province Borders"
+        checked={displaySettings.provinceBorders}
+        disabled={!displaySettings.countryBorders}
+        onChange={(checked) => setDisplayLayer('provinceBorders', checked)}
+      />
+      <LayerToggle
+        label="Show Cell Information"
+        checked={displaySettings.cellData}
+        onChange={(checked) => setDisplayLayer('cellData', checked)}
+      />
     </div>
   );
 }

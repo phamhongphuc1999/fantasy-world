@@ -3,7 +3,7 @@ import { runMultiSourceExpansion } from 'src/services/map/core/expansionEngine';
 import { clamp } from 'src/services/map/core/math';
 import { sortStableDescByScore } from 'src/services/map/core/sort';
 import { createSeededRandom } from 'src/services/map/seededRandom';
-import { TMapCell, TNationMode } from 'src/types/map.types';
+import { TMapCell } from 'src/types/map.types';
 import { getNationSeedSuitability } from './nationCostPolicy';
 import {
   getBoundaryStepCost,
@@ -452,7 +452,6 @@ function getNationStepCost(
   neighborId: number,
   seedHash: number,
   profile: (typeof GEOPOLITICAL_CONFIG.borderLevels)['country'],
-  nationMode: TNationMode,
   nationExpansionBias: number[]
 ) {
   let stepCost = getBoundaryStepCost(
@@ -464,9 +463,6 @@ function getNationStepCost(
     seedHash,
     profile
   );
-  if (nationMode === 'dominant') {
-    stepCost *= current.nationId === 0 ? 0.72 : 1.18;
-  }
   stepCost *= nationExpansionBias[current.nationId] || 1;
   stepCost += GEOPOLITICAL_CONFIG.frontierNoiseWeight * 0.15;
   return Math.max(0.2, stepCost);
@@ -476,7 +472,6 @@ function runInitialFloorExpansion(
   cells: TMapCell[],
   owner: Int32Array,
   cost: Float64Array,
-  nationMode: TNationMode,
   nationExpansionBias: number[],
   seedHash: number
 ) {
@@ -520,7 +515,6 @@ function runInitialFloorExpansion(
               neighborId,
               seedHash,
               profile,
-              nationMode,
               nationExpansionBias
             );
 
@@ -552,15 +546,10 @@ function buildSeedStatesFromAssignedLand(owner: Int32Array, cost: Float64Array) 
   return seeds;
 }
 
-export function buildLandNations(
-  cells: TMapCell[],
-  seed: string,
-  nationMode: TNationMode,
-  nationCount: number
-) {
+export function buildLandNations(cells: TMapCell[], seed: string, nationCount: number) {
   const profile = GEOPOLITICAL_CONFIG.borderLevels.country;
   const landCellCount = cells.filter(isLand).length;
-  const numOfNation = getNationCount(nationMode, nationCount, seed, landCellCount);
+  const numOfNation = getNationCount(nationCount, landCellCount);
   const connectivity = buildConnectivityContext(cells);
   const minSeedComponentSize = GEOPOLITICAL_CONFIG.minNationLandCells + 6;
   const seeds = selectNationSeeds(cells, numOfNation, seed, connectivity, minSeedComponentSize);
@@ -569,7 +558,6 @@ export function buildLandNations(
   owner.fill(-1);
   cost.fill(Number.POSITIVE_INFINITY);
   const nationExpansionBias = Array.from({ length: seeds.length }, (_, nationId) => {
-    if (nationMode !== 'balanced') return 1;
     const random = createSeededRandom(`${seed}:nation-expansion-bias:${nationId}`);
     const roll = random();
     if (roll < 0.2) return 0.7 + random() * 0.18;
@@ -587,7 +575,7 @@ export function buildLandNations(
 
   const seedHash = makeFrontierHash(seed, 'geopolitics:frontier');
   // Stage A: grow nations toward minimum floor size before regular global expansion.
-  runInitialFloorExpansion(cells, owner, cost, nationMode, nationExpansionBias, seedHash);
+  runInitialFloorExpansion(cells, owner, cost, nationExpansionBias, seedHash);
   const initialStates = buildSeedStatesFromAssignedLand(owner, cost);
 
   // Stage B: regular cost-based multi-source expansion with the current frontier model.
@@ -609,7 +597,6 @@ export function buildLandNations(
             neighborId,
             seedHash,
             profile,
-            nationMode,
             nationExpansionBias
           );
 

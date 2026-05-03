@@ -3,12 +3,7 @@
 import { useMemo } from 'react';
 import { useMapContext } from 'src/contexts/map.context';
 import { TMapCell } from 'src/types/map.types';
-import {
-  formatPopulation,
-  getCellPopulationValue,
-  getNationColor,
-  sumCellPopulation,
-} from 'src/utils/mapPanelHelpers';
+import { formatPopulation, getNationColor } from 'src/utils/mapPanelHelpers';
 
 type TProps = Record<string, never>;
 
@@ -42,12 +37,8 @@ function buildTerrainPercentages(cells: TMapCell[]) {
     .sort((a, b) => b.count - a.count);
 }
 
-export default function EthnicRegionsPanel(_props: TProps) {
+export default function EthnicPanel(_props: TProps) {
   const { mesh } = useMapContext();
-
-  const totalPopulation = useMemo(() => {
-    return sumCellPopulation(mesh.cells);
-  }, [mesh.cells]);
 
   const rows = useMemo<TEthnicPopulationRow[]>(() => {
     const nationNameById = new Map(mesh.nations.map((nation) => [nation.id, nation.name]));
@@ -59,12 +50,11 @@ export default function EthnicRegionsPanel(_props: TProps) {
         let ethnicPopulation = 0;
 
         for (const cell of cells) {
-          const cellPopulation = getCellPopulationValue(cell);
-          ethnicPopulation += cellPopulation;
+          ethnicPopulation += cell.population;
           if (cell.nationId === null) continue;
           nationPopulationMap.set(
             cell.nationId,
-            (nationPopulationMap.get(cell.nationId) || 0) + cellPopulation
+            (nationPopulationMap.get(cell.nationId) || 0) + cell.population
           );
         }
 
@@ -88,16 +78,7 @@ export default function EthnicRegionsPanel(_props: TProps) {
   }, [mesh.cells, mesh.ethnicGroups, mesh.nations]);
 
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-      <span className="block text-xs font-medium tracking-[0.18em] text-slate-300 uppercase">
-        Ethnic Regions
-      </span>
-
-      <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
-        <span className="font-semibold text-emerald-200">Total Population:</span>{' '}
-        {formatPopulation(totalPopulation)}
-      </div>
-
+    <div>
       <div className="max-h-[46vh] space-y-2 overflow-y-auto pr-1">
         {rows.map((row) => (
           <div
@@ -144,7 +125,6 @@ export default function EthnicRegionsPanel(_props: TProps) {
             </div>
           </div>
         ))}
-
         {rows.length === 0 && <p className="text-xs text-slate-400">No ethnic groups generated.</p>}
       </div>
     </div>

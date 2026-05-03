@@ -2,7 +2,6 @@
 
 import { Settings2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import TerrainPresetSelect from 'src/components/AppDialog/MapConfigDialog/TerrainPresetSelect';
 import { Button } from 'src/components/ui/button';
 import {
   Dialog,
@@ -19,14 +18,11 @@ import {
   SelectValue,
 } from 'src/components/ui/select';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import CountryModePanel from './CountryModePanel';
 import DisplayModePanel from './DisplayModePanel';
-import EthnicRegionsPanel from './EthnicRegionsPanel';
-import GeneratePanel from './GeneratePanel';
-import LogisticsGamePanel from './LogisticsGamePanel';
+import EthnicPanel from './EthnicPanel';
+import GenerateTab from './GenerateTab';
 import NationsPanel from './NationsPanel';
-import SeaLevelPanel from './SeaLevelPanel';
-import TerrainRatioPanel from './TerrainRatioPanel';
+import TerrainTab from './TerrainTab';
 
 const T_MAP_CONFIG_ACTIVE_PANEL_KEY = 'map-config-active-panel';
 const T_ALLOWED_PANELS = new Set(['terrain', 'generation', 'display', 'nations', 'ethnic']);
@@ -57,7 +53,10 @@ export default function MapConfigDialog() {
           <Settings2 className="size-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex h-dvh max-w-none translate-y-0 flex-col rounded-none border-none bg-slate-900/55 p-4 text-white backdrop-blur-md sm:max-w-none md:top-auto md:right-4 md:bottom-4 md:left-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-95 md:translate-y-0 md:rounded-xl md:border md:border-white/15 md:bg-slate-950/45 md:p-5">
+      <DialogContent
+        overlayClassName="supports-backdrop-filter:backdrop-blur-none"
+        className="flex h-dvh max-w-none translate-y-0 flex-col rounded-none border-none bg-slate-900/55 p-4 text-white sm:max-w-none md:top-auto md:right-4 md:bottom-4 md:left-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-95 md:translate-y-0 md:rounded-xl md:border md:border-white/15 md:bg-slate-950/45 md:p-5"
+      >
         <DialogHeader>
           <DialogTitle>Map Configuration</DialogTitle>
         </DialogHeader>
@@ -74,46 +73,29 @@ export default function MapConfigDialog() {
               <SelectItem value="ethnic">Ethnic</SelectItem>
             </SelectContent>
           </Select>
-
+          <Button
+            type="button"
+            onClick={resetToDefaults}
+            className="mt-1 w-full rounded-xl border border-rose-300/30 bg-rose-400/15 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-400/25"
+          >
+            Reset to Default Config
+          </Button>
           <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-            {activePanel === 'terrain' && (
-              <div className="space-y-4">
-                <TerrainPresetSelect />
-                <TerrainRatioPanel />
-              </div>
-            )}
-
-            {activePanel === 'generation' && (
-              <div className="space-y-4">
-                <GeneratePanel />
-                <SeaLevelPanel />
-                <CountryModePanel />
-                <LogisticsGamePanel />
-              </div>
-            )}
-
+            {activePanel === 'terrain' && <TerrainTab />}
+            {activePanel === 'generation' && <GenerateTab />}
             {activePanel === 'display' && (
               <div className="space-y-4">
                 <DisplayModePanel />
-                <Button
-                  type="button"
-                  onClick={resetToDefaults}
-                  className="w-full rounded-xl border border-rose-300/30 bg-rose-400/15 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-400/25"
-                >
-                  Reset to Default Config
-                </Button>
               </div>
             )}
-
             {activePanel === 'nations' && (
               <div className="space-y-4">
                 <NationsPanel />
               </div>
             )}
-
             {activePanel === 'ethnic' && (
               <div className="space-y-4">
-                <EthnicRegionsPanel />
+                <EthnicPanel />
               </div>
             )}
           </div>
