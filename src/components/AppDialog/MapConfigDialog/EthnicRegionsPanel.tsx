@@ -1,9 +1,14 @@
 'use client';
 
 import { useMemo } from 'react';
-import { NATION_COLOR_PALETTE } from 'src/configs/mapConfig';
 import { useMapContext } from 'src/contexts/map.context';
 import { TMapCell } from 'src/types/map.types';
+import {
+  formatPopulation,
+  getCellPopulationValue,
+  getNationColor,
+  sumCellPopulation,
+} from 'src/utils/mapPanelHelpers';
 
 type TProps = Record<string, never>;
 
@@ -23,15 +28,6 @@ type TEthnicPopulationRow = {
   }>;
 };
 
-function formatPopulation(value: number) {
-  return new Intl.NumberFormat('en-US').format(Math.round(value));
-}
-
-function getNationColor(nationId: number) {
-  const paletteIndex = Math.abs(nationId) % NATION_COLOR_PALETTE.length;
-  return NATION_COLOR_PALETTE[paletteIndex];
-}
-
 function buildTerrainPercentages(cells: TMapCell[]) {
   const counts = new Map<string, number>();
   for (const cell of cells) {
@@ -50,7 +46,7 @@ export default function EthnicRegionsPanel(_props: TProps) {
   const { mesh } = useMapContext();
 
   const totalPopulation = useMemo(() => {
-    return mesh.cells.reduce((sum, cell) => sum + Math.max(0, cell.population || 0), 0);
+    return sumCellPopulation(mesh.cells);
   }, [mesh.cells]);
 
   const rows = useMemo<TEthnicPopulationRow[]>(() => {
@@ -63,7 +59,7 @@ export default function EthnicRegionsPanel(_props: TProps) {
         let ethnicPopulation = 0;
 
         for (const cell of cells) {
-          const cellPopulation = Math.max(0, cell.population || 0);
+          const cellPopulation = getCellPopulationValue(cell);
           ethnicPopulation += cellPopulation;
           if (cell.nationId === null) continue;
           nationPopulationMap.set(

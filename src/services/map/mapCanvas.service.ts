@@ -1,6 +1,6 @@
 /* eslint-disable quotes */
 import { type MouseEvent } from 'react';
-import { NATION_COLOR_PALETTE } from 'src/configs/mapConfig';
+import { NATION_COLOR } from 'src/configs/mapConfig';
 import { getTerrainColor } from 'src/services';
 import { TEthnicGroup, TMapCell, TNation } from 'src/types/map.types';
 
@@ -116,14 +116,14 @@ export function getCellDisplayColor(cell: TMapCell) {
 
 function getNationPaletteColor(nationId: number | null) {
   if (nationId === null) return '#334155';
-  const paletteIndex = Math.abs(nationId) % NATION_COLOR_PALETTE.length;
-  return NATION_COLOR_PALETTE[paletteIndex];
+  const paletteIndex = Math.abs(nationId) % NATION_COLOR.length;
+  return NATION_COLOR[paletteIndex];
 }
 
 function getEthnicPaletteColor(ethnicGroupId: number | null) {
   if (ethnicGroupId === null) return '#334155';
-  const paletteIndex = Math.abs(ethnicGroupId) % NATION_COLOR_PALETTE.length;
-  return NATION_COLOR_PALETTE[paletteIndex];
+  const paletteIndex = Math.abs(ethnicGroupId) % NATION_COLOR.length;
+  return NATION_COLOR[paletteIndex];
 }
 
 export function drawCountryFill(

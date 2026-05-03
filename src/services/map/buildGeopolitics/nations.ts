@@ -1,4 +1,4 @@
-import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { runMultiSourceExpansion } from 'src/services/map/core/expansionEngine';
 import { clamp } from 'src/services/map/core/math';
 import { sortStableDescByScore } from 'src/services/map/core/sort';
@@ -409,12 +409,12 @@ export function buildLandNations(
   nationMode: TNationMode,
   nationCount: number
 ) {
-  const profile = MAP_GEOPOLITICAL_CONFIG.borderLevels.country;
+  const profile = GEOPOLITICAL_CONFIG.borderLevels.country;
   const landCellCount = cells.filter(isLand).length;
   const numOfNation = getNationCount(nationMode, nationCount, seed, landCellCount);
   const connectivity = buildConnectivityContext(cells);
   const minSeedComponentSize =
-    nationMode === 'balanced' ? MAP_GEOPOLITICAL_CONFIG.minNationLandCells + 6 : 1;
+    nationMode === 'balanced' ? GEOPOLITICAL_CONFIG.minNationLandCells + 6 : 1;
   const seeds = selectNationSeeds(cells, numOfNation, seed, connectivity, minSeedComponentSize);
   const owner = new Int32Array(cells.length);
   const cost = new Float64Array(cells.length);
@@ -461,7 +461,7 @@ export function buildLandNations(
           stepCost *= current.nationId === 0 ? 0.72 : 1.18;
         }
         stepCost *= nationExpansionBias[current.nationId] || 1;
-        stepCost += MAP_GEOPOLITICAL_CONFIG.frontierNoiseWeight * 0.15;
+        stepCost += GEOPOLITICAL_CONFIG.frontierNoiseWeight * 0.15;
         const nextCost = current.cost + Math.max(0.2, stepCost);
 
         if (nextCost < cost[neighborId]) {
@@ -525,8 +525,8 @@ export function enforceMinimumNationArea(
 ) {
   const landCellIds = cells.filter(isLand).map((cell) => cell.id);
   const minNationCells = Math.max(
-    MAP_GEOPOLITICAL_CONFIG.minNationLandCells,
-    Math.floor(landCellIds.length * MAP_GEOPOLITICAL_CONFIG.minNationLandRatio)
+    GEOPOLITICAL_CONFIG.minNationLandCells,
+    Math.floor(landCellIds.length * GEOPOLITICAL_CONFIG.minNationLandRatio)
   );
 
   const sizeByNation = new Map<number, number>();
@@ -625,7 +625,7 @@ export function enforceMinimumNationArea(
 }
 
 export function diversifySmallNationSizes(cells: TMapCell[], owner: Int32Array, seed: string) {
-  const minNationCells = MAP_GEOPOLITICAL_CONFIG.minNationLandCells;
+  const minNationCells = GEOPOLITICAL_CONFIG.minNationLandCells;
   const sizeByNation = new Map<number, number>();
   for (const cell of cells) {
     if (!isLand(cell)) continue;

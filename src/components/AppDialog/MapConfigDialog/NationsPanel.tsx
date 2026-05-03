@@ -1,8 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { NATION_COLOR_PALETTE } from 'src/configs/mapConfig';
 import { useMapContext } from 'src/contexts/map.context';
+import {
+  formatPopulation,
+  getCellPopulationValue,
+  getNationColor,
+  sumCellPopulation,
+} from 'src/utils/mapPanelHelpers';
 
 type TProps = Record<string, never>;
 
@@ -17,20 +22,11 @@ type TNationPopulationRow = {
   }>;
 };
 
-function formatPopulation(value: number) {
-  return new Intl.NumberFormat('en-US').format(Math.round(value));
-}
-
-function getNationColor(nationId: number) {
-  const paletteIndex = Math.abs(nationId) % NATION_COLOR_PALETTE.length;
-  return NATION_COLOR_PALETTE[paletteIndex];
-}
-
 export default function NationsPanel(_props: TProps) {
   const { mesh } = useMapContext();
 
   const totalPopulation = useMemo(() => {
-    return mesh.cells.reduce((sum, cell) => sum + Math.max(0, cell.population || 0), 0);
+    return sumCellPopulation(mesh.cells);
   }, [mesh.cells]);
 
   const nationRows = useMemo<TNationPopulationRow[]>(() => {
@@ -45,7 +41,7 @@ export default function NationsPanel(_props: TProps) {
         let nationPopulation = 0;
 
         for (const cell of nationLandCells) {
-          const cellPopulation = Math.max(0, cell.population || 0);
+          const cellPopulation = getCellPopulationValue(cell);
           nationPopulation += cellPopulation;
           if (cell.provinceId === null) continue;
           provincePopulationMap.set(

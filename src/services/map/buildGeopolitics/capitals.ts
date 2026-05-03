@@ -1,4 +1,4 @@
-import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { collectConnectedComponents } from 'src/services/map/core/graph';
 import { TFifoQueue } from 'src/services/map/core/queue';
 import { createSeededRandom } from 'src/services/map/seededRandom';
@@ -150,9 +150,9 @@ export function pickEconomicAndCapital(
     const random = createSeededRandom(`${seed}:capital:${nationId}`);
 
     let hubCount = 1;
-    if (landSize >= MAP_GEOPOLITICAL_CONFIG.hubCount.mediumNationMinLand) hubCount = 3;
-    else if (landSize >= MAP_GEOPOLITICAL_CONFIG.hubCount.smallNationMinLand) hubCount = 2;
-    hubCount = Math.min(hubCount, MAP_GEOPOLITICAL_CONFIG.hubCount.maxHubsPerNation);
+    if (landSize >= GEOPOLITICAL_CONFIG.hubCount.mediumNationMinLand) hubCount = 3;
+    else if (landSize >= GEOPOLITICAL_CONFIG.hubCount.smallNationMinLand) hubCount = 2;
+    hubCount = Math.min(hubCount, GEOPOLITICAL_CONFIG.hubCount.maxHubsPerNation);
 
     const scored = capitalPool
       .map((cell) => {

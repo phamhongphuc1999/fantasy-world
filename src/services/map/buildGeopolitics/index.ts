@@ -1,4 +1,4 @@
-import { TNationMode, TMapMeshWithDelaunay } from 'src/types/map.types';
+import { TMapMeshWithDelaunay, TNationMode } from 'src/types/map.types';
 import { pickEconomicAndCapital } from './capitals';
 import { buildEthnicRegions } from './ethnic';
 import {

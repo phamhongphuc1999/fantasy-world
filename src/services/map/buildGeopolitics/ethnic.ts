@@ -1,4 +1,4 @@
-import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { runMultiSourceExpansion } from 'src/services/map/core/expansionEngine';
 import { collectConnectedComponents } from 'src/services/map/core/graph';
 import { TFifoQueue } from 'src/services/map/core/queue';
@@ -8,7 +8,7 @@ import { TEthnicGroup, TMapCell } from 'src/types/map.types';
 import { ethnicTerrainCost } from './ethnicCostPolicy';
 import { createRegionalName, edgeNoise, isLand } from './shared';
 
-type TEthnicConfig = typeof MAP_GEOPOLITICAL_CONFIG.ethnic;
+type TEthnicConfig = typeof GEOPOLITICAL_CONFIG.ethnic;
 
 function getEthnicGroupCount(landCellCount: number, nationCount: number, config: TEthnicConfig) {
   const byLand = Math.floor(landCellCount / 1300);
@@ -490,7 +490,7 @@ function assignUnclaimedLandCells(cells: TMapCell[], ethnicOwner: Int32Array) {
 }
 
 export function buildEthnicRegions(cells: TMapCell[], nationOwner: Int32Array, seed: string) {
-  const config = MAP_GEOPOLITICAL_CONFIG.ethnic;
+  const config = GEOPOLITICAL_CONFIG.ethnic;
   const ethnicOwner = new Int32Array(cells.length);
   ethnicOwner.fill(-1);
   const ethnicGroups: TEthnicGroup[] = [];

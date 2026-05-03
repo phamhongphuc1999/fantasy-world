@@ -1,8 +1,8 @@
-import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { TMapCell, TTerrainBand, TTerrainRatioMap } from 'src/types/map.types';
 import { clamp, getNeighborAverageElevation, isWaterTerrain } from './common';
 
-type TTerrainBalance = typeof MAP_HYDROLOGY_CONFIG.terrainBalance;
+type TTerrainBalance = typeof HYDROLOGY_CONFIG.terrainBalance;
 function isLockedTerrain(cell: TMapCell, terrain: TTerrainBand) {
   if (isWaterTerrain(terrain)) return true;
   if (terrain === 'mountains' || terrain === 'tundra') return true;
@@ -56,7 +56,7 @@ function getTerrainFitness(
 
   if (terrain === 'plateau') {
     if (cell.elevation < seaLevel + 0.12) return -10;
-    return 0.58 + (relief < MAP_HYDROLOGY_CONFIG.plateauReliefMax ? 0.35 : -0.1);
+    return 0.58 + (relief < HYDROLOGY_CONFIG.plateauReliefMax ? 0.35 : -0.1);
   }
 
   if (terrain === 'plains') {
@@ -133,8 +133,8 @@ function findSmallTerrainRegions(cells: TMapCell[], minRegionSize: number) {
 
 function regionalizeLandTerrains(cells: TMapCell[], seaLevel: number) {
   const minRegionSize = Math.max(
-    MAP_HYDROLOGY_CONFIG.regionalization.minRegionBase,
-    Math.floor(Math.sqrt(cells.length) * MAP_HYDROLOGY_CONFIG.regionalization.minRegionScale)
+    HYDROLOGY_CONFIG.regionalization.minRegionBase,
+    Math.floor(Math.sqrt(cells.length) * HYDROLOGY_CONFIG.regionalization.minRegionScale)
   );
   const smallRegions = findSmallTerrainRegions(cells, minRegionSize);
 
@@ -175,7 +175,7 @@ function regionalizeLandTerrains(cells: TMapCell[], seaLevel: number) {
 
   for (
     let iteration = 0;
-    iteration < MAP_HYDROLOGY_CONFIG.regionalization.smoothingPasses;
+    iteration < HYDROLOGY_CONFIG.regionalization.smoothingPasses;
     iteration += 1
   ) {
     const nextTerrains = cells.map((cell) => cell.terrain);
@@ -198,7 +198,7 @@ function regionalizeLandTerrains(cells: TMapCell[], seaLevel: number) {
       }
 
       if (
-        dominantCount < MAP_HYDROLOGY_CONFIG.regionalization.dominantMinCount ||
+        dominantCount < HYDROLOGY_CONFIG.regionalization.dominantMinCount ||
         dominantTerrain === cell.terrain
       ) {
         continue;
@@ -207,12 +207,12 @@ function regionalizeLandTerrains(cells: TMapCell[], seaLevel: number) {
       const relief = cell.elevation - getNeighborAverageElevation(cell, cells);
       const currentScore =
         getTerrainFitness(cell.terrain, cell, seaLevel, relief) +
-        (counts.get(cell.terrain) || 0) * MAP_HYDROLOGY_CONFIG.regionalization.currentScoreBonus;
+        (counts.get(cell.terrain) || 0) * HYDROLOGY_CONFIG.regionalization.currentScoreBonus;
       const dominantScore =
         getTerrainFitness(dominantTerrain, cell, seaLevel, relief) +
-        dominantCount * MAP_HYDROLOGY_CONFIG.regionalization.dominantScoreBonus;
+        dominantCount * HYDROLOGY_CONFIG.regionalization.dominantScoreBonus;
 
-      if (dominantScore > currentScore + MAP_HYDROLOGY_CONFIG.regionalization.switchMargin) {
+      if (dominantScore > currentScore + HYDROLOGY_CONFIG.regionalization.switchMargin) {
         nextTerrains[cellIndex] = dominantTerrain;
       }
     }
@@ -239,7 +239,7 @@ function toTerrainBalance(terrainRatios: TTerrainRatioMap): TTerrainBalance {
   const plateau = withBand(terrainRatios.plateau);
 
   return {
-    ...MAP_HYDROLOGY_CONFIG.terrainBalance,
+    ...HYDROLOGY_CONFIG.terrainBalance,
     plainsMinShare: plains.min,
     plainsMaxShare: plains.max,
     forestMinShare: forest.min,
@@ -585,7 +585,7 @@ function rebalanceTerrainDistribution(cells: TMapCell[], terrainBalance: TTerrai
 }
 
 function antiAliasTerrains(cells: TMapCell[]) {
-  for (let pass = 0; pass < MAP_HYDROLOGY_CONFIG.antiAlias.passes; pass += 1) {
+  for (let pass = 0; pass < HYDROLOGY_CONFIG.antiAlias.passes; pass += 1) {
     const nextTerrains = cells.map((cell) => cell.terrain);
 
     for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
@@ -597,7 +597,7 @@ function antiAliasTerrains(cells: TMapCell[]) {
       if (counts.size === 0) continue;
 
       const sameCount = counts.get(cell.terrain) || 0;
-      if (sameCount > MAP_HYDROLOGY_CONFIG.antiAlias.isolatedNeighborMax) continue;
+      if (sameCount > HYDROLOGY_CONFIG.antiAlias.isolatedNeighborMax) continue;
 
       let dominantTerrain = cell.terrain;
       let dominantCount = 0;
@@ -610,7 +610,7 @@ function antiAliasTerrains(cells: TMapCell[]) {
       }
 
       if (dominantTerrain === cell.terrain) continue;
-      if (dominantCount < MAP_HYDROLOGY_CONFIG.antiAlias.dominantNeighborMin) continue;
+      if (dominantCount < HYDROLOGY_CONFIG.antiAlias.dominantNeighborMin) continue;
       nextTerrains[cellIndex] = dominantTerrain;
     }
 
@@ -649,8 +649,8 @@ function mergeSmallTerrainClusters(cells: TMapCell[], seaLevel: number) {
     }
 
     const minSize =
-      MAP_HYDROLOGY_CONFIG.terrainClusterMinCells[
-        terrain as keyof typeof MAP_HYDROLOGY_CONFIG.terrainClusterMinCells
+      HYDROLOGY_CONFIG.terrainClusterMinCells[
+        terrain as keyof typeof HYDROLOGY_CONFIG.terrainClusterMinCells
       ] || 0;
     if (region.length >= minSize) continue;
 

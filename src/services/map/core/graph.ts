@@ -33,13 +33,8 @@ export function collectConnectedComponents(
         stack.push(neighborId);
       }
     }
-
     components.push(component);
   }
-
-  if (sortBySizeDesc) {
-    components.sort((a, b) => b.length - a.length);
-  }
-
+  if (sortBySizeDesc) components.sort((a, b) => b.length - a.length);
   return components;
 }

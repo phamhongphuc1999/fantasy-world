@@ -1,8 +1,8 @@
-import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { TMapCell } from 'src/types/map.types';
 import { buildLakeSizeMap, buildPlainsRegionSizeMap } from './lakes';
 
-const T_COAST_OUTLET = MAP_HYDROLOGY_CONFIG.coastOutletId;
+const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 function validateRivers(
   cells: TMapCell[],
   flow: Float32Array,
@@ -13,10 +13,10 @@ function validateRivers(
   const validRiver = new Uint8Array(cells.length);
   const plainsRegionSizeByCell = buildPlainsRegionSizeMap(cells);
   const hasLargePlains = plainsRegionSizeByCell.some(
-    (size) => size >= MAP_HYDROLOGY_CONFIG.largePlainMinCells
+    (size) => size >= HYDROLOGY_CONFIG.largePlainMinCells
   );
   const hasVeryLargePlains = plainsRegionSizeByCell.some(
-    (size) => size >= MAP_HYDROLOGY_CONFIG.veryLargePlainMinCells
+    (size) => size >= HYDROLOGY_CONFIG.veryLargePlainMinCells
   );
   const candidates: Array<{
     chain: number[];
@@ -72,7 +72,7 @@ function validateRivers(
 
         if (cells[next].isLake) {
           const lakeSize = lakeSizeByCell.get(next) || 1;
-          endType = lakeSize >= MAP_HYDROLOGY_CONFIG.largeLakeMinCells ? 'large-lake' : 'invalid';
+          endType = lakeSize >= HYDROLOGY_CONFIG.largeLakeMinCells ? 'large-lake' : 'invalid';
           break;
         }
 
@@ -99,13 +99,13 @@ function validateRivers(
       const sourceLakeSize = sourceCell.isLake ? lakeSizeByCell.get(cellIndex) || 1 : 0;
       const validPlainSource =
         sourceCell.terrain === 'plains' &&
-        flow[cellIndex] >= MAP_HYDROLOGY_CONFIG.plainRiverSourceFlowMin;
+        flow[cellIndex] >= HYDROLOGY_CONFIG.plainRiverSourceFlowMin;
       const validTundraSource =
         sourceCell.terrain === 'tundra' &&
-        flow[cellIndex] >= MAP_HYDROLOGY_CONFIG.tundraRiverSourceFlowMin;
+        flow[cellIndex] >= HYDROLOGY_CONFIG.tundraRiverSourceFlowMin;
       const validSource =
         sourceCell.elevation >= minSourceElevation ||
-        sourceLakeSize >= MAP_HYDROLOGY_CONFIG.largeLakeMinCells ||
+        sourceLakeSize >= HYDROLOGY_CONFIG.largeLakeMinCells ||
         validPlainSource ||
         validTundraSource;
       const validEnd =
@@ -121,10 +121,10 @@ function validateRivers(
       let veryLargePlainsCells = 0;
       for (const id of chain) {
         peakFlow = Math.max(peakFlow, flow[id]);
-        if (plainsRegionSizeByCell[id] >= MAP_HYDROLOGY_CONFIG.largePlainMinCells) {
+        if (plainsRegionSizeByCell[id] >= HYDROLOGY_CONFIG.largePlainMinCells) {
           plainsCells += 1;
         }
-        if (plainsRegionSizeByCell[id] >= MAP_HYDROLOGY_CONFIG.veryLargePlainMinCells) {
+        if (plainsRegionSizeByCell[id] >= HYDROLOGY_CONFIG.veryLargePlainMinCells) {
           veryLargePlainsCells += 1;
         }
       }
@@ -132,13 +132,13 @@ function validateRivers(
       const veryLargePlainCoverage = veryLargePlainsCells / chain.length;
       const score =
         peakFlow +
-        plainCoverage * MAP_HYDROLOGY_CONFIG.largeRiverPlainPriorityBonus +
-        veryLargePlainCoverage * MAP_HYDROLOGY_CONFIG.veryLargePlainRiverBonus +
+        plainCoverage * HYDROLOGY_CONFIG.largeRiverPlainPriorityBonus +
+        veryLargePlainCoverage * HYDROLOGY_CONFIG.veryLargePlainRiverBonus +
         (endType === 'sea' && veryLargePlainCoverage > 0
-          ? MAP_HYDROLOGY_CONFIG.veryLargePlainSeaOutletBonus
+          ? HYDROLOGY_CONFIG.veryLargePlainSeaOutletBonus
           : 0) +
-        chain.length * MAP_HYDROLOGY_CONFIG.riverLengthPriorityWeight +
-        (joinsRiverCellId !== null ? MAP_HYDROLOGY_CONFIG.tributaryJoinBonus : 0);
+        chain.length * HYDROLOGY_CONFIG.riverLengthPriorityWeight +
+        (joinsRiverCellId !== null ? HYDROLOGY_CONFIG.tributaryJoinBonus : 0);
       candidates.push({
         chain,
         peakFlow,
@@ -154,27 +154,26 @@ function validateRivers(
 
   addCandidates(
     isRiver,
-    MAP_HYDROLOGY_CONFIG.riverSourceElevationMin,
-    MAP_HYDROLOGY_CONFIG.riverMinLength,
-    MAP_HYDROLOGY_CONFIG.riverFlowMin
+    HYDROLOGY_CONFIG.riverSourceElevationMin,
+    HYDROLOGY_CONFIG.riverMinLength,
+    HYDROLOGY_CONFIG.riverFlowMin
   );
 
-  if (candidates.length < MAP_HYDROLOGY_CONFIG.minRiverCount) {
+  if (candidates.length < HYDROLOGY_CONFIG.minRiverCount) {
     const relaxedMask = new Uint8Array(cells.length);
     for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
       const cell = cells[cellIndex];
       const downstreamId = downstream[cellIndex];
       if (cell.isWater) continue;
       if (!(downstreamId >= 0 || downstreamId === T_COAST_OUTLET)) continue;
-      if (flow[cellIndex] < MAP_HYDROLOGY_CONFIG.relaxedRiverFlowMin) continue;
+      if (flow[cellIndex] < HYDROLOGY_CONFIG.relaxedRiverFlowMin) continue;
       relaxedMask[cellIndex] = 1;
     }
     addCandidates(
       relaxedMask,
-      MAP_HYDROLOGY_CONFIG.riverSourceElevationMin -
-        MAP_HYDROLOGY_CONFIG.relaxedRiverSourceElevationDrop,
-      MAP_HYDROLOGY_CONFIG.relaxedRiverMinLength,
-      MAP_HYDROLOGY_CONFIG.relaxedRiverFlowMin
+      HYDROLOGY_CONFIG.riverSourceElevationMin - HYDROLOGY_CONFIG.relaxedRiverSourceElevationDrop,
+      HYDROLOGY_CONFIG.relaxedRiverMinLength,
+      HYDROLOGY_CONFIG.relaxedRiverFlowMin
     );
   }
 
@@ -186,19 +185,19 @@ function validateRivers(
   }
 
   const landCellCount = cells.filter((cell) => !cell.isWater).length;
-  const isLargeLand = landCellCount >= MAP_HYDROLOGY_CONFIG.riverTargetLandThreshold;
+  const isLargeLand = landCellCount >= HYDROLOGY_CONFIG.riverTargetLandThreshold;
   const targetLarge = isLargeLand
-    ? MAP_HYDROLOGY_CONFIG.largeRiverMaxCountLargeLand
-    : MAP_HYDROLOGY_CONFIG.largeRiverCountSmallLand;
-  const minLargeBase = isLargeLand ? MAP_HYDROLOGY_CONFIG.largeRiverMinCountLargeLand : 1;
+    ? HYDROLOGY_CONFIG.largeRiverMaxCountLargeLand
+    : HYDROLOGY_CONFIG.largeRiverCountSmallLand;
+  const minLargeBase = isLargeLand ? HYDROLOGY_CONFIG.largeRiverMinCountLargeLand : 1;
   const minLarge = hasLargePlains ? Math.max(2, minLargeBase) : minLargeBase;
   let targetSmall = isLargeLand
-    ? MAP_HYDROLOGY_CONFIG.smallRiverTargetLargeLand
-    : MAP_HYDROLOGY_CONFIG.smallRiverTargetSmallLand;
+    ? HYDROLOGY_CONFIG.smallRiverTargetLargeLand
+    : HYDROLOGY_CONFIG.smallRiverTargetSmallLand;
   if (hasVeryLargePlains) {
     targetSmall += 3;
   }
-  const minimumRiverCount = MAP_HYDROLOGY_CONFIG.minRiverCount;
+  const minimumRiverCount = HYDROLOGY_CONFIG.minRiverCount;
 
   const sortedCandidates = [...candidates].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
@@ -206,8 +205,8 @@ function validateRivers(
     return b.peakFlow - a.peakFlow;
   });
   const preferredMinLength = Math.max(
-    MAP_HYDROLOGY_CONFIG.riverMinLength + 3,
-    MAP_HYDROLOGY_CONFIG.relaxedRiverMinLength + 4
+    HYDROLOGY_CONFIG.riverMinLength + 3,
+    HYDROLOGY_CONFIG.relaxedRiverMinLength + 4
   );
   const selectedChains: number[][] = [];
   const selectedSource = new Set<number>();
@@ -217,7 +216,7 @@ function validateRivers(
     const plainFocusedCandidates = sortedCandidates
       .filter((candidate) => candidate.veryLargePlainCoverage > 0 && candidate.endType === 'sea')
       .sort((a, b) => b.chain.length - a.chain.length)
-      .slice(0, MAP_HYDROLOGY_CONFIG.veryLargePlainMinRiverCount);
+      .slice(0, HYDROLOGY_CONFIG.veryLargePlainMinRiverCount);
     for (const candidate of plainFocusedCandidates) {
       if (selectedSource.has(candidate.sourceId)) continue;
       selectedChains.push(candidate.chain);
@@ -262,7 +261,7 @@ function validateRivers(
     }
     const overlapRatio = overlapCount / candidate.chain.length;
     const maxOverlapRatio =
-      candidate.joinsRiverCellId !== null ? MAP_HYDROLOGY_CONFIG.tributaryMaxOverlapRatio : 0.8;
+      candidate.joinsRiverCellId !== null ? HYDROLOGY_CONFIG.tributaryMaxOverlapRatio : 0.8;
     if (overlapRatio > maxOverlapRatio) continue;
 
     selectedChains.push(candidate.chain);
@@ -280,7 +279,7 @@ function validateRivers(
       }
       const overlapRatio = overlapCount / candidate.chain.length;
       const maxOverlapRatio =
-        candidate.joinsRiverCellId !== null ? MAP_HYDROLOGY_CONFIG.tributaryMaxOverlapRatio : 0.8;
+        candidate.joinsRiverCellId !== null ? HYDROLOGY_CONFIG.tributaryMaxOverlapRatio : 0.8;
       if (overlapRatio > maxOverlapRatio) continue;
 
       selectedChains.push(candidate.chain);
@@ -348,19 +347,19 @@ function addInlandPlainTributaries(cells: TMapCell[], flow: Float32Array, downst
       if (cell.terrain !== 'plains') return false;
       const currentRegionId = regionIdByCell[cellIndex];
       if (currentRegionId < 0) return false;
-      if (regionSizes[currentRegionId] < MAP_HYDROLOGY_CONFIG.veryLargePlainMinCells) return false;
-      return flow[cellIndex] >= MAP_HYDROLOGY_CONFIG.inlandPlainTributaryMinFlow;
+      if (regionSizes[currentRegionId] < HYDROLOGY_CONFIG.veryLargePlainMinCells) return false;
+      return flow[cellIndex] >= HYDROLOGY_CONFIG.inlandPlainTributaryMinFlow;
     })
     .sort((left, right) => flow[right] - flow[left]);
 
   const selectedByRegion = new Map<number, number>();
-  const minLength = MAP_HYDROLOGY_CONFIG.inlandPlainTributaryMinLength;
+  const minLength = HYDROLOGY_CONFIG.inlandPlainTributaryMinLength;
 
   for (const sourceId of candidateSources) {
     const currentRegionId = regionIdByCell[sourceId];
     if (currentRegionId < 0) continue;
     const selectedCount = selectedByRegion.get(currentRegionId) || 0;
-    if (selectedCount >= MAP_HYDROLOGY_CONFIG.inlandPlainTributaryMaxPerPlain) continue;
+    if (selectedCount >= HYDROLOGY_CONFIG.inlandPlainTributaryMaxPerPlain) continue;
 
     const chain: number[] = [];
     const visited = new Set<number>();
@@ -417,7 +416,7 @@ function extendRiversTowardHighlands(
     let reachedHighland = false;
     const visited = new Set<number>();
 
-    for (let step = 0; step < MAP_HYDROLOGY_CONFIG.highlandRiverExtensionMaxSteps; step += 1) {
+    for (let step = 0; step < HYDROLOGY_CONFIG.highlandRiverExtensionMaxSteps; step += 1) {
       visited.add(cursor);
       let bestNeighborId = -1;
       let bestScore = -Infinity;
@@ -426,7 +425,7 @@ function extendRiversTowardHighlands(
         const neighbor = cells[neighborId];
         if (visited.has(neighborId)) continue;
         if (neighbor.isWater || neighbor.isRiver) continue;
-        if (flow[neighborId] < MAP_HYDROLOGY_CONFIG.highlandRiverExtensionMinFlow) continue;
+        if (flow[neighborId] < HYDROLOGY_CONFIG.highlandRiverExtensionMinFlow) continue;
         if (neighbor.elevation <= cells[cursor].elevation) continue;
 
         const isHighland = neighbor.terrain === 'hills' || neighbor.terrain === 'mountains';
@@ -448,7 +447,7 @@ function extendRiversTowardHighlands(
       if (
         cells[bestNeighborId].terrain === 'hills' ||
         cells[bestNeighborId].terrain === 'mountains' ||
-        cells[bestNeighborId].elevation >= MAP_HYDROLOGY_CONFIG.highlandRiverTargetElevationMin
+        cells[bestNeighborId].elevation >= HYDROLOGY_CONFIG.highlandRiverTargetElevationMin
       ) {
         reachedHighland = true;
         break;

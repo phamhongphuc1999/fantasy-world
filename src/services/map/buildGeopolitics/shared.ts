@@ -1,4 +1,4 @@
-import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
 import {
   TBorderLevelKey,
@@ -9,7 +9,7 @@ import {
 } from 'src/types/map.types';
 
 export const CAPITAL_VIEWPORT_MARGIN = 14;
-export type TBorderLevelProfile = (typeof MAP_GEOPOLITICAL_CONFIG.borderLevels)[TBorderLevelKey];
+export type TBorderLevelProfile = (typeof GEOPOLITICAL_CONFIG.borderLevels)[TBorderLevelKey];
 
 const starts = [
   'Al',
@@ -166,7 +166,7 @@ export function limitMountainClusterSplit(
   level: TBorderLevelKey,
   nationOwner?: Int32Array
 ) {
-  const profile = MAP_GEOPOLITICAL_CONFIG.borderLevels[level];
+  const profile = GEOPOLITICAL_CONFIG.borderLevels[level];
   const clusters = collectTerrainClusters(cells, 'mountains');
   for (const cluster of clusters) {
     if (cluster.length < profile.fragmentation.largeMountainClusterMinCells) continue;

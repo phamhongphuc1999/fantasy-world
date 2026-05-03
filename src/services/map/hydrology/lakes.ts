@@ -1,23 +1,23 @@
-import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { TFifoQueue } from 'src/services/map/core/queue';
 import { TMapCell, TTerrainBand } from 'src/types/map.types';
 
-const T_COAST_OUTLET = MAP_HYDROLOGY_CONFIG.coastOutletId;
+const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 function expandLakes(cells: TMapCell[], flow: Float32Array, downstream: Int32Array) {
   const candidateLakeSeeds: number[] = [];
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
     if (!cell.isLake) continue;
-    if (cell.rainShadow > MAP_HYDROLOGY_CONFIG.lakeExpansionRainShadowMax) continue;
-    if (cell.precipitation < MAP_HYDROLOGY_CONFIG.lakeExpansionPrecipitationMin) continue;
+    if (cell.rainShadow > HYDROLOGY_CONFIG.lakeExpansionRainShadowMax) continue;
+    if (cell.precipitation < HYDROLOGY_CONFIG.lakeExpansionPrecipitationMin) continue;
     candidateLakeSeeds.push(cellIndex);
   }
 
   for (const seedId of candidateLakeSeeds) {
     const seedCell = cells[seedId];
     const targetMax = Math.min(
-      MAP_HYDROLOGY_CONFIG.lakeExpansionMaxCells,
+      HYDROLOGY_CONFIG.lakeExpansionMaxCells,
       2 + Math.floor(Math.log2(flow[seedId] + 1) * 2)
     );
     let expanded = 1;
@@ -35,11 +35,11 @@ function expandLakes(cells: TMapCell[], flow: Float32Array, downstream: Int32Arr
 
         const neighbor = cells[neighborId];
         if (neighbor.isWater || neighbor.isLake) continue;
-        if (neighbor.rainShadow > MAP_HYDROLOGY_CONFIG.lakeExpansionRainShadowMax) continue;
-        if (neighbor.precipitation < MAP_HYDROLOGY_CONFIG.lakeExpansionPrecipitationMin) continue;
+        if (neighbor.rainShadow > HYDROLOGY_CONFIG.lakeExpansionRainShadowMax) continue;
+        if (neighbor.precipitation < HYDROLOGY_CONFIG.lakeExpansionPrecipitationMin) continue;
         if (
           neighbor.elevation >
-          seedCell.elevation + MAP_HYDROLOGY_CONFIG.lakeExpansionElevationSlack
+          seedCell.elevation + HYDROLOGY_CONFIG.lakeExpansionElevationSlack
         ) {
           continue;
         }
@@ -143,7 +143,7 @@ function classifyEnclosedWaterBodies(
   downstream: Int32Array
 ) {
   const oceanConnected = buildOceanConnectedWaterMask(cells, width, height);
-  const threshold = seaLevel + MAP_HYDROLOGY_CONFIG.enclosedWaterElevationBuffer;
+  const threshold = seaLevel + HYDROLOGY_CONFIG.enclosedWaterElevationBuffer;
   const visited = new Uint8Array(cells.length);
   const stack: number[] = [];
 
@@ -179,14 +179,14 @@ function classifyEnclosedWaterBodies(
 
     const basinDepth = seaLevel - minElevation;
     const shouldPersistWater =
-      basinDepth >= MAP_HYDROLOGY_CONFIG.enclosedWaterPersistentDepthMin ||
+      basinDepth >= HYDROLOGY_CONFIG.enclosedWaterPersistentDepthMin ||
       component.some((id) => cells[id].isWater);
     if (!shouldPersistWater) continue;
 
-    const isLake = component.length <= MAP_HYDROLOGY_CONFIG.enclosedLakeMaxCells;
+    const isLake = component.length <= HYDROLOGY_CONFIG.enclosedLakeMaxCells;
     const shorelineRise = Math.min(
-      MAP_HYDROLOGY_CONFIG.enclosedWaterDepthShoreMax,
-      basinDepth * MAP_HYDROLOGY_CONFIG.enclosedWaterDepthShoreFactor
+      HYDROLOGY_CONFIG.enclosedWaterDepthShoreMax,
+      basinDepth * HYDROLOGY_CONFIG.enclosedWaterDepthShoreFactor
     );
     const waterSurface = seaLevel + Math.max(0, shorelineRise);
 
@@ -245,7 +245,7 @@ function filterAndLimitLakes(cells: TMapCell[], flow: Float32Array) {
 
   regionScore.sort((a, b) => b.score - a.score);
   const keptRegions = new Set(
-    regionScore.slice(0, MAP_HYDROLOGY_CONFIG.maxLakeCount).map((v) => v.region)
+    regionScore.slice(0, HYDROLOGY_CONFIG.maxLakeCount).map((v) => v.region)
   );
 
   for (const entry of regionScore) {

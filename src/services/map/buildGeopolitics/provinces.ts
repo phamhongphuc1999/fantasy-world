@@ -1,4 +1,4 @@
-import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { runMultiSourceExpansion } from 'src/services/map/core/expansionEngine';
 import { clamp } from 'src/services/map/core/math';
 import { sortStableDescByScore } from 'src/services/map/core/sort';
@@ -171,7 +171,7 @@ function assignNationProvincesBySeeds(
   startProvinceId: number,
   noiseHash: number
 ) {
-  const profile = MAP_GEOPOLITICAL_CONFIG.borderLevels.province;
+  const profile = GEOPOLITICAL_CONFIG.borderLevels.province;
   const localCost = new Float64Array(cells.length);
   localCost.fill(Number.POSITIVE_INFINITY);
   const seedStates: Array<{ cellId: number; provinceId: number; cost: number }> = [];

@@ -1,4 +1,4 @@
-import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import {
   THydrologyProfile,
   TMapMeshWithDelaunay,
@@ -33,7 +33,7 @@ interface TBuildHydrologyOptions {
   terrainRatios?: TTerrainRatioMap;
 }
 
-const T_COAST_OUTLET = MAP_HYDROLOGY_CONFIG.coastOutletId;
+const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 function nowMs() {
   if (typeof globalThis !== 'undefined' && globalThis.performance?.now) {
     return globalThis.performance.now();
@@ -134,18 +134,18 @@ function runHydrologyInternal(
         cell.isWater || isSink
           ? 0
           : Math.min(
-              MAP_HYDROLOGY_CONFIG.erosionMax,
-              slope * MAP_HYDROLOGY_CONFIG.erosionSlopeWeight +
-                Math.log2(flow[cellIndex] + 1) * MAP_HYDROLOGY_CONFIG.erosionFlowWeight
+              HYDROLOGY_CONFIG.erosionMax,
+              slope * HYDROLOGY_CONFIG.erosionSlopeWeight +
+                Math.log2(flow[cellIndex] + 1) * HYDROLOGY_CONFIG.erosionFlowWeight
             );
 
       erosion[cellIndex] = erosionAmount;
 
       if (downstreamId >= 0) {
-        deposit[downstreamId] += erosionAmount * MAP_HYDROLOGY_CONFIG.depositFactor;
+        deposit[downstreamId] += erosionAmount * HYDROLOGY_CONFIG.depositFactor;
       }
 
-      if (isSink && flow[cellIndex] > MAP_HYDROLOGY_CONFIG.lakeSinkFlowMin) {
+      if (isSink && flow[cellIndex] > HYDROLOGY_CONFIG.lakeSinkFlowMin) {
         isLake[cellIndex] = 1;
       }
     }
@@ -187,7 +187,7 @@ function runHydrologyInternal(
 
     if (nextCell.isWater && !nextCell.isLake) {
       nextCell.terrain =
-        nextCell.elevation < seaLevel - MAP_HYDROLOGY_CONFIG.deepWaterOffset
+        nextCell.elevation < seaLevel - HYDROLOGY_CONFIG.deepWaterOffset
           ? 'deep-water'
           : 'shallow-water';
     }
@@ -201,25 +201,25 @@ function runHydrologyInternal(
       const latitude = Math.abs((cell.site[1] / mesh.height) * 2 - 1);
       const temperature = clamp(
         1 -
-          latitude * MAP_HYDROLOGY_CONFIG.temperatureLatitudeWeight -
-          Math.max(0, cell.elevation - seaLevel) * MAP_HYDROLOGY_CONFIG.temperatureElevationWeight +
-          waterInfluence[cellIndex] * MAP_HYDROLOGY_CONFIG.temperatureWaterWeight,
+          latitude * HYDROLOGY_CONFIG.temperatureLatitudeWeight -
+          Math.max(0, cell.elevation - seaLevel) * HYDROLOGY_CONFIG.temperatureElevationWeight +
+          waterInfluence[cellIndex] * HYDROLOGY_CONFIG.temperatureWaterWeight,
         0,
         1
       );
       const rainShadow = getRainShadow(cell, baseCells);
       const orographicRain = clamp(
-        Math.max(0, cell.elevation - MAP_HYDROLOGY_CONFIG.orographicElevationStart) *
-          MAP_HYDROLOGY_CONFIG.orographicWeight,
+        Math.max(0, cell.elevation - HYDROLOGY_CONFIG.orographicElevationStart) *
+          HYDROLOGY_CONFIG.orographicWeight,
         0,
-        MAP_HYDROLOGY_CONFIG.orographicMax
+        HYDROLOGY_CONFIG.orographicMax
       );
       const precipitation = clamp(
-        waterInfluence[cellIndex] * MAP_HYDROLOGY_CONFIG.precipitationWaterWeight +
-          (1 - latitude) * MAP_HYDROLOGY_CONFIG.precipitationLatitudeWeight +
-          Math.log2(cell.flow + 1) * MAP_HYDROLOGY_CONFIG.precipitationFlowWeight +
+        waterInfluence[cellIndex] * HYDROLOGY_CONFIG.precipitationWaterWeight +
+          (1 - latitude) * HYDROLOGY_CONFIG.precipitationLatitudeWeight +
+          Math.log2(cell.flow + 1) * HYDROLOGY_CONFIG.precipitationFlowWeight +
           orographicRain -
-          rainShadow * MAP_HYDROLOGY_CONFIG.precipitationRainShadowWeight,
+          rainShadow * HYDROLOGY_CONFIG.precipitationRainShadowWeight,
         0,
         1
       );
@@ -264,11 +264,11 @@ function runHydrologyInternal(
       }
 
       const dryPenalty =
-        cell.precipitation < MAP_HYDROLOGY_CONFIG.dryRiverPrecipitationMax &&
-        cell.rainShadow > MAP_HYDROLOGY_CONFIG.dryRiverRainShadowMin
-          ? MAP_HYDROLOGY_CONFIG.dryRiverFlowPenalty
+        cell.precipitation < HYDROLOGY_CONFIG.dryRiverPrecipitationMax &&
+        cell.rainShadow > HYDROLOGY_CONFIG.dryRiverRainShadowMin
+          ? HYDROLOGY_CONFIG.dryRiverFlowPenalty
           : 0;
-      const riverThreshold = MAP_HYDROLOGY_CONFIG.riverFlowMin + dryPenalty;
+      const riverThreshold = HYDROLOGY_CONFIG.riverFlowMin + dryPenalty;
 
       if (
         flow[cellIndex] >= riverThreshold &&
@@ -290,7 +290,7 @@ function runHydrologyInternal(
     regionalizeLandTerrains(cells, seaLevel);
     const terrainBalance = terrainRatios
       ? toTerrainBalance(terrainRatios)
-      : MAP_HYDROLOGY_CONFIG.terrainBalance;
+      : HYDROLOGY_CONFIG.terrainBalance;
     rebalanceTerrainDistribution(cells, terrainBalance);
     antiAliasTerrains(cells);
     mergeSmallTerrainClusters(cells, seaLevel);
