@@ -12,24 +12,10 @@ import {
   useState,
 } from 'react';
 import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
-import { buildGeopolitics } from 'src/services/map/buildGeopolitics';
-import { buildHydrology } from 'src/services/map/buildHydrology';
-import { buildMesh } from 'src/services/map/buildMesh';
-import { buildPopulation } from 'src/services/map/buildPopulation';
-import { buildTopography } from 'src/services/map/buildTopography';
+import { MapGenerator } from 'src/services/map/map.generator';
 import { createSeededRandom } from 'src/services/map/seededRandom';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TMapMeshWithDelaunay } from 'src/types/global';
-
-export type TMapContextType = {
-  mesh: TMapMeshWithDelaunay;
-  isGenerating: boolean;
-  handlePointerMove: (x: number, y: number) => void;
-  handleApplySeed: () => void;
-  handleRandomizeSeed: () => void;
-  handleCellCountChange: (nextValue: number) => void;
-  handleSeaLevelDraftChange: (nextValue: number) => void;
-};
+import { TMapContextType, TMapMeshWithDelaunay } from 'src/types/map.types';
 
 const mapContextDefault: TMapContextType = {
   mesh: {
@@ -66,8 +52,8 @@ export default function MapProvider({ children }: TProps) {
     seaLevel,
     terrainPreset,
     terrainRatios,
-    customCountryMode,
-    customCountryCount,
+    nationMode,
+    nationCount,
     setSeed,
     setCellCount,
     setSeaLevelDraft,
@@ -83,21 +69,18 @@ export default function MapProvider({ children }: TProps) {
     setIsGenerating(true);
 
     const timer = window.setTimeout(() => {
-      const baseMesh = buildMesh({
+      const generator = new MapGenerator({
         width: MAP_VIEWPORT_CONFIG.width,
         height: MAP_VIEWPORT_CONFIG.height,
         seed,
         cellCount,
+        seaLevel,
+        terrainPreset,
+        terrainRatios,
+        nationMode,
+        nationCount,
       });
-      const topographyMesh = buildTopography({ mesh: baseMesh, seed, seaLevel, terrainPreset });
-      const hydrologyMesh = buildHydrology({ mesh: topographyMesh, seaLevel, terrainRatios });
-      const populationMesh = buildPopulation({ mesh: hydrologyMesh, seed });
-      const nextMesh = buildGeopolitics({
-        mesh: populationMesh,
-        seed,
-        customCountryMode,
-        customCountryCount,
-      });
+      const nextMesh = generator.generate();
       if (generationId !== generationIdRef.current) return;
       setMesh(nextMesh);
       setIsGenerating(false);
@@ -106,15 +89,7 @@ export default function MapProvider({ children }: TProps) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [
-    cellCount,
-    customCountryCount,
-    customCountryMode,
-    seaLevel,
-    seed,
-    terrainPreset,
-    terrainRatios,
-  ]);
+  }, [cellCount, nationCount, nationMode, seaLevel, seed, terrainPreset, terrainRatios]);
 
   const handlePointerMove = useCallback(
     (x: number, y: number) => {

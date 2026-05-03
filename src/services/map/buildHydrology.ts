@@ -1,6 +1,10 @@
-import { MAP_HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
-import { TMapMeshWithDelaunay, TTerrainBand, TTerrainRatioMap } from 'src/types/global';
-
+import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import {
+  THydrologyProfile,
+  TMapMeshWithDelaunay,
+  TTerrainBand,
+  TTerrainRatioMap,
+} from 'src/types/map.types';
 import {
   buildWaterInfluence,
   getBiome,
@@ -29,13 +33,38 @@ interface TBuildHydrologyOptions {
   terrainRatios?: TTerrainRatioMap;
 }
 
-const T_COAST_OUTLET = MAP_HYDROLOGY_CONFIG.coastOutletId;
+const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
+function nowMs() {
+  if (typeof globalThis !== 'undefined' && globalThis.performance?.now) {
+    return globalThis.performance.now();
+  }
+  return Date.now();
+}
 
-export function buildHydrology({
-  mesh,
-  seaLevel,
-  terrainRatios,
-}: TBuildHydrologyOptions): TMapMeshWithDelaunay {
+function runHydrologyInternal(
+  { mesh, seaLevel, terrainRatios }: TBuildHydrologyOptions,
+  onProfile?: (profile: THydrologyProfile) => void
+): TMapMeshWithDelaunay {
+  const profile: THydrologyProfile = {
+    initAndDownstreamMs: 0,
+    flowAccumulationMs: 0,
+    erosionAndAdjustMs: 0,
+    climateAndTerrainMs: 0,
+    lakesAndEnclosedWaterMs: 0,
+    riversMs: 0,
+    terrainPostProcessMs: 0,
+    finalizeBiomeMs: 0,
+    totalMs: 0,
+  };
+  const totalStart = nowMs();
+
+  function measure<T>(key: keyof Omit<THydrologyProfile, 'totalMs'>, run: () => T) {
+    const start = nowMs();
+    const result = run();
+    profile[key] += nowMs() - start;
+    return result;
+  }
+
   const cellCount = mesh.cells.length;
   const elevations = new Float32Array(cellCount);
   const adjustedElevations = new Float32Array(cellCount);
@@ -46,83 +75,89 @@ export function buildHydrology({
   const isLake = new Uint8Array(cellCount);
   const isRiver = new Uint8Array(cellCount);
 
-  downstream.fill(-1);
+  measure('initAndDownstreamMs', () => {
+    downstream.fill(-1);
 
-  for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
-    elevations[cellIndex] = mesh.cells[cellIndex].elevation;
-    adjustedElevations[cellIndex] = mesh.cells[cellIndex].elevation;
-    flow[cellIndex] = mesh.cells[cellIndex].isWater ? 0 : 1;
-  }
+    for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
+      elevations[cellIndex] = mesh.cells[cellIndex].elevation;
+      adjustedElevations[cellIndex] = mesh.cells[cellIndex].elevation;
+      flow[cellIndex] = mesh.cells[cellIndex].isWater ? 0 : 1;
+    }
 
-  for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
-    const cell = mesh.cells[cellIndex];
-    if (cell.isWater) continue;
+    for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
+      const cell = mesh.cells[cellIndex];
+      if (cell.isWater) continue;
 
-    let nextCellId = -1;
-    let nextElevation = elevations[cellIndex];
-    let hasWaterNeighbor = false;
+      let nextCellId = -1;
+      let nextElevation = elevations[cellIndex];
+      let hasWaterNeighbor = false;
 
-    for (const neighborId of cell.neighbors) {
-      const neighbor = mesh.cells[neighborId];
+      for (const neighborId of cell.neighbors) {
+        const neighbor = mesh.cells[neighborId];
 
-      if (neighbor.isWater) {
-        hasWaterNeighbor = true;
-        continue;
+        if (neighbor.isWater) {
+          hasWaterNeighbor = true;
+          continue;
+        }
+
+        if (elevations[neighborId] < nextElevation) {
+          nextElevation = elevations[neighborId];
+          nextCellId = neighborId;
+        }
       }
 
-      if (elevations[neighborId] < nextElevation) {
-        nextElevation = elevations[neighborId];
-        nextCellId = neighborId;
+      if (nextCellId >= 0) {
+        downstream[cellIndex] = nextCellId;
+      } else if (hasWaterNeighbor) {
+        downstream[cellIndex] = T_COAST_OUTLET;
+      }
+    }
+  });
+
+  measure('flowAccumulationMs', () => {
+    const sortedIndices = sortIndicesByElevation(elevations);
+    for (const cellIndex of sortedIndices) {
+      const downstreamId = downstream[cellIndex];
+      if (downstreamId >= 0) flow[downstreamId] += flow[cellIndex];
+    }
+  });
+
+  measure('erosionAndAdjustMs', () => {
+    for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
+      const cell = mesh.cells[cellIndex];
+      const downstreamId = downstream[cellIndex];
+      const isSink = downstreamId === -1 && !cell.isWater;
+      const slope =
+        downstreamId >= 0 ? Math.max(0, elevations[cellIndex] - elevations[downstreamId]) : 0;
+
+      const erosionAmount =
+        cell.isWater || isSink
+          ? 0
+          : Math.min(
+              HYDROLOGY_CONFIG.erosionMax,
+              slope * HYDROLOGY_CONFIG.erosionSlopeWeight +
+                Math.log2(flow[cellIndex] + 1) * HYDROLOGY_CONFIG.erosionFlowWeight
+            );
+
+      erosion[cellIndex] = erosionAmount;
+
+      if (downstreamId >= 0) {
+        deposit[downstreamId] += erosionAmount * HYDROLOGY_CONFIG.depositFactor;
+      }
+
+      if (isSink && flow[cellIndex] > HYDROLOGY_CONFIG.lakeSinkFlowMin) {
+        isLake[cellIndex] = 1;
       }
     }
 
-    if (nextCellId >= 0) {
-      downstream[cellIndex] = nextCellId;
-    } else if (hasWaterNeighbor) {
-      downstream[cellIndex] = T_COAST_OUTLET;
+    for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
+      adjustedElevations[cellIndex] = clamp(
+        elevations[cellIndex] - erosion[cellIndex] + deposit[cellIndex],
+        0,
+        1
+      );
     }
-  }
-
-  const sortedIndices = sortIndicesByElevation(elevations);
-  for (const cellIndex of sortedIndices) {
-    const downstreamId = downstream[cellIndex];
-    if (downstreamId >= 0) flow[downstreamId] += flow[cellIndex];
-  }
-
-  for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
-    const cell = mesh.cells[cellIndex];
-    const downstreamId = downstream[cellIndex];
-    const isSink = downstreamId === -1 && !cell.isWater;
-    const slope =
-      downstreamId >= 0 ? Math.max(0, elevations[cellIndex] - elevations[downstreamId]) : 0;
-
-    const erosionAmount =
-      cell.isWater || isSink
-        ? 0
-        : Math.min(
-            MAP_HYDROLOGY_CONFIG.erosionMax,
-            slope * MAP_HYDROLOGY_CONFIG.erosionSlopeWeight +
-              Math.log2(flow[cellIndex] + 1) * MAP_HYDROLOGY_CONFIG.erosionFlowWeight
-          );
-
-    erosion[cellIndex] = erosionAmount;
-
-    if (downstreamId >= 0) {
-      deposit[downstreamId] += erosionAmount * MAP_HYDROLOGY_CONFIG.depositFactor;
-    }
-
-    if (isSink && flow[cellIndex] > MAP_HYDROLOGY_CONFIG.lakeSinkFlowMin) {
-      isLake[cellIndex] = 1;
-    }
-  }
-
-  for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
-    adjustedElevations[cellIndex] = clamp(
-      elevations[cellIndex] - erosion[cellIndex] + deposit[cellIndex],
-      0,
-      1
-    );
-  }
+  });
 
   const baseCells = mesh.cells.map((cell, cellIndex) => {
     const nextCell = {
@@ -152,7 +187,7 @@ export function buildHydrology({
 
     if (nextCell.isWater && !nextCell.isLake) {
       nextCell.terrain =
-        nextCell.elevation < seaLevel - MAP_HYDROLOGY_CONFIG.deepWaterOffset
+        nextCell.elevation < seaLevel - HYDROLOGY_CONFIG.deepWaterOffset
           ? 'deep-water'
           : 'shallow-water';
     }
@@ -160,99 +195,146 @@ export function buildHydrology({
     return nextCell;
   });
 
-  const waterInfluence = buildWaterInfluence(baseCells);
+  const cells = measure('climateAndTerrainMs', () => {
+    const waterInfluence = buildWaterInfluence(baseCells);
+    return baseCells.map((cell, cellIndex) => {
+      const latitude = Math.abs((cell.site[1] / mesh.height) * 2 - 1);
+      const temperature = clamp(
+        1 -
+          latitude * HYDROLOGY_CONFIG.temperatureLatitudeWeight -
+          Math.max(0, cell.elevation - seaLevel) * HYDROLOGY_CONFIG.temperatureElevationWeight +
+          waterInfluence[cellIndex] * HYDROLOGY_CONFIG.temperatureWaterWeight,
+        0,
+        1
+      );
+      const rainShadow = getRainShadow(cell, baseCells);
+      const orographicRain = clamp(
+        Math.max(0, cell.elevation - HYDROLOGY_CONFIG.orographicElevationStart) *
+          HYDROLOGY_CONFIG.orographicWeight,
+        0,
+        HYDROLOGY_CONFIG.orographicMax
+      );
+      const precipitation = clamp(
+        waterInfluence[cellIndex] * HYDROLOGY_CONFIG.precipitationWaterWeight +
+          (1 - latitude) * HYDROLOGY_CONFIG.precipitationLatitudeWeight +
+          Math.log2(cell.flow + 1) * HYDROLOGY_CONFIG.precipitationFlowWeight +
+          orographicRain -
+          rainShadow * HYDROLOGY_CONFIG.precipitationRainShadowWeight,
+        0,
+        1
+      );
 
-  const cells = baseCells.map((cell, cellIndex) => {
-    const latitude = Math.abs((cell.site[1] / mesh.height) * 2 - 1);
-    const temperature = clamp(
-      1 -
-        latitude * MAP_HYDROLOGY_CONFIG.temperatureLatitudeWeight -
-        Math.max(0, cell.elevation - seaLevel) * MAP_HYDROLOGY_CONFIG.temperatureElevationWeight +
-        waterInfluence[cellIndex] * MAP_HYDROLOGY_CONFIG.temperatureWaterWeight,
-      0,
-      1
-    );
-    const rainShadow = getRainShadow(cell, baseCells);
-    const orographicRain = clamp(
-      Math.max(0, cell.elevation - MAP_HYDROLOGY_CONFIG.orographicElevationStart) *
-        MAP_HYDROLOGY_CONFIG.orographicWeight,
-      0,
-      MAP_HYDROLOGY_CONFIG.orographicMax
-    );
-    const precipitation = clamp(
-      waterInfluence[cellIndex] * MAP_HYDROLOGY_CONFIG.precipitationWaterWeight +
-        (1 - latitude) * MAP_HYDROLOGY_CONFIG.precipitationLatitudeWeight +
-        Math.log2(cell.flow + 1) * MAP_HYDROLOGY_CONFIG.precipitationFlowWeight +
-        orographicRain -
-        rainShadow * MAP_HYDROLOGY_CONFIG.precipitationRainShadowWeight,
-      0,
-      1
-    );
+      const neighborAverage = getNeighborAverageElevation(cell, baseCells);
+      const relief = cell.elevation - neighborAverage;
+      const terrain = getTerrainBand(
+        cell,
+        seaLevel,
+        temperature,
+        precipitation,
+        rainShadow,
+        relief
+      );
 
-    const neighborAverage = getNeighborAverageElevation(cell, baseCells);
-    const relief = cell.elevation - neighborAverage;
-    const terrain = getTerrainBand(cell, seaLevel, temperature, precipitation, rainShadow, relief);
-
-    return {
-      ...cell,
-      terrain,
-      biome: getBiome(terrain),
-      suitability: getSuitability(terrain, precipitation, temperature),
-      temperature,
-      precipitation,
-      rainShadow,
-    };
+      return {
+        ...cell,
+        terrain,
+        biome: getBiome(terrain),
+        suitability: getSuitability(terrain, precipitation, temperature),
+        temperature,
+        precipitation,
+        rainShadow,
+      };
+    });
   });
 
-  expandLakes(cells, flow, downstream);
-  filterAndLimitLakes(cells, flow);
-  classifyEnclosedWaterBodies(cells, mesh.width, mesh.height, seaLevel, downstream);
+  measure('lakesAndEnclosedWaterMs', () => {
+    expandLakes(cells, flow, downstream);
+    filterAndLimitLakes(cells, flow);
+    classifyEnclosedWaterBodies(cells, mesh.width, mesh.height, seaLevel, downstream);
+  });
 
-  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
-    const cell = cells[cellIndex];
-    const downstreamId = downstream[cellIndex];
+  measure('riversMs', () => {
+    for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+      const cell = cells[cellIndex];
+      const downstreamId = downstream[cellIndex];
 
-    if (cell.isWater) {
-      cell.isRiver = false;
-      continue;
+      if (cell.isWater) {
+        cell.isRiver = false;
+        continue;
+      }
+
+      const dryPenalty =
+        cell.precipitation < HYDROLOGY_CONFIG.dryRiverPrecipitationMax &&
+        cell.rainShadow > HYDROLOGY_CONFIG.dryRiverRainShadowMin
+          ? HYDROLOGY_CONFIG.dryRiverFlowPenalty
+          : 0;
+      const riverThreshold = HYDROLOGY_CONFIG.riverFlowMin + dryPenalty;
+
+      if (
+        flow[cellIndex] >= riverThreshold &&
+        (downstreamId >= 0 || downstreamId === T_COAST_OUTLET)
+      ) {
+        isRiver[cellIndex] = 1;
+        cell.isRiver = true;
+      } else {
+        cell.isRiver = false;
+      }
     }
 
-    const dryPenalty =
-      cell.precipitation < MAP_HYDROLOGY_CONFIG.dryRiverPrecipitationMax &&
-      cell.rainShadow > MAP_HYDROLOGY_CONFIG.dryRiverRainShadowMin
-        ? MAP_HYDROLOGY_CONFIG.dryRiverFlowPenalty
-        : 0;
-    const riverThreshold = MAP_HYDROLOGY_CONFIG.riverFlowMin + dryPenalty;
+    validateRivers(cells, flow, downstream, isRiver);
+    addInlandPlainTributaries(cells, flow, downstream);
+    extendRiversTowardHighlands(cells, flow, downstream, seaLevel);
+  });
 
-    if (
-      flow[cellIndex] >= riverThreshold &&
-      (downstreamId >= 0 || downstreamId === T_COAST_OUTLET)
-    ) {
-      isRiver[cellIndex] = 1;
-      cell.isRiver = true;
-    } else {
-      cell.isRiver = false;
+  measure('terrainPostProcessMs', () => {
+    regionalizeLandTerrains(cells, seaLevel);
+    const terrainBalance = terrainRatios
+      ? toTerrainBalance(terrainRatios)
+      : HYDROLOGY_CONFIG.terrainBalance;
+    rebalanceTerrainDistribution(cells, terrainBalance);
+    antiAliasTerrains(cells);
+    mergeSmallTerrainClusters(cells, seaLevel);
+    antiAliasTerrains(cells);
+  });
+
+  measure('finalizeBiomeMs', () => {
+    for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+      const cell = cells[cellIndex];
+      cell.biome = getBiome(cell.terrain);
+      cell.suitability = getSuitability(cell.terrain, cell.precipitation, cell.temperature);
     }
-  }
+  });
 
-  validateRivers(cells, flow, downstream, isRiver);
-  addInlandPlainTributaries(cells, flow, downstream);
-  extendRiversTowardHighlands(cells, flow, downstream, seaLevel);
-
-  regionalizeLandTerrains(cells, seaLevel);
-  const terrainBalance = terrainRatios
-    ? toTerrainBalance(terrainRatios)
-    : MAP_HYDROLOGY_CONFIG.terrainBalance;
-  rebalanceTerrainDistribution(cells, terrainBalance);
-  antiAliasTerrains(cells);
-  mergeSmallTerrainClusters(cells, seaLevel);
-  antiAliasTerrains(cells);
-
-  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
-    const cell = cells[cellIndex];
-    cell.biome = getBiome(cell.terrain);
-    cell.suitability = getSuitability(cell.terrain, cell.precipitation, cell.temperature);
-  }
-
+  profile.totalMs = nowMs() - totalStart;
+  onProfile?.(profile);
   return { ...mesh, cells };
+}
+
+export function buildHydrology({
+  mesh,
+  seaLevel,
+  terrainRatios,
+}: TBuildHydrologyOptions): TMapMeshWithDelaunay {
+  return runHydrologyInternal({ mesh, seaLevel, terrainRatios });
+}
+
+export function buildHydrologyProfiled({ mesh, seaLevel, terrainRatios }: TBuildHydrologyOptions): {
+  mesh: TMapMeshWithDelaunay;
+  profile: THydrologyProfile;
+} {
+  let hydrologyProfile: THydrologyProfile = {
+    initAndDownstreamMs: 0,
+    flowAccumulationMs: 0,
+    erosionAndAdjustMs: 0,
+    climateAndTerrainMs: 0,
+    lakesAndEnclosedWaterMs: 0,
+    riversMs: 0,
+    terrainPostProcessMs: 0,
+    finalizeBiomeMs: 0,
+    totalMs: 0,
+  };
+  const builtMesh = runHydrologyInternal({ mesh, seaLevel, terrainRatios }, (profile) => {
+    hydrologyProfile = profile;
+  });
+  return { mesh: builtMesh, profile: hydrologyProfile };
 }

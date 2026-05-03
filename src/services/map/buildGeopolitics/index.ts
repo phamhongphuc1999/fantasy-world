@@ -1,4 +1,4 @@
-import { TCustomCountryMode, TMapMeshWithDelaunay } from 'src/types/global';
+import { TMapMeshWithDelaunay, TNationMode } from 'src/types/map.types';
 import { pickEconomicAndCapital } from './capitals';
 import { buildEthnicRegions } from './ethnic';
 import {
@@ -7,8 +7,7 @@ import {
   diversifySmallNationSizes,
   enforceMainlandContiguity,
   enforceMinimumNationArea,
-  ensureAllLandClaimed,
-  fillUnclaimedLand,
+  reconcileNationClaims,
 } from './nations';
 import {
   buildNationProvinces,
@@ -20,49 +19,93 @@ import { assignMaritimeZones, getNationCount, isLand, limitMountainClusterSplit 
 type TBuildGeopoliticsOptions = {
   mesh: TMapMeshWithDelaunay;
   seed: string;
-  customCountryMode: TCustomCountryMode;
-  customCountryCount: number;
+  nationMode: TNationMode;
+  nationCount: number;
 };
 
-export function buildGeopolitics({
-  mesh,
-  seed,
-  customCountryMode,
-  customCountryCount,
-}: TBuildGeopoliticsOptions): TMapMeshWithDelaunay {
-  const landCellCount = mesh.cells.filter(isLand).length;
-  const targetNationCount = getNationCount(
-    customCountryMode,
-    customCountryCount,
-    seed,
-    landCellCount
-  );
-  const preserveNationCount = customCountryMode === 'balanced' ? targetNationCount : 0;
-  const owner = buildLandNations(mesh.cells, seed, customCountryMode, customCountryCount);
-  alignNaturalTerrainClusters(mesh.cells, owner);
-  limitMountainClusterSplit(mesh.cells, owner, 'country');
-  enforceMinimumNationArea(mesh.cells, owner, preserveNationCount);
-  enforceMainlandContiguity(mesh.cells, owner);
-  alignNaturalTerrainClusters(mesh.cells, owner);
-  limitMountainClusterSplit(mesh.cells, owner, 'country');
-  fillUnclaimedLand(mesh.cells, owner);
-  ensureAllLandClaimed(mesh.cells, owner);
-  enforceMinimumNationArea(mesh.cells, owner, preserveNationCount);
-  ensureAllLandClaimed(mesh.cells, owner);
-  if (customCountryMode === 'balanced') {
-    diversifySmallNationSizes(mesh.cells, owner, seed);
-    enforceMinimumNationArea(mesh.cells, owner, preserveNationCount);
-    ensureAllLandClaimed(mesh.cells, owner);
-  }
+type TNationAssignment = {
+  owner: Int32Array;
+  preserveNationCount: number;
+};
 
+function runNationStabilityPass(
+  cells: TMapMeshWithDelaunay['cells'],
+  owner: Int32Array,
+  preserveNationCount: number
+) {
+  alignNaturalTerrainClusters(cells, owner);
+  limitMountainClusterSplit(cells, owner, 'country');
+  enforceMinimumNationArea(cells, owner, preserveNationCount);
+}
+
+function runNationClaimReconciliationPass(
+  cells: TMapMeshWithDelaunay['cells'],
+  owner: Int32Array,
+  preserveNationCount: number
+) {
+  reconcileNationClaims(cells, owner, preserveNationCount);
+}
+
+function assignNations(
+  mesh: TMapMeshWithDelaunay,
+  seed: string,
+  nationMode: TNationMode,
+  nationCount: number
+): TNationAssignment {
+  const landCellCount = mesh.cells.filter(isLand).length;
+  const targetNationCount = getNationCount(nationMode, nationCount, seed, landCellCount);
+  const preserveNationCount = nationMode === 'balanced' ? targetNationCount : 0;
+  const owner = buildLandNations(mesh.cells, seed, nationMode, nationCount);
+  return { owner, preserveNationCount };
+}
+
+function postProcessNations(
+  cells: TMapMeshWithDelaunay['cells'],
+  owner: Int32Array,
+  preserveNationCount: number,
+  nationMode: TNationMode,
+  seed: string
+) {
+  runNationStabilityPass(cells, owner, preserveNationCount);
+  enforceMainlandContiguity(cells, owner);
+  runNationStabilityPass(cells, owner, preserveNationCount);
+  runNationClaimReconciliationPass(cells, owner, preserveNationCount);
+  if (nationMode === 'balanced') {
+    diversifySmallNationSizes(cells, owner, seed);
+    runNationClaimReconciliationPass(cells, owner, preserveNationCount);
+  }
+}
+
+function assignProvinces(cells: TMapMeshWithDelaunay['cells'], owner: Int32Array, seed: string) {
+  return { provinceOwner: buildNationProvinces(cells, owner, seed) };
+}
+
+function postProcessProvinces(
+  cells: TMapMeshWithDelaunay['cells'],
+  owner: Int32Array,
+  provinceOwner: Int32Array
+) {
+  limitMountainClusterSplit(cells, provinceOwner, 'province', owner);
+  enforceProvinceContiguity(cells, owner, provinceOwner);
+  enforceMinimumProvinceArea(cells, owner, provinceOwner);
+  enforceProvinceContiguity(cells, owner, provinceOwner);
+  enforceMinimumProvinceArea(cells, owner, provinceOwner);
+}
+
+function assignEthnic(cells: TMapMeshWithDelaunay['cells'], owner: Int32Array, seed: string) {
+  const { ethnicOwner, ethnicGroups } = buildEthnicRegions(cells, owner, seed);
+  return { ethnicOwner, ethnicGroups };
+}
+
+function finalizeOwnershipProjection(
+  mesh: TMapMeshWithDelaunay,
+  owner: Int32Array,
+  provinceOwner: Int32Array,
+  ethnicOwner: Int32Array,
+  ethnicGroups: TMapMeshWithDelaunay['ethnicGroups'],
+  seed: string
+) {
   const { waterOwner, zoneType } = assignMaritimeZones(mesh.cells);
-  const provinceOwner = buildNationProvinces(mesh.cells, owner, seed);
-  limitMountainClusterSplit(mesh.cells, provinceOwner, 'province', owner);
-  enforceProvinceContiguity(mesh.cells, owner, provinceOwner);
-  enforceMinimumProvinceArea(mesh.cells, owner, provinceOwner);
-  enforceProvinceContiguity(mesh.cells, owner, provinceOwner);
-  enforceMinimumProvinceArea(mesh.cells, owner, provinceOwner);
-  const { ethnicOwner, ethnicGroups } = buildEthnicRegions(mesh.cells, owner, seed);
   const nations = pickEconomicAndCapital(mesh.cells, owner, seed, mesh.width, mesh.height);
 
   const hubCellIds = new Set<number>();
@@ -96,5 +139,20 @@ export function buildGeopolitics({
       isCapital: capitalCellIds.has(cell.id),
     };
   });
+
   return { ...mesh, cells, nations, ethnicGroups };
+}
+
+export function buildGeopolitics({
+  mesh,
+  seed,
+  nationMode,
+  nationCount,
+}: TBuildGeopoliticsOptions): TMapMeshWithDelaunay {
+  const { owner, preserveNationCount } = assignNations(mesh, seed, nationMode, nationCount);
+  postProcessNations(mesh.cells, owner, preserveNationCount, nationMode, seed);
+  const { provinceOwner } = assignProvinces(mesh.cells, owner, seed);
+  postProcessProvinces(mesh.cells, owner, provinceOwner);
+  const { ethnicOwner, ethnicGroups } = assignEthnic(mesh.cells, owner, seed);
+  return finalizeOwnershipProjection(mesh, owner, provinceOwner, ethnicOwner, ethnicGroups, seed);
 }

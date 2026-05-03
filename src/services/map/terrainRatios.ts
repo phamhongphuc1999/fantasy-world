@@ -1,5 +1,5 @@
-import { MAP_EXPLORER_DEFAULT_CONFIG } from 'src/configs/mapConfig';
-import { TTerrainRatioKey, TTerrainRatioMap } from 'src/types/global';
+import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
+import { TTerrainRatioKey, TTerrainRatioMap } from 'src/types/map.types';
 
 export const TERRAIN_RATIO_FIELDS: Array<{ key: TTerrainRatioKey; label: string }> = [
   { key: 'plains', label: 'Plains' },
@@ -18,7 +18,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export function normalizeTerrainRatios(input: Partial<TTerrainRatioMap>): TTerrainRatioMap {
-  const defaults = MAP_EXPLORER_DEFAULT_CONFIG.terrainRatios;
+  const defaults = DEFAULT_CONFIG.terrainRatios;
   const merged = TERRAIN_RATIO_FIELDS.reduce((acc, field) => {
     const rawValue = input[field.key] ?? defaults[field.key];
     acc[field.key] = Number.isFinite(rawValue) ? Math.max(0, rawValue) : defaults[field.key];

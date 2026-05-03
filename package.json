@@ -7,6 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "bench:map": "tsx scripts/benchmark-map-generation.ts",
     "format": "prettier --write .",
     "eslint": "eslint --config ./eslint.config.js --cache",
     "prepare": "husky"
@@ -45,8 +48,10 @@
     "postcss": "^8",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
-    "typescript-eslint": "^8.34.1"
+    "typescript-eslint": "^8.34.1",
+    "vitest": "^4.1.5"
   },
   "commitlint": {
     "extends": [

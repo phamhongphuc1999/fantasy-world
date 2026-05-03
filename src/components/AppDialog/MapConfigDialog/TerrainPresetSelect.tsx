@@ -8,7 +8,7 @@ import {
 } from 'src/components/ui/select';
 import { TERRAIN_PRESET_OPTIONS } from 'src/configs/constance';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TTerrainPreset } from 'src/types/global';
+import { TTerrainPreset } from 'src/types/map.types';
 
 export default function TerrainPresetSelect() {
   const { terrainPreset, setTerrainPreset } = useMapExplorerStore();

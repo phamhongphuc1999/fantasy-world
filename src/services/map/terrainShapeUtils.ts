@@ -1,4 +1,4 @@
-import { TMapMesh } from 'src/types/global';
+import { TMapMesh } from 'src/types/map.types';
 
 type TRangeBandOptions = {
   count: number;

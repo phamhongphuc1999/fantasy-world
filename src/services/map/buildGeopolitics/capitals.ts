@@ -1,6 +1,8 @@
-import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { collectConnectedComponents } from 'src/services/map/core/graph';
+import { TFifoQueue } from 'src/services/map/core/queue';
 import { createSeededRandom } from 'src/services/map/seededRandom';
-import { TMapCell, TNation } from 'src/types/global';
+import { TMapCell, TNation } from 'src/types/map.types';
 import { CAPITAL_VIEWPORT_MARGIN, createRegionalName, isLand } from './shared';
 
 function getLandDistanceMap(
@@ -10,55 +12,34 @@ function getLandDistanceMap(
 ) {
   const distances = new Int32Array(cells.length);
   distances.fill(-1);
-  const queue: number[] = [];
+  const queue = new TFifoQueue<number>();
 
   for (const cellId of nationLandSet) {
     if (!sourcePredicate(cellId)) continue;
     distances[cellId] = 0;
-    queue.push(cellId);
+    queue.enqueue(cellId);
   }
 
-  while (queue.length > 0) {
-    const current = queue.shift() as number;
+  while (queue.size > 0) {
+    const current = queue.dequeue() as number;
     const currentDistance = distances[current];
     for (const neighborId of cells[current].neighbors) {
       if (!nationLandSet.has(neighborId)) continue;
       if (distances[neighborId] >= 0) continue;
       distances[neighborId] = currentDistance + 1;
-      queue.push(neighborId);
+      queue.enqueue(neighborId);
     }
   }
   return distances;
 }
 
 function getNationComponents(cells: TMapCell[], owner: Int32Array, nationId: number) {
-  const visited = new Set<number>();
-  const components: number[][] = [];
-  const nationCellIds = cells
-    .filter((cell) => owner[cell.id] === nationId && isLand(cell))
-    .map((cell) => cell.id);
-
-  for (const startCellId of nationCellIds) {
-    if (visited.has(startCellId)) continue;
-    const queue = [startCellId];
-    const component: number[] = [];
-    visited.add(startCellId);
-
-    while (queue.length > 0) {
-      const current = queue.pop() as number;
-      component.push(current);
-      for (const neighborId of cells[current].neighbors) {
-        if (owner[neighborId] !== nationId) continue;
-        if (!isLand(cells[neighborId])) continue;
-        if (visited.has(neighborId)) continue;
-        visited.add(neighborId);
-        queue.push(neighborId);
-      }
-    }
-    components.push(component);
-  }
-  components.sort((a, b) => b.length - a.length);
-  return components;
+  return collectConnectedComponents(
+    cells,
+    (cell) => owner[cell.id] === nationId && isLand(cell),
+    (_current, neighbor) => owner[neighbor.id] === nationId && isLand(neighbor),
+    true
+  );
 }
 
 function waterProximityScore(cell: TMapCell, cells: TMapCell[]) {
@@ -169,9 +150,9 @@ export function pickEconomicAndCapital(
     const random = createSeededRandom(`${seed}:capital:${nationId}`);
 
     let hubCount = 1;
-    if (landSize >= MAP_GEOPOLITICAL_CONFIG.hubCount.mediumNationMinLand) hubCount = 3;
-    else if (landSize >= MAP_GEOPOLITICAL_CONFIG.hubCount.smallNationMinLand) hubCount = 2;
-    hubCount = Math.min(hubCount, MAP_GEOPOLITICAL_CONFIG.hubCount.maxHubsPerNation);
+    if (landSize >= GEOPOLITICAL_CONFIG.hubCount.mediumNationMinLand) hubCount = 3;
+    else if (landSize >= GEOPOLITICAL_CONFIG.hubCount.smallNationMinLand) hubCount = 2;
+    hubCount = Math.min(hubCount, GEOPOLITICAL_CONFIG.hubCount.maxHubsPerNation);
 
     const scored = capitalPool
       .map((cell) => {

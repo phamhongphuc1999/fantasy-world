@@ -1,6 +1,6 @@
 import { Delaunay } from 'd3-delaunay';
 import { createSeededRandom } from 'src/services/map/seededRandom';
-import { TMapCell, TMapEdge, TMapMeshWithDelaunay, TMapVertex, TPoint } from 'src/types/global';
+import { TMapCell, TMapEdge, TMapMeshWithDelaunay, TMapVertex, TPoint } from 'src/types/map.types';
 
 interface TBuildMeshOptions {
   width: number;

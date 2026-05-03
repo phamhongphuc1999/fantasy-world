@@ -1,11 +1,11 @@
-import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { runMultiSourceExpansion } from 'src/services/map/core/expansionEngine';
+import { clamp } from 'src/services/map/core/math';
+import { sortStableDescByScore } from 'src/services/map/core/sort';
 import { hashSeed } from 'src/services/map/seededRandom';
-import { TMapCell } from 'src/types/global';
+import { TMapCell } from 'src/types/map.types';
+import { getProvinceSeedScore } from './provinceCostPolicy';
 import { getBoundaryStepCost, isLand } from './shared';
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
 
 function getMinimumProvinceCells(nationCellCount: number) {
   return Math.max(10, Math.floor(nationCellCount * 0.02));
@@ -162,18 +162,6 @@ function getProvinceTargetCount(
   return clamp(target, 1, maxProvinceCount);
 }
 
-function getProvinceSeedScore(cell: TMapCell) {
-  if (!isLand(cell)) return -1000;
-  if (cell.terrain === 'plains') return 7 + cell.suitability * 2;
-  if (cell.terrain === 'valley') return 6.5 + cell.suitability * 2;
-  if (cell.terrain === 'coast') return 5.2 + cell.suitability * 1.8;
-  if (cell.terrain === 'forest') return 3.5 + cell.suitability;
-  if (cell.terrain === 'hills' || cell.terrain === 'plateau') return 1.8 + cell.suitability * 0.8;
-  if (cell.terrain === 'mountains' || cell.terrain === 'desert' || cell.terrain === 'volcanic')
-    return -4;
-  return 1.2 + cell.suitability * 0.8;
-}
-
 function assignNationProvincesBySeeds(
   cells: TMapCell[],
   owner: Int32Array,
@@ -183,46 +171,47 @@ function assignNationProvincesBySeeds(
   startProvinceId: number,
   noiseHash: number
 ) {
-  const profile = MAP_GEOPOLITICAL_CONFIG.borderLevels.province;
+  const profile = GEOPOLITICAL_CONFIG.borderLevels.province;
   const localCost = new Float64Array(cells.length);
   localCost.fill(Number.POSITIVE_INFINITY);
-  const frontier: Array<{ cellId: number; provinceId: number; cost: number }> = [];
+  const seedStates: Array<{ cellId: number; provinceId: number; cost: number }> = [];
 
   for (let seedIndex = 0; seedIndex < seeds.length; seedIndex += 1) {
     const cellId = seeds[seedIndex];
     const provinceId = startProvinceId + seedIndex;
     provinceOwner[cellId] = provinceId;
     localCost[cellId] = 0;
-    frontier.push({ cellId, provinceId, cost: 0 });
+    seedStates.push({ cellId, provinceId, cost: 0 });
   }
 
-  while (frontier.length > 0) {
-    frontier.sort((a, b) => a.cost - b.cost);
-    const current = frontier.shift() as { cellId: number; provinceId: number; cost: number };
-    if (current.cost > localCost[current.cellId]) continue;
+  runMultiSourceExpansion({
+    seeds: seedStates,
+    getPriority: (state) => state.cost,
+    isStale: (state) => state.cost > localCost[state.cellId],
+    expand: (current, push) => {
+      for (const neighborId of cells[current.cellId].neighbors) {
+        if (owner[neighborId] !== nationId) continue;
+        if (!isLand(cells[neighborId])) continue;
 
-    for (const neighborId of cells[current.cellId].neighbors) {
-      if (owner[neighborId] !== nationId) continue;
-      if (!isLand(cells[neighborId])) continue;
+        const step = getBoundaryStepCost(
+          cells,
+          provinceOwner,
+          current.cellId,
+          neighborId,
+          current.provinceId,
+          noiseHash,
+          profile
+        );
 
-      const step = getBoundaryStepCost(
-        cells,
-        provinceOwner,
-        current.cellId,
-        neighborId,
-        current.provinceId,
-        noiseHash,
-        profile
-      );
-
-      const nextCost = current.cost + Math.max(0.25, step);
-      if (nextCost < localCost[neighborId]) {
-        localCost[neighborId] = nextCost;
-        provinceOwner[neighborId] = current.provinceId;
-        frontier.push({ cellId: neighborId, provinceId: current.provinceId, cost: nextCost });
+        const nextCost = current.cost + Math.max(0.25, step);
+        if (nextCost < localCost[neighborId]) {
+          localCost[neighborId] = nextCost;
+          provinceOwner[neighborId] = current.provinceId;
+          push({ cellId: neighborId, provinceId: current.provinceId, cost: nextCost });
+        }
       }
-    }
-  }
+    },
+  });
 }
 
 export function buildNationProvinces(cells: TMapCell[], owner: Int32Array, seed: string) {
@@ -271,9 +260,9 @@ export function buildNationProvinces(cells: TMapCell[], owner: Int32Array, seed:
       getProvinceTargetCount(nationCells, minProvinceCells, maxProvinceCount)
     );
 
-    const scored = nationCells
-      .map((cell) => ({ cellId: cell.id, score: getProvinceSeedScore(cell) }))
-      .sort((a, b) => b.score - a.score);
+    const scored = sortStableDescByScore(
+      nationCells.map((cell) => ({ cellId: cell.id, score: getProvinceSeedScore(cell) }))
+    );
     if (scored.length === 0) continue;
 
     const seeds: number[] = [];
@@ -507,6 +496,7 @@ export function enforceProvinceContiguity(
   provinceOwner: Int32Array
 ) {
   const provinceIds = Array.from(new Set(provinceOwner)).filter((provinceId) => provinceId >= 0);
+  const stack: number[] = [];
   for (const provinceId of provinceIds) {
     const provinceCells = cells.filter(
       (cell) => isLand(cell) && provinceOwner[cell.id] === provinceId
@@ -518,18 +508,19 @@ export function enforceProvinceContiguity(
     const components: number[][] = [];
     for (const cell of provinceCells) {
       if (visited.has(cell.id)) continue;
-      const queue = [cell.id];
+      stack.length = 0;
+      stack.push(cell.id);
       const component: number[] = [];
       visited.add(cell.id);
-      while (queue.length > 0) {
-        const current = queue.pop() as number;
+      while (stack.length > 0) {
+        const current = stack.pop() as number;
         component.push(current);
         for (const neighborId of cells[current].neighbors) {
           if (owner[neighborId] !== nationId) continue;
           if (provinceOwner[neighborId] !== provinceId) continue;
           if (visited.has(neighborId)) continue;
           visited.add(neighborId);
-          queue.push(neighborId);
+          stack.push(neighborId);
         }
       }
       components.push(component);

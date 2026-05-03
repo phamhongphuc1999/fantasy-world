@@ -1,9 +1,14 @@
-import { MAP_GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { runMultiSourceExpansion } from 'src/services/map/core/expansionEngine';
+import { collectConnectedComponents } from 'src/services/map/core/graph';
+import { TFifoQueue } from 'src/services/map/core/queue';
+import { sortStableDescByScore } from 'src/services/map/core/sort';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
-import { TEthnicGroup, TMapCell } from 'src/types/global';
+import { TEthnicGroup, TMapCell } from 'src/types/map.types';
+import { ethnicTerrainCost } from './ethnicCostPolicy';
 import { createRegionalName, edgeNoise, isLand } from './shared';
 
-type TEthnicConfig = typeof MAP_GEOPOLITICAL_CONFIG.ethnic;
+type TEthnicConfig = typeof GEOPOLITICAL_CONFIG.ethnic;
 
 function getEthnicGroupCount(landCellCount: number, nationCount: number, config: TEthnicConfig) {
   const byLand = Math.floor(landCellCount / 1300);
@@ -13,47 +18,13 @@ function getEthnicGroupCount(landCellCount: number, nationCount: number, config:
   );
 }
 
-function ethnicTerrainCost(cell: TMapCell, config: TEthnicConfig) {
-  const strength = config.terrainInfluenceStrength;
-  if (cell.terrain === 'plains' || cell.terrain === 'valley' || cell.terrain === 'coast')
-    return strength;
-  if (cell.terrain === 'forest') return 1.35 * strength;
-  if (cell.terrain === 'swamp') return 1.75 * strength;
-  if (cell.terrain === 'hills') return 1.5 * strength;
-  if (cell.terrain === 'plateau') return 1.6 * strength;
-  if (cell.terrain === 'mountains' || cell.terrain === 'volcanic') return 2.45 * strength;
-  if (cell.terrain === 'desert' || cell.terrain === 'badlands') return 1.65 * strength;
-  if (cell.terrain === 'tundra') return 1.55 * strength;
-  return 1.3 * strength;
-}
-
 function collectLandComponents(cells: TMapCell[]) {
-  const visited = new Uint8Array(cells.length);
-  const components: number[][] = [];
-
-  for (const cell of cells) {
-    if (!isLand(cell) || visited[cell.id] === 1) continue;
-    const queue = [cell.id];
-    const component: number[] = [];
-    visited[cell.id] = 1;
-
-    while (queue.length > 0) {
-      const current = queue.pop() as number;
-      component.push(current);
-
-      for (const neighborId of cells[current].neighbors) {
-        if (visited[neighborId] === 1) continue;
-        if (!isLand(cells[neighborId])) continue;
-        visited[neighborId] = 1;
-        queue.push(neighborId);
-      }
-    }
-
-    components.push(component);
-  }
-
-  components.sort((a, b) => b.length - a.length);
-  return components;
+  return collectConnectedComponents(
+    cells,
+    (cell) => isLand(cell),
+    (_current, neighbor) => isLand(neighbor),
+    true
+  );
 }
 
 function pickEthnicCoreSeeds(
@@ -63,18 +34,19 @@ function pickEthnicCoreSeeds(
   seed: string
 ) {
   const random = createSeededRandom(`${seed}:ethnic:cores`);
-  const candidates = componentCellIds
-    .map((cellId) => cells[cellId])
-    .map((cell) => {
-      let score = cell.suitability * 1.3;
-      if (cell.terrain === 'plains' || cell.terrain === 'valley') score += 1.1;
-      if (cell.terrain === 'forest') score += 0.35;
-      if (cell.terrain === 'mountains') score += 0.2;
-      if (cell.isRiver || cell.isLake) score += 0.35;
-      score += random() * 0.5;
-      return { cellId: cell.id, score };
-    })
-    .sort((a, b) => b.score - a.score);
+  const candidates = sortStableDescByScore(
+    componentCellIds
+      .map((cellId) => cells[cellId])
+      .map((cell) => {
+        let score = cell.suitability * 1.3;
+        if (cell.terrain === 'plains' || cell.terrain === 'valley') score += 1.1;
+        if (cell.terrain === 'forest') score += 0.35;
+        if (cell.terrain === 'mountains') score += 0.2;
+        if (cell.isRiver || cell.isLake) score += 0.35;
+        score += random() * 0.5;
+        return { cellId: cell.id, score };
+      })
+  );
 
   const seeds: number[] = [];
   for (const candidate of candidates) {
@@ -104,7 +76,8 @@ function buildEthnicField(
 ) {
   const cost = new Float64Array(cells.length);
   cost.fill(Number.POSITIVE_INFINITY);
-  const frontier: Array<{ cellId: number; ethnicId: number; cost: number; distance: number }> = [];
+  const seedStates: Array<{ cellId: number; ethnicId: number; cost: number; distance: number }> =
+    [];
   const seedHash = hashSeed(`${seed}:ethnic:frontier`);
 
   for (let localEthnicId = 0; localEthnicId < seedCells.length; localEthnicId += 1) {
@@ -112,53 +85,49 @@ function buildEthnicField(
     const ethnicId = ethnicOffset + localEthnicId;
     ethnicOwner[cellId] = ethnicId;
     cost[cellId] = 0;
-    frontier.push({ cellId, ethnicId, cost: 0, distance: 0 });
+    seedStates.push({ cellId, ethnicId, cost: 0, distance: 0 });
   }
 
-  while (frontier.length > 0) {
-    frontier.sort((a, b) => a.cost - b.cost);
-    const current = frontier.shift() as {
-      cellId: number;
-      ethnicId: number;
-      cost: number;
-      distance: number;
-    };
-    if (current.cost > cost[current.cellId]) continue;
+  runMultiSourceExpansion({
+    seeds: seedStates,
+    getPriority: (state) => state.cost,
+    isStale: (state) => state.cost > cost[state.cellId],
+    expand: (current, push) => {
+      for (const neighborId of cells[current.cellId].neighbors) {
+        const neighbor = cells[neighborId];
+        if (!allowedCellSet.has(neighborId) || !isLand(neighbor)) continue;
 
-    for (const neighborId of cells[current.cellId].neighbors) {
-      const neighbor = cells[neighborId];
-      if (!allowedCellSet.has(neighborId) || !isLand(neighbor)) continue;
+        let step = ethnicTerrainCost(neighbor, config);
+        const borderPenalty =
+          owner[current.cellId] >= 0 &&
+          owner[neighborId] >= 0 &&
+          owner[current.cellId] !== owner[neighborId]
+            ? 1 - config.crossBorderBlend
+            : 0;
+        step += borderPenalty;
+        if (cells[current.cellId].terrain === 'mountains' && neighbor.terrain === 'mountains') {
+          step += config.fragmentationLevel * 0.35;
+        }
+        if (cells[current.cellId].isRiver || neighbor.isRiver) step += 0.3;
+        if (cells[current.cellId].isLake !== neighbor.isLake) step += 0.45;
+        const nextDistance = current.distance + 1;
+        step += nextDistance * config.distancePenalty;
+        step += (edgeNoise(seedHash, current.cellId, neighborId) - 0.5) * 0.16;
+        const nextCost = current.cost + Math.max(0.2, step);
 
-      let step = ethnicTerrainCost(neighbor, config);
-      const borderPenalty =
-        owner[current.cellId] >= 0 &&
-        owner[neighborId] >= 0 &&
-        owner[current.cellId] !== owner[neighborId]
-          ? 1 - config.crossBorderBlend
-          : 0;
-      step += borderPenalty;
-      if (cells[current.cellId].terrain === 'mountains' && neighbor.terrain === 'mountains') {
-        step += config.fragmentationLevel * 0.35;
+        if (nextCost < cost[neighborId]) {
+          cost[neighborId] = nextCost;
+          ethnicOwner[neighborId] = current.ethnicId;
+          push({
+            cellId: neighborId,
+            ethnicId: current.ethnicId,
+            cost: nextCost,
+            distance: nextDistance,
+          });
+        }
       }
-      if (cells[current.cellId].isRiver || neighbor.isRiver) step += 0.3;
-      if (cells[current.cellId].isLake !== neighbor.isLake) step += 0.45;
-      const nextDistance = current.distance + 1;
-      step += nextDistance * config.distancePenalty;
-      step += (edgeNoise(seedHash, current.cellId, neighborId) - 0.5) * 0.16;
-      const nextCost = current.cost + Math.max(0.2, step);
-
-      if (nextCost < cost[neighborId]) {
-        cost[neighborId] = nextCost;
-        ethnicOwner[neighborId] = current.ethnicId;
-        frontier.push({
-          cellId: neighborId,
-          ethnicId: current.ethnicId,
-          cost: nextCost,
-          distance: nextDistance,
-        });
-      }
-    }
-  }
+    },
+  });
 }
 
 function enforceCountryEthnicDominance(
@@ -474,10 +443,14 @@ function ensureEthnicMultiNationPresence(
     if (candidateBorders.length === 0) continue;
 
     let painted = 0;
-    const queue = [...new Set(candidateBorders)];
-    const visited = new Set<number>(queue);
-    while (queue.length > 0 && painted < 18) {
-      const currentId = queue.shift() as number;
+    const uniqueBorderCells = [...new Set(candidateBorders)];
+    const queue = new TFifoQueue<number>();
+    for (const cellId of uniqueBorderCells) {
+      queue.enqueue(cellId);
+    }
+    const visited = new Set<number>(uniqueBorderCells);
+    while (queue.size > 0 && painted < 18) {
+      const currentId = queue.dequeue() as number;
       if (!isLand(cells[currentId])) continue;
       if (ethnicOwner[currentId] !== group.id) {
         ethnicOwner[currentId] = group.id;
@@ -488,7 +461,7 @@ function ensureEthnicMultiNationPresence(
         if (!isLand(cells[neighborId])) continue;
         if (nationOwner[neighborId] !== nationOwner[currentId]) continue;
         visited.add(neighborId);
-        queue.push(neighborId);
+        queue.enqueue(neighborId);
       }
     }
   }
@@ -517,7 +490,7 @@ function assignUnclaimedLandCells(cells: TMapCell[], ethnicOwner: Int32Array) {
 }
 
 export function buildEthnicRegions(cells: TMapCell[], nationOwner: Int32Array, seed: string) {
-  const config = MAP_GEOPOLITICAL_CONFIG.ethnic;
+  const config = GEOPOLITICAL_CONFIG.ethnic;
   const ethnicOwner = new Int32Array(cells.length);
   ethnicOwner.fill(-1);
   const ethnicGroups: TEthnicGroup[] = [];

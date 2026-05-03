@@ -1,7 +1,7 @@
 import { Button } from 'src/components/ui/button';
 import { TERRAIN_RATIO_FIELDS } from 'src/services/map/terrainRatios';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TTerrainRatioKey } from 'src/types/global';
+import { TTerrainRatioKey } from 'src/types/map.types';
 
 type TProps = {
   terrain: TTerrainRatioKey;

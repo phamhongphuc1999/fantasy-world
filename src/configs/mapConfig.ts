@@ -1,11 +1,11 @@
 import {
-  TCustomCountryMode,
   TMapDisplaySettings,
+  TNationMode,
   TTerrainPreset,
   TTerrainRatioMap,
-} from 'src/types/global';
+} from 'src/types/map.types';
 
-export const NATION_COLOR_PALETTE = [
+export const NATION_COLOR = [
   '#e6194b', // red
   '#3cb44b', // green
   '#f58231', // orange
@@ -36,13 +36,13 @@ export const NATION_COLOR_PALETTE = [
   '#deb887', // burlywood
 ];
 
-export const MAP_EXPLORER_DEFAULT_CONFIG: {
+export const DEFAULT_CONFIG: {
   seed: string;
   cellCount: number;
   seaLevel: number;
   terrainPreset: TTerrainPreset;
-  customCountryMode: TCustomCountryMode;
-  customCountryCount: number;
+  nationMode: TNationMode;
+  nationCount: number;
   terrainRatios: TTerrainRatioMap;
   displaySettings: TMapDisplaySettings;
 } = {
@@ -50,8 +50,8 @@ export const MAP_EXPLORER_DEFAULT_CONFIG: {
   cellCount: 10000,
   seaLevel: 0.5,
   terrainPreset: 'balanced',
-  customCountryMode: 'balanced',
-  customCountryCount: 8,
+  nationMode: 'balanced',
+  nationCount: 8,
   terrainRatios: {
     plains: 0.35,
     forest: 0.2,
@@ -78,7 +78,7 @@ export const MAP_VIEWPORT_CONFIG = {
   maxCells: 10000,
 };
 
-export const MAP_TERRAIN_CLASSIFICATION_CONFIG = {
+export const TERRAIN_CONFIG = {
   deepWaterOffset: 0.15,
   coastBand: 0.02,
   plainsMax: 0.62,
@@ -86,7 +86,7 @@ export const MAP_TERRAIN_CLASSIFICATION_CONFIG = {
   mountainsMax: 0.9,
 };
 
-export const MAP_TOPOGRAPHY_CONFIG = {
+export const TOPOGRAPHY_CONFIG = {
   boundary: {
     collisionBaseCount: 7,
     collisionExtraCount: 4,
@@ -171,7 +171,7 @@ export const MAP_TOPOGRAPHY_CONFIG = {
   },
 };
 
-export const MAP_PRESET_CONFIG = {
+export const PRESET_CONFIG = {
   balanced: {
     rangeBands: { count: 7, amplitude: 0.2, width: 0.11 },
     valleyBands: { count: 5, depth: 0.12, width: 0.12 },
@@ -204,7 +204,7 @@ export const MAP_PRESET_CONFIG = {
   },
 };
 
-export const MAP_HYDROLOGY_CONFIG = {
+export const HYDROLOGY_CONFIG = {
   coastOutletId: -2,
   waterInfluenceIterations: 6,
   waterInfluenceSelfWeight: 1.2,
@@ -343,9 +343,7 @@ export const MAP_HYDROLOGY_CONFIG = {
   },
 };
 
-export const MAP_GEOPOLITICAL_CONFIG = {
-  nationCountMin: 3,
-  nationCountMax: 7,
+export const GEOPOLITICAL_CONFIG = {
   targetLandCellsPerNation: 620,
   minNationLandRatio: 0,
   minNationLandCells: 10,
