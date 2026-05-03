@@ -7,8 +7,7 @@ import {
   diversifySmallNationSizes,
   enforceMainlandContiguity,
   enforceMinimumNationArea,
-  ensureAllLandClaimed,
-  fillUnclaimedLand,
+  reconcileNationClaims,
 } from './nations';
 import {
   buildNationProvinces,
@@ -44,10 +43,7 @@ function runNationClaimReconciliationPass(
   owner: Int32Array,
   preserveNationCount: number
 ) {
-  fillUnclaimedLand(cells, owner);
-  ensureAllLandClaimed(cells, owner);
-  enforceMinimumNationArea(cells, owner, preserveNationCount);
-  ensureAllLandClaimed(cells, owner);
+  reconcileNationClaims(cells, owner, preserveNationCount);
 }
 
 function assignNations(
@@ -76,8 +72,7 @@ function postProcessNations(
   runNationClaimReconciliationPass(cells, owner, preserveNationCount);
   if (nationMode === 'balanced') {
     diversifySmallNationSizes(cells, owner, seed);
-    enforceMinimumNationArea(cells, owner, preserveNationCount);
-    ensureAllLandClaimed(cells, owner);
+    runNationClaimReconciliationPass(cells, owner, preserveNationCount);
   }
 }
 

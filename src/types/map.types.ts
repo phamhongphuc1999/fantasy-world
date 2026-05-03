@@ -45,23 +45,6 @@ export interface TTopographyCellData {
 // Hydrology & Climate
 export type TZoneType = 'land' | 'internal-waters' | 'territorial-waters' | 'international-waters';
 
-export interface THydrologyCellData {
-  flow: number;
-  downstreamId: number | null;
-  erosion: number;
-  isRiver: boolean;
-  isLake: boolean;
-  biome: string;
-  suitability: number;
-  temperature: number;
-  precipitation: number;
-  rainShadow: number;
-  population: number;
-  waterAccessibility: number;
-  nationId: number | null;
-  zoneType: TZoneType;
-}
-
 // Geopolitics: Nation / Ethnic / Province flags on cells
 export interface TNation {
   id: number;
@@ -192,18 +175,6 @@ export interface TEthnicStatistic {
   percent: number;
   population: number;
   populationPercent: number;
-}
-
-export interface TEthnicRegionRow {
-  id: number;
-  name: string;
-  coreCellId: number;
-  landCells: number;
-  nationCount: number;
-  regionPopulation: number;
-  nationPopulation: number;
-  nationPopulationPercent: number;
-  terrainStats: string;
 }
 
 // Generation Pipeline

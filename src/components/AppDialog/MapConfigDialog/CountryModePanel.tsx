@@ -98,6 +98,10 @@ export default function CountryModePanel() {
       </div>
 
       <p className="text-xs text-slate-300">{helperText}</p>
+      <p className="text-xs text-slate-400">
+        Nation generation now runs a floor-first expansion pass before normal frontier expansion to
+        reduce tiny fragmented artifacts.
+      </p>
     </div>
   );
 }
