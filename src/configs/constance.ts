@@ -6,13 +6,15 @@ export const APP_NAME = 'Fantasy World';
 
 export const siteMetadata: TSiteMetadata = {
   title: APP_NAME,
-  description: '',
+  description:
+    'Procedural fantasy world map generator with deterministic seeds, terrain simulation, hydrology, nations, and ethnic regions.',
   url: 'https://fantasy.peter-present.xyz/',
   siteName: APP_NAME,
   twitterHandle: 'PhamHon08928762',
   icon: ImageAsset.icon,
   image: ImageAsset.thumbnail,
-  keywords: '',
+  keywords:
+    'fantasy map generator, procedural world generation, seeded map generation, worldbuilding tool, terrain and river simulation, nation borders, ethnic regions',
 };
 
 export const TERRAIN_PRESET_OPTIONS: TTerrainPresetOption[] = [

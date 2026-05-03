@@ -1,177 +1,79 @@
 # Fantasy World
 
-Fantasy World is a procedural map engine built with Next.js 16, React 19, TypeScript, and `d3-delaunay`.
+Fantasy World is a deterministic procedural world-map generator built with Next.js 16, React 19, TypeScript, and Canvas rendering.
 
-The project follows a layered world-generation pipeline:
+The app generates a world through a staged pipeline:
 
-1. Geometry
-2. Topography
-3. Hydrology
-4. Rendering and interaction
+1. Mesh (Voronoi/Delaunay geometry)
+2. Topography (elevation + terrain classification)
+3. Hydrology (flow, rivers, lakes, climate-driven adjustments)
+4. Population
+5. Geopolitics (nations, provinces, ethnic regions, capitals/hubs)
 
-The current app already implements the first three layers and renders the result through Canvas in the browser.
+## Current Capabilities
 
-## Current Status
-
-Implemented:
-
-- deterministic Voronoi / Delaunay mesh generation
-- explicit topology graph with cells, edges, and vertices
-- seed-driven terrain generation
-- elevation, land/water classification, and terrain bands
-- downhill flow routing
-- river detection
-- sink lake detection
-- lightweight erosion / deposition pass
-- Canvas-based rendering
-- hover and click selection
-- centralized explorer state
-
-Not implemented yet:
-
-- biome simulation
-- climate / moisture systems
-- political borders
-- settlements
-- worker-based background simulation
+- Deterministic map generation from seed
+- Terrain presets + editable terrain ratios
+- Hydrology with rivers/lakes and erosion/deposition effects
+- Population simulation on land cells
+- Nation generation with post-processing for contiguity and minimum area
+- Province generation inside nations
+- Ethnic region generation
+- Capitals and economic hubs selection
+- Canvas visualization layers:
+  - Terrain
+  - Rivers
+  - Country border / country fill (independent)
+  - Ethnic border / ethnic fill (independent)
+  - Province border
+  - Labels
+- Detail dialogs:
+  - Nation detail
+  - Ethnic detail (when ethnic layers are active without country layers)
+- Logistics route overlay mode
 
 ## Tech Stack
 
-- Next.js 16.2.4
-- React 19.2.4
-- TypeScript
+- Next.js `16.2.4` (App Router)
+- React `19.2.4`
+- TypeScript (strict)
 - Tailwind CSS v4
+- Zustand
 - `d3-delaunay`
+- Vitest
 
 ## Getting Started
 
-Install dependencies and run the app:
+Install dependencies:
 
 ```bash
-bun install
-bun run dev
+yarn install
 ```
 
-Useful scripts:
+Run development server:
 
 ```bash
-bun run dev
-bun run build
-bun run start
-bun run format
-bun run eslint
+yarn dev
 ```
 
-## Project Structure
+Open [http://localhost:3000](http://localhost:3000)
 
-```text
-app/
-  layout.tsx
-  page.tsx
+Production domain: [https://fantasy.peter-present.xyz/](https://fantasy.peter-present.xyz/)
 
-documents/
-  task.md
+## Scripts
 
-src/
-  components/
-  configs/
-  features/
-    map/
-      components/
-      core/
-      store/
-  styles/
-  types/
-  views/
+```bash
+yarn dev
+yarn build
+yarn start
+yarn test
+yarn test:watch
+yarn bench:map
+yarn eslint
+yarn format
 ```
 
-Key files:
+## Notes
 
-- `app/page.tsx`
-  - route entrypoint
-- `src/views/HomeView/index.tsx`
-  - main screen orchestration
-- `src/features/map/core/buildMesh.ts`
-  - geometry layer
-- `src/features/map/core/buildTopography.ts`
-  - topography layer
-- `src/features/map/core/buildHydrology.ts`
-  - hydrology layer
-- `src/features/map/components/MapCanvas.tsx`
-  - Canvas renderer
-- `src/features/map/store/mapExplorerStore.ts`
-  - centralized explorer state
-- `src/types/global.ts`
-  - shared types
-
-## Generation Pipeline
-
-### 1. Geometry
-
-`buildMesh()` creates a deterministic Voronoi mesh from a seed and cell count.
-
-Output includes:
-
-- `TMapCell`
-- `TMapEdge`
-- `TMapVertex`
-- Delaunay lookup for interaction
-
-### 2. Topography
-
-`buildTopography()` applies a deterministic fBm-style value-noise heightmap over the mesh.
-
-Output includes:
-
-- `elevation`
-- `isWater`
-- `terrain`
-
-### 3. Hydrology
-
-`buildHydrology()` uses typed arrays to simulate downhill flow and derive water systems.
-
-Output includes:
-
-- `flow`
-- `downstreamId`
-- `erosion`
-- `isRiver`
-- `isLake`
-
-### 4. Rendering
-
-The app renders the current map state with Canvas for better scalability than SVG at higher cell counts.
-
-Interaction currently supports:
-
-- hover detection
-- click selection
-- live regeneration from seed
-- cell count changes
-- sea level changes
-
-## Notes For Contributors
-
-- Follow the rules in `AGENTS.md`.
-- Keep `app/` routes thin.
-- Put domain logic in `src/features/`.
-- Keep generation deterministic and seed-driven.
-- Shared types belong in `src/types/global.ts`.
-- If you touch Next.js-specific behavior, check the local docs in `node_modules/next/dist/docs/`.
-
-## Roadmap
-
-Planned next layers:
-
-1. Ecology and biome simulation
-2. Political regions and borders
-3. Settlements and world metadata
-4. Worker-based heavy computation
-5. Higher-density rendering and optimization
-
-## Reference
-
-The technical target and pipeline notes for this project are described in:
-
-- `documents/task.md`
+- Generation is designed to be deterministic for the same input config/seed.
+- Read and follow `AGENTS.md` for project coding rules before contributing.

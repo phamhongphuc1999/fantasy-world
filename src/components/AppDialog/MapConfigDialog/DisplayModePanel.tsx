@@ -43,14 +43,9 @@ export default function DisplayModePanel() {
         onChange={(checked) => setDisplayLayer('countryBorders', checked)}
       />
       <LayerToggle
-        label="Ethnic Borders"
-        checked={displaySettings.ethnicBorders}
-        onChange={(checked) => setDisplayLayer('ethnicBorders', checked)}
-      />
-      <LayerToggle
-        label="Labels"
-        checked={displaySettings.labels}
-        onChange={(checked) => setDisplayLayer('labels', checked)}
+        label="Country Fill"
+        checked={displaySettings.countryFill}
+        onChange={(checked) => setDisplayLayer('countryFill', checked)}
       />
       <LayerToggle
         label="Province Borders"
@@ -59,7 +54,22 @@ export default function DisplayModePanel() {
         onChange={(checked) => setDisplayLayer('provinceBorders', checked)}
       />
       <LayerToggle
-        label="Show Cell Information"
+        label="Ethnic Borders"
+        checked={displaySettings.ethnicBorders}
+        onChange={(checked) => setDisplayLayer('ethnicBorders', checked)}
+      />
+      <LayerToggle
+        label="Ethnic Fill"
+        checked={displaySettings.ethnicFill}
+        onChange={(checked) => setDisplayLayer('ethnicFill', checked)}
+      />
+      <LayerToggle
+        label="Labels"
+        checked={displaySettings.labels}
+        onChange={(checked) => setDisplayLayer('labels', checked)}
+      />
+      <LayerToggle
+        label="Cell Data"
         checked={displaySettings.cellData}
         onChange={(checked) => setDisplayLayer('cellData', checked)}
       />

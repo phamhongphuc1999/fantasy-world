@@ -126,12 +126,8 @@ function getEthnicPaletteColor(ethnicGroupId: number | null) {
   return NATION_COLOR[paletteIndex];
 }
 
-export function drawCountryFill(
-  context: CanvasRenderingContext2D,
-  cells: TMapCell[],
-  showTerrain: boolean
-) {
-  const fillOpacity = showTerrain ? 0 : 0.86;
+export function drawCountryFill(context: CanvasRenderingContext2D, cells: TMapCell[]) {
+  const fillOpacity = 0.86;
   for (const cell of cells) {
     if (!isLandCell(cell)) continue;
     const fillColor = getNationPaletteColor(cell.nationId);
@@ -218,6 +214,12 @@ function shouldDrawCountryLandBorder(cellA: TMapCell, cellB: TMapCell) {
   return cellA.nationId !== cellB.nationId;
 }
 
+function shouldDrawEthnicLandBorder(cellA: TMapCell, cellB: TMapCell) {
+  if (!isLandCell(cellA) || !isLandCell(cellB)) return false;
+  if (cellA.ethnicGroupId === null || cellB.ethnicGroupId === null) return false;
+  return cellA.ethnicGroupId !== cellB.ethnicGroupId;
+}
+
 export function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
   const edgeOwner = new Map<
     string,
@@ -239,6 +241,39 @@ export function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCe
       }
 
       if (!shouldDrawCountryLandBorder(existing.cell, cell)) continue;
+      drawNaturalBorderSegment(context, existing.start, existing.end, edgeKey);
+      context.strokeStyle = '#1f2937';
+      context.lineWidth = 1;
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      context.globalAlpha = 0.98;
+      context.stroke();
+      context.globalAlpha = 1;
+    }
+  }
+}
+
+export function drawEthnicBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
+  const edgeOwner = new Map<
+    string,
+    { start: [number, number]; end: [number, number]; cell: TMapCell }
+  >();
+
+  for (const cell of cells) {
+    if (cell.polygon.length < 2) continue;
+
+    for (let index = 0; index < cell.polygon.length; index += 1) {
+      const start = cell.polygon[index];
+      const end = cell.polygon[(index + 1) % cell.polygon.length];
+      const edgeKey = toEdgeKey(start, end);
+      const existing = edgeOwner.get(edgeKey);
+
+      if (!existing) {
+        edgeOwner.set(edgeKey, { start, end, cell });
+        continue;
+      }
+
+      if (!shouldDrawEthnicLandBorder(existing.cell, cell)) continue;
       drawNaturalBorderSegment(context, existing.start, existing.end, edgeKey);
       context.strokeStyle = '#1f2937';
       context.lineWidth = 1;

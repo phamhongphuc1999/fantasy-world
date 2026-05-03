@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import EthnicDetailDialog from 'src/components/AppDialog/EthnicDetailDialog';
 import NationDetailDialog from 'src/components/AppDialog/NationDetailDialog';
 import { useMapContext } from 'src/contexts/map.context';
 import { getTerrainColor } from 'src/services';
@@ -8,6 +9,7 @@ import {
   drawCellShape,
   drawCountryFill,
   drawCurvedRiverSegment,
+  drawEthnicBorders,
   drawEthnicFill,
   drawGrayBorders,
   drawLogisticsRouteOverlay,
@@ -29,7 +31,9 @@ export default function MapCanvasPanel() {
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [selectedNationId, setSelectedNationId] = useState<number | null>(null);
+  const [selectedEthnicGroupId, setSelectedEthnicGroupId] = useState<number | null>(null);
   const [nationDialogOpen, setNationDialogOpen] = useState(false);
+  const [ethnicDialogOpen, setEthnicDialogOpen] = useState(false);
   const { displaySettings, hoverIndex, setHoverClientPoint, setHoverIndex } = useMapExplorerStore();
   const {
     enabled: logisticsEnabled,
@@ -60,7 +64,7 @@ export default function MapCanvasPanel() {
     }
 
     const showUniformLand =
-      !displaySettings.terrain && !displaySettings.countryBorders && !displaySettings.ethnicBorders;
+      !displaySettings.terrain && !displaySettings.countryFill && !displaySettings.ethnicFill;
 
     if (displaySettings.terrain) {
       for (const cell of cells) {
@@ -76,8 +80,8 @@ export default function MapCanvasPanel() {
       }
     }
 
-    if (displaySettings.countryBorders) drawCountryFill(context, cells, displaySettings.terrain);
-    if (displaySettings.ethnicBorders) drawEthnicFill(context, cells, displaySettings.terrain);
+    if (displaySettings.countryFill) drawCountryFill(context, cells);
+    if (displaySettings.ethnicFill) drawEthnicFill(context, cells, displaySettings.terrain);
 
     if (displaySettings.rivers) {
       for (const cell of cells) {
@@ -102,12 +106,15 @@ export default function MapCanvasPanel() {
       drawGrayBorders(context, cells);
       drawUrbanHierarchy(context, cells);
     }
+    if (displaySettings.ethnicBorders) {
+      drawEthnicBorders(context, cells);
+    }
 
     if (displaySettings.countryBorders && displaySettings.provinceBorders)
       drawProvinceBorders(context, cells);
 
     if (displaySettings.labels) {
-      if (displaySettings.ethnicBorders)
+      if (displaySettings.ethnicFill || displaySettings.ethnicBorders)
         drawRegionNames(context, cells, nations, ethnicGroups, 'ethnic');
       else if (displaySettings.countryBorders)
         drawRegionNames(context, cells, nations, ethnicGroups, 'nation');
@@ -188,8 +195,22 @@ export default function MapCanvasPanel() {
               return;
             }
 
+            const shouldOpenEthnicDetail =
+              (displaySettings.ethnicFill || displaySettings.ethnicBorders) &&
+              !displaySettings.countryFill &&
+              !displaySettings.countryBorders;
+            if (shouldOpenEthnicDetail) {
+              const ethnicGroupId = cells[clickedId]?.ethnicGroupId ?? null;
+              if (ethnicGroupId === null) return;
+              setNationDialogOpen(false);
+              setSelectedEthnicGroupId(ethnicGroupId);
+              setEthnicDialogOpen(true);
+              return;
+            }
+
             const nationId = cells[clickedId]?.nationId ?? null;
             if (nationId === null) return;
+            setEthnicDialogOpen(false);
             setSelectedNationId(nationId);
             setNationDialogOpen(true);
           }}
@@ -206,6 +227,12 @@ export default function MapCanvasPanel() {
         open={nationDialogOpen}
         onOpenChange={setNationDialogOpen}
         nationId={selectedNationId}
+        mesh={mesh}
+      />
+      <EthnicDetailDialog
+        open={ethnicDialogOpen}
+        onOpenChange={setEthnicDialogOpen}
+        ethnicGroupId={selectedEthnicGroupId}
         mesh={mesh}
       />
     </div>

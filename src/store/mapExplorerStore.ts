@@ -122,24 +122,16 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         terrainPreset: state.terrainPreset,
         nationCount: state.nationCount,
         terrainRatios: state.terrainRatios,
-        // terrainRatiosDraft: state.terrainRatiosDraft,
         displaySettings: state.displaySettings,
       }),
-      version: 3,
+      version: 4,
       migrate: (persistedState) => {
         const state = persistedState as Partial<TMapExplorerState> | undefined;
         if (!state) return DEFAULT_STATE;
-        const displaySettings = {
-          ...DEFAULT_STATE.displaySettings,
-          ...(state.displaySettings ?? {}),
-        };
         const terrainRatios = migrateLegacyTerrainRatios(
           state.terrainRatios as unknown as Partial<Record<string, number>> | undefined
         );
-        // const terrainRatiosDraft = migrateLegacyTerrainRatios(
-        //   state.terrainRatiosDraft as unknown as Partial<Record<string, number>> | undefined
-        // );
-        return { ...DEFAULT_STATE, ...state, displaySettings, terrainRatios };
+        return { ...DEFAULT_STATE, ...state, terrainRatios };
       },
     }
   )

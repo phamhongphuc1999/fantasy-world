@@ -111,8 +111,10 @@ export interface TMapDisplaySettings {
   terrain: boolean;
   rivers: boolean;
   countryBorders: boolean;
+  countryFill: boolean;
   provinceBorders: boolean;
   ethnicBorders: boolean;
+  ethnicFill: boolean;
   labels: boolean;
   cellData: boolean;
 }
