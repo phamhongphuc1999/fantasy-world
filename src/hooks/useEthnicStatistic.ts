@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { toPercent } from 'src/services';
 import { TMapMeshWithDelaunay } from 'src/types/map.types';
 
 export default function useEthnicStatistic(
@@ -43,7 +44,7 @@ export default function useEthnicStatistic(
       .map(([terrain, count]) => ({
         terrain,
         count,
-        percent: Number(((count / Math.max(1, ethnicCells.length)) * 100).toFixed(2)),
+        percent: toPercent(count, ethnicCells.length),
       }))
       .sort((a, b) => b.count - a.count);
 

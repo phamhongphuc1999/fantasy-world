@@ -1,6 +1,6 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { clamp, findNearestCellId } from 'src/services';
 import { runMultiSourceExpansion } from 'src/services/map/core/expansionEngine';
-import { clamp } from 'src/services/map/core/math';
 import { sortStableDescByScore } from 'src/services/map/core/sort';
 import { createSeededRandom } from 'src/services/map/seededRandom';
 import { TMapCell } from 'src/types/map.types';
@@ -189,21 +189,16 @@ function findNearestForeignNationId(
   sourceCellId: number,
   sourceNationId: number
 ) {
-  const point = cells[sourceCellId].site;
-  let bestNationId = -1;
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  for (const candidateCellId of landCellIds) {
-    const candidateNationId = owner[candidateCellId];
-    if (candidateNationId < 0 || candidateNationId === sourceNationId) continue;
-    const candidatePoint = cells[candidateCellId].site;
-    const distance = Math.hypot(point[0] - candidatePoint[0], point[1] - candidatePoint[1]);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestNationId = candidateNationId;
+  const nearestCellId = findNearestCellId(
+    cells,
+    cells[sourceCellId].site,
+    landCellIds,
+    (cellId) => {
+      const candidateNationId = owner[cellId];
+      return candidateNationId >= 0 && candidateNationId !== sourceNationId;
     }
-  }
-  return bestNationId;
+  );
+  return nearestCellId >= 0 ? owner[nearestCellId] : -1;
 }
 
 function getNeighborNationIds(cells: TMapCell[], owner: Int32Array, nationId: number) {
@@ -889,7 +884,7 @@ export function enforceMainlandContiguity(cells: TMapCell[], owner: Int32Array) 
   }
 }
 
-export function fillUnclaimedLand(cells: TMapCell[], owner: Int32Array) {
+function fillUnclaimedLand(cells: TMapCell[], owner: Int32Array) {
   let changed = true;
   while (changed) {
     changed = false;
@@ -912,26 +907,17 @@ export function fillUnclaimedLand(cells: TMapCell[], owner: Int32Array) {
   }
 }
 
-export function ensureAllLandClaimed(cells: TMapCell[], owner: Int32Array) {
-  const claimedLand = cells.filter((cell) => isLand(cell) && owner[cell.id] >= 0);
-  if (claimedLand.length === 0) return;
+function ensureAllLandClaimed(cells: TMapCell[], owner: Int32Array) {
+  const claimedLandIds = cells
+    .filter((cell) => isLand(cell) && owner[cell.id] >= 0)
+    .map((cell) => cell.id);
+  if (claimedLandIds.length === 0) return;
 
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     if (!isLand(cells[cellId])) continue;
     if (owner[cellId] >= 0) continue;
-
-    let bestNationId = -1;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    const point = cells[cellId].site;
-
-    for (const claimedCell of claimedLand) {
-      const distance = Math.hypot(point[0] - claimedCell.site[0], point[1] - claimedCell.site[1]);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestNationId = owner[claimedCell.id];
-      }
-    }
-    if (bestNationId >= 0) owner[cellId] = bestNationId;
+    const nearestCellId = findNearestCellId(cells, cells[cellId].site, claimedLandIds);
+    if (nearestCellId >= 0) owner[cellId] = owner[nearestCellId];
   }
 }
 

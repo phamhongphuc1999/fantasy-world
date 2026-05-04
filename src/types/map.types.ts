@@ -3,6 +3,16 @@ import type { Delaunay } from 'd3-delaunay';
 // Mesh & Geometry
 export type TPoint = [number, number];
 
+export type TTerrainConfig = {
+  label: string;
+  color: string;
+  icon: string;
+  isWater?: boolean;
+  baseWeight: number;
+  cityFactor: number;
+  flatness: number;
+};
+
 export interface TMapVertex {
   id: number;
   point: TPoint;
@@ -153,21 +163,6 @@ export interface TTerrainStatistic {
   terrain: string;
   count: number;
   percent: number;
-}
-
-export interface TProvinceStatistic {
-  provinceId: number;
-  population: number;
-  cellCount: number;
-}
-
-export interface TEthnicStatistic {
-  ethnicId: number;
-  name: string;
-  count: number;
-  percent: number;
-  population: number;
-  populationPercent: number;
 }
 
 // Generation Pipeline

@@ -145,7 +145,6 @@ export function applyRangeChains(
           1
         );
       }
-
       px = nx;
       py = ny;
     }

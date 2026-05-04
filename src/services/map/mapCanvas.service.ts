@@ -1,6 +1,6 @@
 /* eslint-disable quotes */
 import { type MouseEvent } from 'react';
-import { getNationColor, getTerrainColor } from 'src/services';
+import { getNationColor, toUndirectedEdgeKey } from 'src/services';
 import { TEthnicGroup, TMapCell, TNation, TPoint } from 'src/types/map.types';
 
 function drawPolygon(context: CanvasRenderingContext2D, polygon: TMapCell['polygon']) {
@@ -108,11 +108,6 @@ function isWaterCell(cell: TMapCell) {
   );
 }
 
-export function getCellDisplayColor(cell: TMapCell) {
-  const terrainColor = getTerrainColor(cell.terrain);
-  return terrainColor;
-}
-
 function clamp01(value: number) {
   return Math.max(0, Math.min(1, value));
 }
@@ -169,16 +164,6 @@ export function drawEthnicFill(
     context.fill();
     context.globalAlpha = 1;
   }
-}
-
-function toPointKey(point: TPoint) {
-  return `${point[0].toFixed(3)}:${point[1].toFixed(3)}`;
-}
-
-function toEdgeKey(startPoint: TPoint, endPoint: TPoint) {
-  const startKey = toPointKey(startPoint);
-  const endKey = toPointKey(endPoint);
-  return startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
 }
 
 function edgeNoiseValue(edgeKey: string, salt: number) {
@@ -244,7 +229,7 @@ export function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCe
     for (let index = 0; index < cell.polygon.length; index += 1) {
       const start = cell.polygon[index];
       const end = cell.polygon[(index + 1) % cell.polygon.length];
-      const edgeKey = toEdgeKey(start, end);
+      const edgeKey = toUndirectedEdgeKey(start, end, { precision: 3 });
       const existing = edgeOwner.get(edgeKey);
 
       if (!existing) {
@@ -274,7 +259,7 @@ export function drawEthnicBorders(context: CanvasRenderingContext2D, cells: TMap
     for (let index = 0; index < cell.polygon.length; index += 1) {
       const start = cell.polygon[index];
       const end = cell.polygon[(index + 1) % cell.polygon.length];
-      const edgeKey = toEdgeKey(start, end);
+      const edgeKey = toUndirectedEdgeKey(start, end, { precision: 3 });
       const existing = edgeOwner.get(edgeKey);
 
       if (!existing) {
@@ -305,7 +290,7 @@ export function drawProvinceBorders(context: CanvasRenderingContext2D, cells: TM
     for (let index = 0; index < cell.polygon.length; index += 1) {
       const start = cell.polygon[index];
       const end = cell.polygon[(index + 1) % cell.polygon.length];
-      const edgeKey = toEdgeKey(start, end);
+      const edgeKey = toUndirectedEdgeKey(start, end, { precision: 3 });
       const existing = edgeOwner.get(edgeKey);
 
       if (!existing) {

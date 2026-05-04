@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import EthnicDetailDialog from 'src/components/AppDialog/EthnicDetailDialog';
 import NationDetailDialog from 'src/components/AppDialog/NationDetailDialog';
+import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { useMapContext } from 'src/contexts/map.context';
-import { getTerrainColor } from 'src/services';
 import {
   drawCellShape,
   drawCountryFill,
@@ -18,7 +18,6 @@ import {
   drawSiteMarker,
   drawUrbanHierarchy,
   getCanvasPoint,
-  getCellDisplayColor,
   getPopulationHeatmapColor,
   isLandCell,
   setupCanvas,
@@ -61,7 +60,7 @@ export default function MapCanvasPanel() {
 
     for (const cell of cells) {
       if (isLandCell(cell)) continue;
-      drawCellShape(context, cell, getTerrainColor(cell.terrain), 0.95, 'transparent', 0);
+      drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 0.95, 'transparent', 0);
     }
 
     const showUniformLand =
@@ -83,7 +82,7 @@ export default function MapCanvasPanel() {
     if (displaySettings.terrain) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, getCellDisplayColor(cell), 0.95, 'transparent', 0);
+        drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 0.95, 'transparent', 0);
       }
     }
 

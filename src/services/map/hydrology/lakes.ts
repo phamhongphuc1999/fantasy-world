@@ -1,4 +1,5 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { collectConnectedComponents, floodFromSeeds } from 'src/services/map/core/graph';
 import { TFifoQueue } from 'src/services/map/core/queue';
 import { TMapCell, TTerrainBand } from 'src/types/map.types';
 
@@ -68,33 +69,11 @@ function expandLakes(cells: TMapCell[], flow: Float32Array, downstream: Int32Arr
 }
 
 function buildLakeRegions(cells: TMapCell[]) {
-  const visited = new Uint8Array(cells.length);
-  const regions: number[][] = [];
-  const stack: number[] = [];
-
-  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
-    if (visited[cellIndex] === 1 || !cells[cellIndex].isLake) continue;
-
-    stack.length = 0;
-    stack.push(cellIndex);
-    const region: number[] = [];
-    visited[cellIndex] = 1;
-
-    while (stack.length > 0) {
-      const current = stack.pop() as number;
-      region.push(current);
-
-      for (const neighborId of cells[current].neighbors) {
-        if (visited[neighborId] === 1) continue;
-        if (!cells[neighborId].isLake) continue;
-
-        visited[neighborId] = 1;
-        stack.push(neighborId);
-      }
-    }
-    regions.push(region);
-  }
-  return regions;
+  return collectConnectedComponents(
+    cells,
+    (cell) => cell.isLake,
+    (_current, neighbor) => neighbor.isLake
+  );
 }
 
 function isSeaTerrain(terrain: TTerrainBand) {
@@ -113,26 +92,13 @@ function touchesMapBoundary(cell: TMapCell, width: number, height: number) {
 }
 
 function buildOceanConnectedWaterMask(cells: TMapCell[], width: number, height: number) {
-  const oceanConnected = new Uint8Array(cells.length);
-  const stack: number[] = [];
-
+  const seedIds: number[] = [];
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     if (!cells[cellIndex].isWater) continue;
     if (!touchesMapBoundary(cells[cellIndex], width, height)) continue;
-    oceanConnected[cellIndex] = 1;
-    stack.push(cellIndex);
+    seedIds.push(cellIndex);
   }
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (current === undefined) continue;
-    for (const neighborId of cells[current].neighbors) {
-      if (oceanConnected[neighborId] === 1) continue;
-      if (!cells[neighborId].isWater) continue;
-      oceanConnected[neighborId] = 1;
-      stack.push(neighborId);
-    }
-  }
-  return oceanConnected;
+  return floodFromSeeds(cells, seedIds, (_current, neighbor) => neighbor.isWater);
 }
 
 function classifyEnclosedWaterBodies(
@@ -276,33 +242,14 @@ function buildLakeSizeMap(cells: TMapCell[]) {
 
 function buildPlainsRegionSizeMap(cells: TMapCell[]) {
   const regionSizeByCell = new Int32Array(cells.length);
-  const visited = new Uint8Array(cells.length);
-  const stack: number[] = [];
+  const plainsRegions = collectConnectedComponents(
+    cells,
+    (cell) => cell.terrain === 'plains',
+    (_current, neighbor) => neighbor.terrain === 'plains'
+  );
 
-  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
-    if (visited[cellIndex] === 1) continue;
-    if (cells[cellIndex].terrain !== 'plains') continue;
-
-    stack.length = 0;
-    stack.push(cellIndex);
-    const region: number[] = [];
-    visited[cellIndex] = 1;
-
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (current === undefined) continue;
-      region.push(current);
-
-      for (const neighborId of cells[current].neighbors) {
-        if (visited[neighborId] === 1) continue;
-        if (cells[neighborId].terrain !== 'plains') continue;
-        visited[neighborId] = 1;
-        stack.push(neighborId);
-      }
-    }
-    for (const id of region) {
-      regionSizeByCell[id] = region.length;
-    }
+  for (const region of plainsRegions) {
+    for (const id of region) regionSizeByCell[id] = region.length;
   }
   return regionSizeByCell;
 }

@@ -1,9 +1,10 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { collectConnectedComponents } from 'src/services/map/core/graph';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
 import { TBorderLevelKey, TMapCell, TTerrainBand, TZoneType } from 'src/types/map.types';
 
 export const CAPITAL_VIEWPORT_MARGIN = 14;
-export type TBorderLevelProfile = (typeof GEOPOLITICAL_CONFIG.borderLevels)[TBorderLevelKey];
+type TBorderLevelProfile = (typeof GEOPOLITICAL_CONFIG.borderLevels)[TBorderLevelKey];
 
 const starts = [
   'Al',
@@ -269,27 +270,12 @@ export function getNationNeighborCounts(cells: TMapCell[], owner: Int32Array, ce
   return counts;
 }
 
-export function collectTerrainClusters(cells: TMapCell[], terrain: TTerrainBand) {
-  const visited = new Set<number>();
-  const clusters: number[][] = [];
-  for (const cell of cells) {
-    if (cell.terrain !== terrain || cell.isWater || visited.has(cell.id)) continue;
-    const queue = [cell.id];
-    const cluster: number[] = [];
-    visited.add(cell.id);
-    while (queue.length > 0) {
-      const current = queue.pop() as number;
-      cluster.push(current);
-      for (const neighborId of cells[current].neighbors) {
-        if (visited.has(neighborId)) continue;
-        if (cells[neighborId].terrain !== terrain || cells[neighborId].isWater) continue;
-        visited.add(neighborId);
-        queue.push(neighborId);
-      }
-    }
-    clusters.push(cluster);
-  }
-  return clusters;
+function collectTerrainClusters(cells: TMapCell[], terrain: TTerrainBand) {
+  return collectConnectedComponents(
+    cells,
+    (cell) => cell.terrain === terrain && !cell.isWater,
+    (_current, neighbor) => neighbor.terrain === terrain && !neighbor.isWater
+  );
 }
 
 export function limitMountainClusterSplit(

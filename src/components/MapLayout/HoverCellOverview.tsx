@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useMapContext } from 'src/contexts/map.context';
+import { clamp } from 'src/services';
 import { describeCell } from 'src/services/map/describeCell';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
@@ -9,10 +10,6 @@ const PANEL_OFFSET = 16;
 const PANEL_PADDING = 10;
 const PANEL_ESTIMATED_WIDTH = 320;
 const PANEL_ESTIMATED_HEIGHT = 360;
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
 
 export default function HoverCellOverview() {
   const { hoverClientPoint, hoverIndex, displaySettings } = useMapExplorerStore();

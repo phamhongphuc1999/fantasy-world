@@ -1,7 +1,5 @@
 import { TTerrainBand } from 'src/types/map.types';
 
-export { clamp, getNeighborAverageElevation } from 'src/services';
-
 export function sortIndicesByElevation(elevations: Float32Array) {
   return Array.from({ length: elevations.length }, (_, index) => index).sort(
     (leftIndex, rightIndex) => elevations[rightIndex] - elevations[leftIndex]

@@ -1,13 +1,8 @@
-import { TERRAIN_COLORS } from 'src/configs/constance';
 import { NATION_COLOR } from 'src/configs/mapConfig';
-import { TLine, TMapCell, TTerrainBand } from 'src/types/map.types';
+import { TLine, TMapCell, TPoint } from 'src/types/map.types';
 
 export function toPercent(count: number, total: number) {
   return parseFloat(((count / Math.max(1, total)) * 100).toFixed(2));
-}
-
-export function getTerrainColor(terrain: TTerrainBand) {
-  return TERRAIN_COLORS[terrain];
 }
 
 export function formatPopulation(value: number) {
@@ -57,4 +52,59 @@ export function distanceToSegment(x: number, y: number, line: TLine): number {
   const projectionY = line.y1 + t * dy;
 
   return Math.sqrt((x - projectionX) ** 2 + (y - projectionY) ** 2);
+}
+
+type TPointKeyOptions = {
+  precision?: number;
+  separator?: string;
+};
+
+type TUndirectedEdgeKeyOptions = {
+  precision?: number;
+  pointSeparator?: string;
+  edgeSeparator?: string;
+};
+
+export function toPointKey(point: TPoint, options?: TPointKeyOptions) {
+  const precision = options?.precision ?? 3;
+  const separator = options?.separator ?? ':';
+  return `${point[0].toFixed(precision)}${separator}${point[1].toFixed(precision)}`;
+}
+
+export function toUndirectedEdgeKey(
+  startPoint: TPoint,
+  endPoint: TPoint,
+  options?: TUndirectedEdgeKeyOptions
+) {
+  const precision = options?.precision ?? 3;
+  const pointSeparator = options?.pointSeparator ?? ':';
+  const edgeSeparator = options?.edgeSeparator ?? '|';
+  const startKey = toPointKey(startPoint, { precision, separator: pointSeparator });
+  const endKey = toPointKey(endPoint, { precision, separator: pointSeparator });
+  return startKey < endKey
+    ? `${startKey}${edgeSeparator}${endKey}`
+    : `${endKey}${edgeSeparator}${startKey}`;
+}
+
+export function findNearestCellId(
+  cells: Pick<TMapCell, 'site'>[],
+  sourcePoint: TPoint,
+  candidateCellIds: number[],
+  isEligible?: (cellId: number) => boolean
+) {
+  let nearestCellId = -1;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const candidateCellId of candidateCellIds) {
+    if (isEligible && !isEligible(candidateCellId)) continue;
+    const candidatePoint = cells[candidateCellId].site;
+    const distance = Math.hypot(
+      sourcePoint[0] - candidatePoint[0],
+      sourcePoint[1] - candidatePoint[1]
+    );
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      nearestCellId = candidateCellId;
+    }
+  }
+  return nearestCellId;
 }

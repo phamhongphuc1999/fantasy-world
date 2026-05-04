@@ -1,40 +1,12 @@
-import { createSeededRandom } from 'src/services/map/seededRandom';
-import { TMapMeshWithDelaunay, TTerrainBand } from 'src/types/map.types';
-import { clamp } from 'src/services/map/core/math';
+import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { TFifoQueue } from 'src/services/map/core/queue';
+import { createSeededRandom } from 'src/services/map/seededRandom';
+import { TMapMeshWithDelaunay } from 'src/types/map.types';
+import { clamp } from '..';
 
 interface TBuildPopulationOptions {
   mesh: TMapMeshWithDelaunay;
   seed: string;
-}
-
-function terrainBaseWeight(terrain: TTerrainBand) {
-  if (terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea') return 0;
-  if (terrain === 'lake') return 0;
-  if (terrain === 'plains') return 1;
-  if (terrain === 'valley') return 0.7;
-  if (terrain === 'coast') return 0.5;
-  if (terrain === 'forest') return 0.2;
-  if (terrain === 'swamp') return 0.3;
-  if (terrain === 'hills') return 0.42;
-  if (terrain === 'plateau') return 0.38;
-  if (terrain === 'mountains' || terrain === 'volcanic') return 0.1;
-  if (terrain === 'desert' || terrain === 'badlands') return 0.04;
-  if (terrain === 'tundra') return 0.06;
-  return 0.4;
-}
-
-function terrainCityFactor(terrain: TTerrainBand) {
-  if (terrain === 'plains' || terrain === 'valley') return 1;
-  if (terrain === 'coast') return 0.92;
-  if (terrain === 'forest') return 0.7;
-  if (terrain === 'hills') return 0.45;
-  if (terrain === 'swamp') return 0.32;
-  if (terrain === 'mountains' || terrain === 'volcanic') return 0.16;
-  if (terrain === 'desert' || terrain === 'badlands') return 0.14;
-  if (terrain === 'plateau') return 0.3;
-  if (terrain === 'tundra') return 0.2;
-  return 0.4;
 }
 
 function populationMultiplier(
@@ -102,7 +74,7 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
       continue;
     }
 
-    let value = terrainBaseWeight(cell.terrain);
+    let value = TERRAIN_CONFIG[cell.terrain].baseWeight;
     if (cell.terrain === 'coast') value += 0.3;
     if (cell.isRiver) value += 0.24;
     if (cell.isLake) value += 0.2;
@@ -158,7 +130,7 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
       const distance = Math.hypot(cell.site[0] - seedPoint[0], cell.site[1] - seedPoint[1]);
       if (distance > radius) continue;
       const distanceFactor = 1 - distance / radius;
-      const terrainFactor = terrainCityFactor(cell.terrain);
+      const terrainFactor = TERRAIN_CONFIG[cell.terrain].cityFactor;
       score[cellId] += distanceFactor * boost * terrainFactor;
     }
   }

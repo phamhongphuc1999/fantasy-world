@@ -1,3 +1,4 @@
+import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { collectConnectedComponents } from 'src/services/map/core/graph';
 import { TFifoQueue } from 'src/services/map/core/queue';
@@ -58,16 +59,6 @@ function waterProximityScore(cell: TMapCell, cells: TMapCell[]) {
     }
   }
   return Math.min(0.85, secondRingWater * 0.08);
-}
-
-function flatnessScore(cell: TMapCell) {
-  if (cell.terrain === 'plains') return 1;
-  if (cell.terrain === 'valley') return 0.9;
-  if (cell.terrain === 'coast') return 0.82;
-  if (cell.terrain === 'forest') return 0.7;
-  if (cell.terrain === 'plateau') return 0.64;
-  if (cell.terrain === 'hills') return 0.45;
-  return 0.2;
 }
 
 function strategicCapitalScore(
@@ -154,9 +145,8 @@ export function pickEconomicAndCapital(
 
     const scored = capitalPool
       .map((cell) => {
-        const flatScore = flatnessScore(cell);
         const waterScore = waterProximityScore(cell, cells);
-        const capitalScore = flatScore * 0.6 + waterScore * 0.4;
+        const capitalScore = TERRAIN_CONFIG[cell.terrain].flatness * 0.6 + waterScore * 0.4;
         return { cellId: cell.id, capitalScore };
       })
       .sort((a, b) => b.capitalScore - a.capitalScore);

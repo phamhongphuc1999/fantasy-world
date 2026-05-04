@@ -1,6 +1,6 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { clamp } from 'src/services';
 import { TMapCell, TTerrainBand } from 'src/types/map.types';
-import { clamp } from './hydrologyUtils';
 
 export function buildWaterInfluence(cells: TMapCell[]): Float32Array {
   let waterInfluence = new Float32Array(cells.length);
@@ -135,43 +135,6 @@ export function getTerrainBand(
   if (relief < -0.008 && precipitation > 0.44) return 'valley';
   if (relief > 0.03 && cell.elevation > seaLevel + 0.08) return 'hills';
   return 'plains';
-}
-
-export function getBiome(terrain: TTerrainBand): string {
-  switch (terrain) {
-    case 'deep-water':
-      return 'Deep Ocean';
-    case 'shallow-water':
-      return 'Sea Shelf';
-    case 'inland-sea':
-      return 'Inland Sea';
-    case 'lake':
-      return 'Freshwater Lake';
-    case 'coast':
-      return 'Coastal Littoral';
-    case 'plateau':
-      return 'High Plateau';
-    case 'desert':
-      return 'Arid Desert';
-    case 'badlands':
-      return 'Rocky Badlands';
-    case 'forest':
-      return 'Woodland';
-    case 'swamp':
-      return 'Wetland';
-    case 'valley':
-      return 'River Valley';
-    case 'hills':
-      return 'Highland';
-    case 'mountains':
-      return 'Mountain Range';
-    case 'volcanic':
-      return 'Volcanic Wastes';
-    case 'tundra':
-      return 'Tundra';
-    default:
-      return 'Grassland';
-  }
 }
 
 export function getSuitability(

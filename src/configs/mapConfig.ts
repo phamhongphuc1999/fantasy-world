@@ -75,7 +75,7 @@ export const MAP_VIEWPORT_CONFIG = {
   maxCells: 10000,
 };
 
-export const TERRAIN_CONFIG = {
+export const TERRAIN_THRESHOLDS = {
   deepWaterOffset: 0.15,
   coastBand: 0.02,
   plainsMax: 0.62,

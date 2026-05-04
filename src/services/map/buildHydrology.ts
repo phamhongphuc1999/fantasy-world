@@ -1,22 +1,12 @@
+import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import {
-  THydrologyProfile,
-  TMapMeshWithDelaunay,
-  TTerrainBand,
-  TTerrainRatioMap,
-} from 'src/types/map.types';
-import {
   buildWaterInfluence,
-  getBiome,
   getRainShadow,
   getSuitability,
   getTerrainBand,
 } from 'src/services/map/hydrology/climateTerrain';
-import {
-  clamp,
-  getNeighborAverageElevation,
-  sortIndicesByElevation,
-} from 'src/services/map/hydrology/hydrologyUtils';
+import { sortIndicesByElevation } from 'src/services/map/hydrology/hydrologyUtils';
 import {
   classifyEnclosedWaterBodies,
   expandLakes,
@@ -29,11 +19,18 @@ import {
 } from 'src/services/map/hydrology/rivers';
 import {
   antiAliasTerrains,
+  clusterLandTerrains,
   mergeSmallTerrainClusters,
   rebalanceTerrainDistribution,
-  regionalizeLandTerrains,
   toTerrainBalance,
 } from 'src/services/map/hydrology/terrainProcessing';
+import {
+  THydrologyProfile,
+  TMapMeshWithDelaunay,
+  TTerrainBand,
+  TTerrainRatioMap,
+} from 'src/types/map.types';
+import { clamp, getNeighborAverageElevation } from '..';
 
 interface TBuildHydrologyOptions {
   mesh: TMapMeshWithDelaunay;
@@ -250,7 +247,7 @@ function runHydrologyInternal(
       return {
         ...cell,
         terrain,
-        biome: getBiome(terrain),
+        biome: TERRAIN_CONFIG[terrain].label,
         suitability: getSuitability(terrain, precipitation, temperature),
         temperature,
         precipitation,
@@ -299,7 +296,7 @@ function runHydrologyInternal(
   });
 
   measure('terrainPostProcessMs', () => {
-    regionalizeLandTerrains(cells, seaLevel);
+    clusterLandTerrains(cells, seaLevel);
     const terrainBalance = terrainRatios
       ? toTerrainBalance(terrainRatios)
       : HYDROLOGY_CONFIG.terrainBalance;
@@ -312,7 +309,7 @@ function runHydrologyInternal(
   measure('finalizeBiomeMs', () => {
     for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
       const cell = cells[cellIndex];
-      cell.biome = getBiome(cell.terrain);
+      cell.biome = TERRAIN_CONFIG[cell.terrain].label;
       cell.suitability = getSuitability(cell.terrain, cell.precipitation, cell.temperature);
     }
   });

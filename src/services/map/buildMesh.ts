@@ -1,5 +1,5 @@
 import { Delaunay } from 'd3-delaunay';
-import { clamp } from 'src/services';
+import { clamp, toPointKey } from 'src/services';
 import { createSeededRandom } from 'src/services/map/seededRandom';
 import { TMapCell, TMapEdge, TMapMeshWithDelaunay, TMapVertex, TPoint } from 'src/types/map.types';
 
@@ -50,10 +50,6 @@ function normalizePolygon(polygon: Iterable<TPoint> | null | undefined): TPoint[
   return points;
 }
 
-function createPointKey([x, y]: TPoint) {
-  return `${x.toFixed(4)}:${y.toFixed(4)}`;
-}
-
 function createEdgeKey(vertexAId: number, vertexBId: number) {
   return vertexAId < vertexBId ? `${vertexAId}:${vertexBId}` : `${vertexBId}:${vertexAId}`;
 }
@@ -75,7 +71,7 @@ export function buildMesh({
   const cells: TMapCell[] = points.map((point, index) => {
     const polygon = normalizePolygon(voronoi.cellPolygon(index));
     const vertexIds = polygon.map((polygonPoint) => {
-      const pointKey = createPointKey(polygonPoint);
+      const pointKey = toPointKey(polygonPoint, { precision: 4 });
       const existingVertexId = vertexIdByKey.get(pointKey);
 
       if (existingVertexId !== undefined) return existingVertexId;

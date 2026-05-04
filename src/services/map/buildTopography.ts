@@ -196,7 +196,6 @@ function buildReliefSeeds(
             : TOPOGRAPHY_CONFIG.seeds.basinAmplitudeRange),
     });
   }
-
   return seeds;
 }
 

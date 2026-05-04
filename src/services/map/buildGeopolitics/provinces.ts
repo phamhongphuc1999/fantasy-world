@@ -1,6 +1,6 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { clamp, findNearestCellId } from 'src/services';
 import { runMultiSourceExpansion } from 'src/services/map/core/expansionEngine';
-import { clamp } from 'src/services/map/core/math';
 import { sortStableDescByScore } from 'src/services/map/core/sort';
 import { hashSeed } from 'src/services/map/seededRandom';
 import { TMapCell } from 'src/types/map.types';
@@ -477,17 +477,17 @@ export function enforceMinimumProvinceArea(
         }
 
         if (bestProvinceId < 0) {
-          const point = cells[cellId].site;
-          let bestDistance = Number.POSITIVE_INFINITY;
-          for (const candidateCellId of nationCellIds) {
-            const candidateProvinceId = provinceOwner[candidateCellId];
-            if (candidateProvinceId < 0 || candidateProvinceId === provinceId) continue;
-            const candidatePoint = cells[candidateCellId].site;
-            const distance = Math.hypot(point[0] - candidatePoint[0], point[1] - candidatePoint[1]);
-            if (distance < bestDistance) {
-              bestDistance = distance;
-              bestProvinceId = candidateProvinceId;
+          const nearestCellId = findNearestCellId(
+            cells,
+            cells[cellId].site,
+            nationCellIds,
+            (id) => {
+              const candidateProvinceId = provinceOwner[id];
+              return candidateProvinceId >= 0 && candidateProvinceId !== provinceId;
             }
+          );
+          if (nearestCellId >= 0) {
+            bestProvinceId = provinceOwner[nearestCellId];
           }
         }
 

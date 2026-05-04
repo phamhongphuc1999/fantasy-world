@@ -38,7 +38,6 @@ export function normalizeTerrainRatios(input: Partial<TTerrainRatioMap>): TTerra
   for (const field of TERRAIN_RATIO_FIELDS) {
     normalized[field.key] /= sum;
   }
-
   return normalized;
 }
 

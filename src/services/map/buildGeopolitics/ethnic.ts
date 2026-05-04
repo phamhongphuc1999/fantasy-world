@@ -1,4 +1,5 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { findNearestCellId } from 'src/services';
 import { runMultiSourceExpansion } from 'src/services/map/core/expansionEngine';
 import { collectConnectedComponents } from 'src/services/map/core/graph';
 import { TFifoQueue } from 'src/services/map/core/queue';
@@ -463,24 +464,15 @@ function ensureEthnicMultiNationPresence(
 }
 
 function assignUnclaimedLandCells(cells: TMapCell[], ethnicOwner: Int32Array) {
-  const claimedLand = cells.filter((cell) => isLand(cell) && ethnicOwner[cell.id] >= 0);
-  if (claimedLand.length === 0) return;
+  const claimedLandIds = cells
+    .filter((cell) => isLand(cell) && ethnicOwner[cell.id] >= 0)
+    .map((cell) => cell.id);
+  if (claimedLandIds.length === 0) return;
 
   for (const cell of cells) {
     if (!isLand(cell) || ethnicOwner[cell.id] >= 0) continue;
-    let bestEthnicId = -1;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (const claimedCell of claimedLand) {
-      const distance = Math.hypot(
-        cell.site[0] - claimedCell.site[0],
-        cell.site[1] - claimedCell.site[1]
-      );
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestEthnicId = ethnicOwner[claimedCell.id];
-      }
-    }
-    if (bestEthnicId >= 0) ethnicOwner[cell.id] = bestEthnicId;
+    const nearestCellId = findNearestCellId(cells, cell.site, claimedLandIds);
+    if (nearestCellId >= 0) ethnicOwner[cell.id] = ethnicOwner[nearestCellId];
   }
 }
 

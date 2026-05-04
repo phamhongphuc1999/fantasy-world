@@ -1,6 +1,8 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { clamp, getNeighborAverageElevation } from 'src/services';
+import { collectConnectedComponents } from 'src/services/map/core/graph';
 import { TMapCell, TTerrainBand, TTerrainRatioMap } from 'src/types/map.types';
-import { clamp, getNeighborAverageElevation, isWaterTerrain } from './hydrologyUtils';
+import { isWaterTerrain } from './hydrologyUtils';
 
 type TTerrainBalance = typeof HYDROLOGY_CONFIG.terrainBalance;
 function isLockedTerrain(cell: TMapCell, terrain: TTerrainBand) {
@@ -90,48 +92,19 @@ function getNeighborTerrainCounts(cell: TMapCell, cells: TMapCell[]) {
 
     counts.set(neighborTerrain, (counts.get(neighborTerrain) || 0) + 1);
   }
-
   return counts;
 }
 
 function findSmallTerrainRegions(cells: TMapCell[], minRegionSize: number) {
-  const visited = new Uint8Array(cells.length);
-  const regions: number[][] = [];
-  const stack: number[] = [];
-
-  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
-    if (visited[cellIndex] === 1) continue;
-
-    const seedCell = cells[cellIndex];
-    if (isWaterTerrain(seedCell.terrain)) continue;
-
-    stack.length = 0;
-    stack.push(cellIndex);
-    const region: number[] = [];
-    visited[cellIndex] = 1;
-
-    while (stack.length > 0) {
-      const current = stack.pop() as number;
-      region.push(current);
-
-      for (const neighborId of cells[current].neighbors) {
-        if (visited[neighborId] === 1) continue;
-        if (cells[neighborId].terrain !== seedCell.terrain) continue;
-        if (isWaterTerrain(cells[neighborId].terrain)) continue;
-
-        visited[neighborId] = 1;
-        stack.push(neighborId);
-      }
-    }
-
-    if (region.length < minRegionSize) {
-      regions.push(region);
-    }
-  }
-  return regions;
+  const regions = collectConnectedComponents(
+    cells,
+    (cell) => !isWaterTerrain(cell.terrain),
+    (current, neighbor) => !isWaterTerrain(neighbor.terrain) && current.terrain === neighbor.terrain
+  );
+  return regions.filter((region) => region.length < minRegionSize);
 }
 
-function regionalizeLandTerrains(cells: TMapCell[], seaLevel: number) {
+function clusterLandTerrains(cells: TMapCell[], seaLevel: number) {
   const minRegionSize = Math.max(
     HYDROLOGY_CONFIG.regionalization.minRegionBase,
     Math.floor(Math.sqrt(cells.length) * HYDROLOGY_CONFIG.regionalization.minRegionScale)
@@ -690,6 +663,6 @@ export {
   antiAliasTerrains,
   mergeSmallTerrainClusters,
   rebalanceTerrainDistribution,
-  regionalizeLandTerrains,
+  clusterLandTerrains,
   toTerrainBalance,
 };
