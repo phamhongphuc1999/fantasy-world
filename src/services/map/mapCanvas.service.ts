@@ -114,6 +114,34 @@ export function getCellDisplayColor(cell: TMapCell) {
   return terrainColor;
 }
 
+function clamp01(value: number) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function interpolateChannel(start: number, end: number, factor: number) {
+  return Math.round(start + (end - start) * factor);
+}
+
+export function getPopulationHeatmapColor(
+  population: number,
+  minPopulation: number,
+  maxPopulation: number
+) {
+  const light = { r: 224, g: 243, b: 255 }; // #e0f3ff
+  const dark = { r: 8, g: 48, b: 107 }; // #08306b
+
+  if (maxPopulation <= minPopulation) {
+    return `rgb(${light.r}, ${light.g}, ${light.b})`;
+  }
+
+  const normalized = clamp01((population - minPopulation) / (maxPopulation - minPopulation));
+  const r = interpolateChannel(light.r, dark.r, normalized);
+  const g = interpolateChannel(light.g, dark.g, normalized);
+  const b = interpolateChannel(light.b, dark.b, normalized);
+
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 function getNationPaletteColor(nationId: number | null) {
   if (nationId === null) return '#334155';
   const paletteIndex = Math.abs(nationId) % NATION_COLOR.length;
@@ -354,8 +382,8 @@ export function drawUrbanHierarchy(context: CanvasRenderingContext2D, cells: TMa
     if (cell.isCapital) {
       const [x, y] = cell.site;
       const spikes = 5;
-      const outerRadius = 7;
-      const innerRadius = 3.2;
+      const outerRadius = 4;
+      const innerRadius = 1.6;
       let rotation = (Math.PI / 2) * 3;
 
       context.beginPath();

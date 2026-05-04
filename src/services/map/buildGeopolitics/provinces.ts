@@ -4,8 +4,8 @@ import { clamp } from 'src/services/map/core/math';
 import { sortStableDescByScore } from 'src/services/map/core/sort';
 import { hashSeed } from 'src/services/map/seededRandom';
 import { TMapCell } from 'src/types/map.types';
-import { getProvinceSeedScore } from './provinceCostPolicy';
-import { getBoundaryStepCost, isLand } from './shared';
+import { getProvinceSeedScore } from './costPolicies';
+import { getBoundaryStepCost, isLand } from './geopoliticsShared';
 
 function getMinimumProvinceCells(nationCellCount: number) {
   return Math.max(10, Math.floor(nationCellCount * 0.02));
@@ -160,6 +160,13 @@ function getProvinceTargetCount(
   const pressureScaled = baseCount * (0.7 + pressureAverage * 0.9);
   const target = Math.max(1, Math.round(pressureScaled));
   return clamp(target, 1, maxProvinceCount);
+}
+
+function getMaxProvincePopulationShare(nationPopulation: number) {
+  if (nationPopulation <= 1_000_000) return 0.5;
+  if (nationPopulation <= 2_000_000) return 0.4;
+  if (nationPopulation <= 5_000_000) return 0.35;
+  return 0.3;
 }
 
 function assignNationProvincesBySeeds(
@@ -318,13 +325,21 @@ export function buildNationProvinces(cells: TMapCell[], owner: Int32Array, seed:
       if (seeds.length < maxProvinceCount) {
         for (const [provinceId, provinceCells] of provinceToCells) {
           const share = provinceCells.length / nationCells.length;
+          const provincePopulation = provinceCells.reduce(
+            (sum, cellId) => sum + cells[cellId].population,
+            0
+          );
+          const provincePopulationShare = provincePopulation / Math.max(1, nationPopulation);
+          const maxProvincePopulationShare = getMaxProvincePopulationShare(nationPopulation);
           const plainsCount = provinceCells.filter((cellId) => {
             const terrain = cells[cellId].terrain;
             return terrain === 'plains' || terrain === 'valley' || terrain === 'coast';
           }).length;
           const plainsShare = plainsCount / Math.max(1, provinceCells.length);
           const maxShare = plainsShare >= 0.45 ? 0.15 : 0.25;
-          if (share <= maxShare) continue;
+          const shouldSplitByArea = share > maxShare;
+          const shouldSplitByPopulation = provincePopulationShare > maxProvincePopulationShare;
+          if (!shouldSplitByArea && !shouldSplitByPopulation) continue;
 
           const seedCellId = seeds[provinceId - nationStartProvinceId];
           let farthestCellId = seedCellId;

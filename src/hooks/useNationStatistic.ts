@@ -42,7 +42,7 @@ export default function useNationStatistic(nationId: number | null, mesh: TMapMe
         }
       }
 
-      const terrainStats = Array.from(terrainCounts.entries())
+      const terrains = Array.from(terrainCounts.entries())
         .map(([terrain, count]) => ({
           terrain,
           count,
@@ -52,7 +52,7 @@ export default function useNationStatistic(nationId: number | null, mesh: TMapMe
         .slice(0, 8);
 
       const ethnicNameById = new Map(mesh.ethnicGroups.map((group) => [group.id, group.name]));
-      const ethnicStats = Array.from(ethnicCounts.entries())
+      const ethnics = Array.from(ethnicCounts.entries())
         .map(([ethnicId, count]) => ({
           ethnicId,
           name: ethnicNameById.get(ethnicId) || `Ethnic #${ethnicId}`,
@@ -72,7 +72,7 @@ export default function useNationStatistic(nationId: number | null, mesh: TMapMe
         }))
         .sort((a, b) => b.population - a.population);
 
-      return { nationCells, totalPopulation, terrainStats, ethnicStats, provinces };
+      return { nationCells, totalPopulation, terrains, ethnics, provinces };
     }
   }, [mesh.cells, mesh.ethnicGroups, nation]);
 

@@ -50,11 +50,7 @@ export class MapGenerator {
   }
 
   private buildGeopolitics(mesh: TMapMeshWithDelaunay) {
-    return buildGeopolitics({
-      mesh,
-      seed: this.config.seed,
-      nationCount: this.config.nationCount,
-    });
+    return buildGeopolitics({ mesh, seed: this.config.seed, nationCount: this.config.nationCount });
   }
 
   generateStages(): TMapGenerationStages {

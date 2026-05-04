@@ -56,6 +56,7 @@ export const DEFAULT_CONFIG: {
   },
   displaySettings: {
     terrain: true,
+    populationHeatmap: false,
     rivers: false,
     countryBorders: false,
     countryFill: false,

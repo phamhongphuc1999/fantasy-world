@@ -19,6 +19,7 @@ import {
   drawUrbanHierarchy,
   getCanvasPoint,
   getCellDisplayColor,
+  getPopulationHeatmapColor,
   isLandCell,
   setupCanvas,
 } from 'src/services/map/mapCanvas.service';
@@ -64,12 +65,39 @@ export default function MapCanvasPanel() {
     }
 
     const showUniformLand =
-      !displaySettings.terrain && !displaySettings.countryFill && !displaySettings.ethnicFill;
+      !displaySettings.terrain &&
+      !displaySettings.populationHeatmap &&
+      !displaySettings.countryFill &&
+      !displaySettings.ethnicFill;
+
+    let minPopulation = Number.POSITIVE_INFINITY;
+    let maxPopulation = Number.NEGATIVE_INFINITY;
+    if (displaySettings.populationHeatmap) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        if (cell.population < minPopulation) minPopulation = cell.population;
+        if (cell.population > maxPopulation) maxPopulation = cell.population;
+      }
+    }
 
     if (displaySettings.terrain) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
         drawCellShape(context, cell, getCellDisplayColor(cell), 0.95, 'transparent', 0);
+      }
+    }
+
+    if (displaySettings.populationHeatmap) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        drawCellShape(
+          context,
+          cell,
+          getPopulationHeatmapColor(cell.population, minPopulation, maxPopulation),
+          0.96,
+          'transparent',
+          0
+        );
       }
     }
 
@@ -120,7 +148,11 @@ export default function MapCanvasPanel() {
         drawRegionNames(context, cells, nations, ethnicGroups, 'nation');
     }
 
-    if (displaySettings.terrain && cells.length <= T_SITE_MARKER_LIMIT) {
+    if (
+      displaySettings.terrain &&
+      !displaySettings.populationHeatmap &&
+      cells.length <= T_SITE_MARKER_LIMIT
+    ) {
       for (const cell of cells) {
         drawSiteMarker(context, cell, 1.4, cell.isWater ? '#dbeafe' : '#fef3c7', 0.22);
       }

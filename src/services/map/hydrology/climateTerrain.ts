@@ -1,6 +1,6 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { TMapCell, TTerrainBand } from 'src/types/map.types';
-import { clamp } from './common';
+import { clamp } from './hydrologyUtils';
 
 export function buildWaterInfluence(cells: TMapCell[]): Float32Array {
   let waterInfluence = new Float32Array(cells.length);

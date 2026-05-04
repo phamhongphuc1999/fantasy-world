@@ -109,6 +109,7 @@ export type TMapMeshWithDelaunay = TMapMesh & {
 // Map Configuration & UI state
 export interface TMapDisplaySettings {
   terrain: boolean;
+  populationHeatmap: boolean;
   rivers: boolean;
   countryBorders: boolean;
   countryFill: boolean;

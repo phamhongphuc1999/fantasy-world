@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
 import BlurCard from 'src/components/BlurCard';
+import TerrainStatistic from 'src/components/TerrainStatistic';
 import {
   Dialog,
   DialogContent,
@@ -9,9 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from 'src/components/ui/dialog';
-import { TERRAIN_COLORS, TERRAIN_ICONS } from 'src/configs/constance';
-import { TMapMeshWithDelaunay, TTerrainBand } from 'src/types/map.types';
-import { formatPopulation } from 'src/utils/mapPanelHelpers';
+import useEthnicStatistic from 'src/hooks/useEthnicStatistic';
+import { TMapMeshWithDelaunay } from 'src/types/map.types';
+import { formatPopulation, getNationColor } from 'src/utils/mapPanelHelpers';
 
 type TProps = {
   open: boolean;
@@ -21,51 +21,7 @@ type TProps = {
 };
 
 export default function EthnicDetailDialog({ open, onOpenChange, ethnicGroupId, mesh }: TProps) {
-  const data = useMemo(() => {
-    if (ethnicGroupId === null) return null;
-    const ethnicGroup = mesh.ethnicGroups.find((group) => group.id === ethnicGroupId);
-    if (!ethnicGroup) return null;
-
-    const ethnicCells = mesh.cells.filter(
-      (cell) => !cell.isWater && cell.ethnicGroupId === ethnicGroupId
-    );
-    const totalPopulation = ethnicCells.reduce(
-      (sum, cell) => sum + Math.max(0, cell.population || 0),
-      0
-    );
-
-    const nationNameById = new Map(mesh.nations.map((nation) => [nation.id, nation.name]));
-    const populationByNation = new Map<number, number>();
-    const terrainCount = new Map<string, number>();
-
-    for (const cell of ethnicCells) {
-      if (cell.nationId !== null) {
-        populationByNation.set(
-          cell.nationId,
-          (populationByNation.get(cell.nationId) || 0) + Math.max(0, cell.population || 0)
-        );
-      }
-      terrainCount.set(cell.terrain, (terrainCount.get(cell.terrain) || 0) + 1);
-    }
-
-    const nationPopulationStats = Array.from(populationByNation.entries())
-      .map(([nationId, population]) => ({
-        nationId,
-        nationName: nationNameById.get(nationId) || `Nation #${nationId}`,
-        population,
-      }))
-      .sort((a, b) => b.population - a.population);
-
-    const terrainStats = Array.from(terrainCount.entries())
-      .map(([terrain, count]) => ({
-        terrain,
-        count,
-        percent: Number(((count / Math.max(1, ethnicCells.length)) * 100).toFixed(2)),
-      }))
-      .sort((a, b) => b.count - a.count);
-
-    return { ethnicGroup, ethnicCells, totalPopulation, nationPopulationStats, terrainStats };
-  }, [ethnicGroupId, mesh.cells, mesh.ethnicGroups, mesh.nations]);
+  const { data } = useEthnicStatistic(ethnicGroupId, mesh);
 
   if (!data) {
     return (
@@ -89,7 +45,9 @@ export default function EthnicDetailDialog({ open, onOpenChange, ethnicGroupId, 
         className="border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md sm:max-w-[45vw]"
       >
         <DialogHeader>
-          <DialogTitle className="font-bold">{data.ethnicGroup.name}</DialogTitle>
+          <DialogTitle className="font-bold" style={{ color: getNationColor(data.ethnicGroup.id) }}>
+            {data.ethnicGroup.name}
+          </DialogTitle>
           <DialogDescription className="text-slate-300">
             Ethnic #{data.ethnicGroup.id} · Land Cells: {data.ethnicCells.length}
           </DialogDescription>
@@ -101,35 +59,23 @@ export default function EthnicDetailDialog({ open, onOpenChange, ethnicGroupId, 
             cell)
           </BlurCard>
           <BlurCard title="Population By Nation">
-            {data.nationPopulationStats.length > 0 ? (
-              data.nationPopulationStats.map((item) => (
+            {data.nations.length > 0 ? (
+              data.nations.map((item) => (
                 <div key={item.nationId} className="flex items-center justify-between gap-2">
-                  <span>{item.nationName}</span>
-                  <span>{formatPopulation(item.population)}</span>
+                  <span className="font-bold" style={{ color: getNationColor(item.nationId) }}>
+                    {item.nationName}
+                  </span>
+                  <span>
+                    {formatPopulation(item.population)} (
+                    {((item.population / data.totalPopulation) * 100).toFixed(2)}%)
+                  </span>
                 </div>
               ))
             ) : (
               <p className="text-slate-500">No nation coverage</p>
             )}
           </BlurCard>
-          <BlurCard title="Terrain">
-            {data.terrainStats.map((item) => (
-              <div key={item.terrain} className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="size-3 rounded-full"
-                    style={{ backgroundColor: TERRAIN_COLORS[item.terrain as TTerrainBand] }}
-                  />
-                  <span className="font-bold">
-                    {item.terrain.replace('-', ' ')} {TERRAIN_ICONS[item.terrain as TTerrainBand]}
-                  </span>
-                </div>
-                <span>
-                  {item.count} cells ({item.percent}%)
-                </span>
-              </div>
-            ))}
-          </BlurCard>
+          <TerrainStatistic terrains={data.terrains} />
         </div>
       </DialogContent>
     </Dialog>

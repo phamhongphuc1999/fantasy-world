@@ -88,9 +88,10 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         set({ terrainRatios: terrainRatiosDraft, hoverIndex: null });
       },
       setDisplaySettings(displaySettings: TMapDisplaySettings) {
-        const normalizedSettings = displaySettings.countryBorders
-          ? displaySettings
-          : { ...displaySettings, provinceBorders: false };
+        const normalizedBase = { ...DEFAULT_CONFIG.displaySettings, ...displaySettings };
+        const normalizedSettings = normalizedBase.countryBorders
+          ? normalizedBase
+          : { ...normalizedBase, provinceBorders: false };
         set({ displaySettings: normalizedSettings });
       },
       setDisplayLayer<K extends keyof TMapDisplaySettings>(layer: K, enabled: boolean) {
@@ -131,7 +132,16 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         const terrainRatios = migrateLegacyTerrainRatios(
           state.terrainRatios as unknown as Partial<Record<string, number>> | undefined
         );
-        return { ...DEFAULT_STATE, ...state, terrainRatios };
+        const persistedDisplaySettings = state.displaySettings as TMapDisplaySettings | undefined;
+        return {
+          ...DEFAULT_STATE,
+          ...state,
+          terrainRatios,
+          displaySettings: {
+            ...DEFAULT_CONFIG.displaySettings,
+            ...persistedDisplaySettings,
+          },
+        };
       },
     }
   )

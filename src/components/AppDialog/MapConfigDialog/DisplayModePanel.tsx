@@ -33,6 +33,11 @@ export default function DisplayModePanel() {
         onChange={(checked) => setDisplayLayer('terrain', checked)}
       />
       <LayerToggle
+        label="Population Heatmap"
+        checked={displaySettings.populationHeatmap}
+        onChange={(checked) => setDisplayLayer('populationHeatmap', checked)}
+      />
+      <LayerToggle
         label="Rivers"
         checked={displaySettings.rivers}
         onChange={(checked) => setDisplayLayer('rivers', checked)}

@@ -2,6 +2,12 @@ import { TMapMeshWithDelaunay } from 'src/types/map.types';
 import { pickEconomicAndCapital } from './capitals';
 import { buildEthnicRegions } from './ethnic';
 import {
+  assignMaritimeZones,
+  getNationCount,
+  isLand,
+  limitMountainClusterSplit,
+} from './geopoliticsShared';
+import {
   alignNaturalTerrainClusters,
   buildLandNations,
   diversifySmallNationSizes,
@@ -14,7 +20,6 @@ import {
   enforceMinimumProvinceArea,
   enforceProvinceContiguity,
 } from './provinces';
-import { assignMaritimeZones, getNationCount, isLand, limitMountainClusterSplit } from './shared';
 
 type TBuildGeopoliticsOptions = {
   mesh: TMapMeshWithDelaunay;
@@ -134,7 +139,6 @@ function finalizeOwnershipProjection(
       isCapital: capitalCellIds.has(cell.id),
     };
   });
-
   return { ...mesh, cells, nations, ethnicGroups };
 }
 

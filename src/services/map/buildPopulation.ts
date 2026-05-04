@@ -1,7 +1,7 @@
 import { createSeededRandom } from 'src/services/map/seededRandom';
 import { TMapMeshWithDelaunay, TTerrainBand } from 'src/types/map.types';
-import { clamp } from './core/math';
-import { TFifoQueue } from './core/queue';
+import { clamp } from 'src/services/map/core/math';
+import { TFifoQueue } from 'src/services/map/core/queue';
 
 interface TBuildPopulationOptions {
   mesh: TMapMeshWithDelaunay;

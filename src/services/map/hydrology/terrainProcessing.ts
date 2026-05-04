@@ -1,6 +1,6 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { TMapCell, TTerrainBand, TTerrainRatioMap } from 'src/types/map.types';
-import { clamp, getNeighborAverageElevation, isWaterTerrain } from './common';
+import { clamp, getNeighborAverageElevation, isWaterTerrain } from './hydrologyUtils';
 
 type TTerrainBalance = typeof HYDROLOGY_CONFIG.terrainBalance;
 function isLockedTerrain(cell: TMapCell, terrain: TTerrainBand) {

@@ -11,21 +11,29 @@ import {
   getRainShadow,
   getSuitability,
   getTerrainBand,
-} from './hydrology/climateTerrain';
-import { clamp, getNeighborAverageElevation, sortIndicesByElevation } from './hydrology/common';
-import { classifyEnclosedWaterBodies, expandLakes, filterAndLimitLakes } from './hydrology/lakes';
+} from 'src/services/map/hydrology/climateTerrain';
+import {
+  clamp,
+  getNeighborAverageElevation,
+  sortIndicesByElevation,
+} from 'src/services/map/hydrology/hydrologyUtils';
+import {
+  classifyEnclosedWaterBodies,
+  expandLakes,
+  filterAndLimitLakes,
+} from 'src/services/map/hydrology/lakes';
 import {
   addInlandPlainTributaries,
   extendRiversTowardHighlands,
   validateRivers,
-} from './hydrology/rivers';
+} from 'src/services/map/hydrology/rivers';
 import {
   antiAliasTerrains,
   mergeSmallTerrainClusters,
   rebalanceTerrainDistribution,
   regionalizeLandTerrains,
   toTerrainBalance,
-} from './hydrology/terrainProcessing';
+} from 'src/services/map/hydrology/terrainProcessing';
 
 interface TBuildHydrologyOptions {
   mesh: TMapMeshWithDelaunay;
@@ -41,11 +49,8 @@ function nowMs() {
   return Date.now();
 }
 
-function runHydrologyInternal(
-  { mesh, seaLevel, terrainRatios }: TBuildHydrologyOptions,
-  onProfile?: (profile: THydrologyProfile) => void
-): TMapMeshWithDelaunay {
-  const profile: THydrologyProfile = {
+function createEmptyHydrologyProfile(): THydrologyProfile {
+  return {
     initAndDownstreamMs: 0,
     flowAccumulationMs: 0,
     erosionAndAdjustMs: 0,
@@ -56,6 +61,13 @@ function runHydrologyInternal(
     finalizeBiomeMs: 0,
     totalMs: 0,
   };
+}
+
+function runHydrologyInternal(
+  { mesh, seaLevel, terrainRatios }: TBuildHydrologyOptions,
+  onProfile?: (profile: THydrologyProfile) => void
+): TMapMeshWithDelaunay {
+  const profile = createEmptyHydrologyProfile();
   const totalStart = nowMs();
 
   function measure<T>(key: keyof Omit<THydrologyProfile, 'totalMs'>, run: () => T) {
@@ -322,17 +334,7 @@ export function buildHydrologyProfiled({ mesh, seaLevel, terrainRatios }: TBuild
   mesh: TMapMeshWithDelaunay;
   profile: THydrologyProfile;
 } {
-  let hydrologyProfile: THydrologyProfile = {
-    initAndDownstreamMs: 0,
-    flowAccumulationMs: 0,
-    erosionAndAdjustMs: 0,
-    climateAndTerrainMs: 0,
-    lakesAndEnclosedWaterMs: 0,
-    riversMs: 0,
-    terrainPostProcessMs: 0,
-    finalizeBiomeMs: 0,
-    totalMs: 0,
-  };
+  let hydrologyProfile = createEmptyHydrologyProfile();
   const builtMesh = runHydrologyInternal({ mesh, seaLevel, terrainRatios }, (profile) => {
     hydrologyProfile = profile;
   });

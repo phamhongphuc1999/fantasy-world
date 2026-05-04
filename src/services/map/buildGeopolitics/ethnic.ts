@@ -5,8 +5,8 @@ import { TFifoQueue } from 'src/services/map/core/queue';
 import { sortStableDescByScore } from 'src/services/map/core/sort';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
 import { TEthnicGroup, TMapCell } from 'src/types/map.types';
-import { ethnicTerrainCost } from './ethnicCostPolicy';
-import { createRegionalName, edgeNoise, isLand } from './shared';
+import { ethnicTerrainCost } from './costPolicies';
+import { createRegionalName, edgeNoise, isLand } from './geopoliticsShared';
 
 type TEthnicConfig = typeof GEOPOLITICAL_CONFIG.ethnic;
 
@@ -27,15 +27,10 @@ function collectLandComponents(cells: TMapCell[]) {
   );
 }
 
-function pickEthnicCoreSeeds(
-  cells: TMapCell[],
-  componentCellIds: number[],
-  count: number,
-  seed: string
-) {
+function pickEthnicCoreSeeds(cells: TMapCell[], cellIds: number[], count: number, seed: string) {
   const random = createSeededRandom(`${seed}:ethnic:cores`);
   const candidates = sortStableDescByScore(
-    componentCellIds
+    cellIds
       .map((cellId) => cells[cellId])
       .map((cell) => {
         let score = cell.suitability * 1.3;

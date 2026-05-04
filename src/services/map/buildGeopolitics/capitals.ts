@@ -3,7 +3,7 @@ import { collectConnectedComponents } from 'src/services/map/core/graph';
 import { TFifoQueue } from 'src/services/map/core/queue';
 import { createSeededRandom } from 'src/services/map/seededRandom';
 import { TMapCell, TNation } from 'src/types/map.types';
-import { CAPITAL_VIEWPORT_MARGIN, createRegionalName, isLand } from './shared';
+import { CAPITAL_VIEWPORT_MARGIN, createRegionalName, isLand } from './geopoliticsShared';
 
 function getLandDistanceMap(
   cells: TMapCell[],
@@ -45,9 +45,7 @@ function getNationComponents(cells: TMapCell[], owner: Int32Array, nationId: num
 function waterProximityScore(cell: TMapCell, cells: TMapCell[]) {
   for (const neighborId of cell.neighbors) {
     const neighbor = cells[neighborId];
-    if (neighbor.isWater || neighbor.isRiver || neighbor.isLake) {
-      return 1;
-    }
+    if (neighbor.isWater || neighbor.isRiver || neighbor.isLake) return 1;
   }
 
   let secondRingWater = 0;
@@ -231,10 +229,7 @@ export function pickEconomicAndCapital(
       capitalCellId = safeHubId ?? hubCellIds[0];
     }
 
-    if (capitalCellId === null && capitalPool.length > 0) {
-      capitalCellId = capitalPool[0].id;
-    }
-
+    if (capitalCellId === null && capitalPool.length > 0) capitalCellId = capitalPool[0].id;
     const nationName = createRegionalName(seed, 'nation', nationId);
 
     return {

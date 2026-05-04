@@ -4,31 +4,29 @@ import { clamp } from 'src/services/map/core/math';
 import { sortStableDescByScore } from 'src/services/map/core/sort';
 import { createSeededRandom } from 'src/services/map/seededRandom';
 import { TMapCell } from 'src/types/map.types';
-import { getNationSeedSuitability } from './nationCostPolicy';
+import { getNationSeedSuitability } from './costPolicies';
 import {
   getBoundaryStepCost,
   getNationCount,
   getNationNeighborCounts,
   isLand,
   makeFrontierHash,
-} from './shared';
+} from './geopoliticsShared';
 
 const LARGE_LAND_COMPONENT_MIN_CELLS = 200;
 
 type TConnectivityContext = {
-  componentByCellId: Int32Array;
-  componentCellIds: number[][];
+  cellId: Int32Array;
   componentSizes: number[];
   largeComponentIds: Set<number>;
-  boundaryCellsByComponentId: number[][];
+  boundaryCells: number[][];
 };
 
 function buildConnectivityContext(cells: TMapCell[]): TConnectivityContext {
-  const componentByCellId = new Int32Array(cells.length);
-  componentByCellId.fill(-1);
-  const componentCellIds: number[][] = [];
+  const cellId = new Int32Array(cells.length);
+  cellId.fill(-1);
   const componentSizes: number[] = [];
-  const boundaryCellsByComponentId: number[][] = [];
+  const boundaryCells: number[][] = [];
   const visited = new Uint8Array(cells.length);
   const stack: number[] = [];
 
@@ -41,7 +39,7 @@ function buildConnectivityContext(cells: TMapCell[]): TConnectivityContext {
     const component: number[] = [];
     const boundaries: number[] = [];
     visited[cell.id] = 1;
-    componentByCellId[cell.id] = componentId;
+    cellId[cell.id] = componentId;
 
     while (stack.length > 0) {
       const currentId = stack.pop() as number;
@@ -55,15 +53,14 @@ function buildConnectivityContext(cells: TMapCell[]): TConnectivityContext {
         }
         if (visited[neighborId] === 1) continue;
         visited[neighborId] = 1;
-        componentByCellId[neighborId] = componentId;
+        cellId[neighborId] = componentId;
         stack.push(neighborId);
       }
       if (touchesWater) boundaries.push(currentId);
     }
 
-    componentCellIds.push(component);
     componentSizes.push(component.length);
-    boundaryCellsByComponentId.push(boundaries.length > 0 ? boundaries : [component[0] as number]);
+    boundaryCells.push(boundaries.length > 0 ? boundaries : [component[0] as number]);
     componentId += 1;
   }
 
@@ -72,24 +69,18 @@ function buildConnectivityContext(cells: TMapCell[]): TConnectivityContext {
     if (componentSizes[id] >= LARGE_LAND_COMPONENT_MIN_CELLS) largeComponentIds.add(id);
   }
 
-  return {
-    componentByCellId,
-    componentCellIds,
-    componentSizes,
-    largeComponentIds,
-    boundaryCellsByComponentId,
-  };
+  return { cellId, componentSizes, largeComponentIds, boundaryCells };
 }
 
-function estimateWaterCellsBetweenComponents(
+function estimateWaterCells(
   cells: TMapCell[],
   context: TConnectivityContext,
   leftComponentId: number,
   rightComponentId: number
 ) {
   if (leftComponentId === rightComponentId) return 0;
-  const leftBoundaries = context.boundaryCellsByComponentId[leftComponentId] || [];
-  const rightBoundaries = context.boundaryCellsByComponentId[rightComponentId] || [];
+  const leftBoundaries = context.boundaryCells[leftComponentId] || [];
+  const rightBoundaries = context.boundaryCells[rightComponentId] || [];
   if (leftBoundaries.length === 0 || rightBoundaries.length === 0) return 0;
 
   const sampleLeft = leftBoundaries.slice(0, Math.min(24, leftBoundaries.length));
@@ -320,7 +311,7 @@ function selectNationSeeds(
       .map((_, cellId) => ({
         cellId,
         score: getNationSeedSuitability(cellId, cells),
-        componentId: connectivity.componentByCellId[cellId],
+        componentId: connectivity.cellId[cellId],
       }))
       .filter((entry) => isLand(cells[entry.cellId]))
   );
@@ -336,7 +327,7 @@ function selectNationSeeds(
   if (sourceCandidates.length === 0) return [];
   const seeds: number[] = [sourceCandidates[0].cellId];
   const seededLargeComponentIds = new Set<number>();
-  const firstComponentId = connectivity.componentByCellId[sourceCandidates[0].cellId];
+  const firstComponentId = connectivity.cellId[sourceCandidates[0].cellId];
   if (connectivity.largeComponentIds.has(firstComponentId)) {
     seededLargeComponentIds.add(firstComponentId);
   }
@@ -366,15 +357,15 @@ function selectNationSeeds(
       const isLargeComponent = connectivity.largeComponentIds.has(candidate.componentId);
       const componentSize = connectivity.componentSizes[candidate.componentId] || 0;
       const alreadySeededInComponent = seeds.some(
-        (seedCellId) => connectivity.componentByCellId[seedCellId] === candidate.componentId
+        (seedCellId) => connectivity.cellId[seedCellId] === candidate.componentId
       );
 
       let nearestSeededComponentId = -1;
       let nearestWaterGap = Number.POSITIVE_INFINITY;
       for (const seedCellId of seeds) {
-        const seededComponentId = connectivity.componentByCellId[seedCellId];
+        const seededComponentId = connectivity.cellId[seedCellId];
         if (seededComponentId < 0 || seededComponentId === candidate.componentId) continue;
-        const gap = estimateWaterCellsBetweenComponents(
+        const gap = estimateWaterCells(
           cells,
           connectivity,
           candidate.componentId,
