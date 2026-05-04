@@ -201,9 +201,8 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
 
   const normalizedMax = Math.max(0.0001, maxScore);
   const nextCells = cells.map((cell) => {
-    if (cell.isWater) {
+    if (cell.isWater)
       return { ...cell, population: 0, waterAccessibility: waterAccessibility[cell.id] };
-    }
     const density = clamp(score[cell.id] / normalizedMax, 0, 1);
     const shaped = Math.pow(density, 1.08);
     const basePopulation = Math.round(shaped * 5000);
@@ -212,6 +211,5 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
     );
     return { ...cell, population, waterAccessibility: waterAccessibility[cell.id] };
   });
-
   return { ...mesh, cells: nextCells };
 }

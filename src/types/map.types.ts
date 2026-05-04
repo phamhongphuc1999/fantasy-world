@@ -10,7 +10,7 @@ export interface TMapVertex {
 
 export interface TMapEdge {
   id: number;
-  vertexIds: [number, number];
+  vertexIds: TPoint;
   cellIds: number[];
   isBoundary: boolean;
 }
@@ -223,3 +223,10 @@ export interface TCellDescription {
 
 // Geopolitics Borders
 export type TBorderLevelKey = 'country' | 'province';
+
+export type TLine = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};

@@ -1,8 +1,7 @@
 /* eslint-disable quotes */
 import { type MouseEvent } from 'react';
-import { NATION_COLOR } from 'src/configs/mapConfig';
-import { getTerrainColor } from 'src/services';
-import { TEthnicGroup, TMapCell, TNation } from 'src/types/map.types';
+import { getNationColor, getTerrainColor } from 'src/services';
+import { TEthnicGroup, TMapCell, TNation, TPoint } from 'src/types/map.types';
 
 function drawPolygon(context: CanvasRenderingContext2D, polygon: TMapCell['polygon']) {
   if (polygon.length === 0) return;
@@ -142,23 +141,11 @@ export function getPopulationHeatmapColor(
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-function getNationPaletteColor(nationId: number | null) {
-  if (nationId === null) return '#334155';
-  const paletteIndex = Math.abs(nationId) % NATION_COLOR.length;
-  return NATION_COLOR[paletteIndex];
-}
-
-function getEthnicPaletteColor(ethnicGroupId: number | null) {
-  if (ethnicGroupId === null) return '#334155';
-  const paletteIndex = Math.abs(ethnicGroupId) % NATION_COLOR.length;
-  return NATION_COLOR[paletteIndex];
-}
-
 export function drawCountryFill(context: CanvasRenderingContext2D, cells: TMapCell[]) {
   const fillOpacity = 0.86;
   for (const cell of cells) {
     if (!isLandCell(cell)) continue;
-    const fillColor = getNationPaletteColor(cell.nationId);
+    const fillColor = getNationColor(cell.nationId);
     drawPolygon(context, cell.polygon);
     context.fillStyle = fillColor;
     context.globalAlpha = fillOpacity;
@@ -175,7 +162,7 @@ export function drawEthnicFill(
   const fillOpacity = showTerrain ? 0.3 : 0.86;
   for (const cell of cells) {
     if (!isLandCell(cell)) continue;
-    const fillColor = getEthnicPaletteColor(cell.ethnicGroupId);
+    const fillColor = getNationColor(cell.ethnicGroupId);
     drawPolygon(context, cell.polygon);
     context.fillStyle = fillColor;
     context.globalAlpha = fillOpacity;
@@ -184,11 +171,11 @@ export function drawEthnicFill(
   }
 }
 
-function toPointKey(point: [number, number]) {
+function toPointKey(point: TPoint) {
   return `${point[0].toFixed(3)}:${point[1].toFixed(3)}`;
 }
 
-function toEdgeKey(startPoint: [number, number], endPoint: [number, number]) {
+function toEdgeKey(startPoint: TPoint, endPoint: TPoint) {
   const startKey = toPointKey(startPoint);
   const endKey = toPointKey(endPoint);
   return startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
@@ -205,8 +192,8 @@ function edgeNoiseValue(edgeKey: string, salt: number) {
 
 function drawNaturalBorderSegment(
   context: CanvasRenderingContext2D,
-  start: [number, number],
-  end: [number, number],
+  start: TPoint,
+  end: TPoint,
   edgeKey: string
 ) {
   const dx = end[0] - start[0];
@@ -222,11 +209,11 @@ function drawNaturalBorderSegment(
   const cp1Amplitude = amplitudeBase * wobbleA;
   const cp2Amplitude = amplitudeBase * wobbleB;
 
-  const cp1: [number, number] = [
+  const cp1: TPoint = [
     start[0] + dx * 0.33 + nx * cp1Amplitude,
     start[1] + dy * 0.33 + ny * cp1Amplitude,
   ];
-  const cp2: [number, number] = [
+  const cp2: TPoint = [
     start[0] + dx * 0.66 + nx * cp2Amplitude,
     start[1] + dy * 0.66 + ny * cp2Amplitude,
   ];
@@ -249,10 +236,7 @@ function shouldDrawEthnicLandBorder(cellA: TMapCell, cellB: TMapCell) {
 }
 
 export function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
-  const edgeOwner = new Map<
-    string,
-    { start: [number, number]; end: [number, number]; cell: TMapCell }
-  >();
+  const edgeOwner = new Map<string, { start: TPoint; end: TPoint; cell: TMapCell }>();
 
   for (const cell of cells) {
     if (cell.polygon.length < 2) continue;
@@ -282,10 +266,7 @@ export function drawGrayBorders(context: CanvasRenderingContext2D, cells: TMapCe
 }
 
 export function drawEthnicBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
-  const edgeOwner = new Map<
-    string,
-    { start: [number, number]; end: [number, number]; cell: TMapCell }
-  >();
+  const edgeOwner = new Map<string, { start: TPoint; end: TPoint; cell: TMapCell }>();
 
   for (const cell of cells) {
     if (cell.polygon.length < 2) continue;
@@ -315,10 +296,7 @@ export function drawEthnicBorders(context: CanvasRenderingContext2D, cells: TMap
 }
 
 export function drawProvinceBorders(context: CanvasRenderingContext2D, cells: TMapCell[]) {
-  const edgeOwner = new Map<
-    string,
-    { start: [number, number]; end: [number, number]; cell: TMapCell }
-  >();
+  const edgeOwner = new Map<string, { start: TPoint; end: TPoint; cell: TMapCell }>();
 
   for (const cell of cells) {
     if (!isLandCell(cell)) continue;

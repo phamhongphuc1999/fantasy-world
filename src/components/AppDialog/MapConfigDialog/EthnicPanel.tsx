@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useMapContext } from 'src/contexts/map.context';
-import { formatPopulation } from 'src/utils/mapPanelHelpers';
+import { formatPopulation } from 'src/services';
 
 type TProps = Record<string, never>;
 

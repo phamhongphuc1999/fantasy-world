@@ -1,3 +1,4 @@
+import { clamp, distanceToSegment, smoothStep } from 'src/services';
 import { TMapMesh } from 'src/types/map.types';
 
 type TRangeBandOptions = {
@@ -25,38 +26,6 @@ type TIslandSeed = {
   amplitude: number;
 };
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function smoothStep(value: number) {
-  const clamped = clamp(value, 0, 1);
-  return clamped * clamped * (3 - 2 * clamped);
-}
-
-function distanceToSegment(
-  x: number,
-  y: number,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number
-): number {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const denominator = dx * dx + dy * dy;
-
-  if (denominator === 0) {
-    return Math.sqrt((x - x1) ** 2 + (y - y1) ** 2);
-  }
-
-  const t = clamp(((x - x1) * dx + (y - y1) * dy) / denominator, 0, 1);
-  const projectionX = x1 + t * dx;
-  const projectionY = y1 + t * dy;
-
-  return Math.sqrt((x - projectionX) ** 2 + (y - projectionY) ** 2);
-}
-
 function sampleDeterministicDetail(x: number, y: number, seed: number) {
   const value = Math.sin(x * 12.9898 + y * 78.233 + seed * 0.01031) * 43758.5453;
   return Math.abs(value - Math.floor(value));
@@ -71,11 +40,9 @@ export function smoothElevations(mesh: TMapMesh, elevations: Float32Array, facto
     for (const neighborId of mesh.cells[cellIndex].neighbors) {
       total += elevations[neighborId];
     }
-
     const average = total / (mesh.cells[cellIndex].neighbors.length + 1);
     smoothed[cellIndex] = clamp(elevations[cellIndex] * (1 - factor) + average * factor, 0, 1);
   }
-
   elevations.set(smoothed);
 }
 
@@ -123,7 +90,7 @@ export function applyRangeBands(
 
     for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
       const [x, y] = mesh.cells[cellIndex].site;
-      const distance = distanceToSegment(x, y, x1, y1, x2, y2) / diagonal;
+      const distance = distanceToSegment(x, y, { x1, y1, x2, y2 }) / diagonal;
       const influence = clamp(1 - distance / width, 0, 1);
       if (influence === 0) continue;
 
@@ -165,7 +132,7 @@ export function applyRangeChains(
 
       for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
         const [x, y] = mesh.cells[cellIndex].site;
-        const distance = distanceToSegment(x, y, px, py, nx, ny) / diagonal;
+        const distance = distanceToSegment(x, y, { x1: px, y1: py, x2: nx, y2: ny }) / diagonal;
         const influence = clamp(1 - distance / ridgeWidth, 0, 1);
         if (influence === 0) continue;
 
@@ -206,7 +173,7 @@ export function applyValleyBands(
 
     for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
       const [x, y] = mesh.cells[cellIndex].site;
-      const distance = distanceToSegment(x, y, x1, y1, x2, y2) / diagonal;
+      const distance = distanceToSegment(x, y, { x1, y1, x2, y2 }) / diagonal;
       const influence = clamp(1 - distance / width, 0, 1);
       if (influence === 0) continue;
 

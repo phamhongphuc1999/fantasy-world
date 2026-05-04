@@ -1,4 +1,5 @@
 import { PRESET_CONFIG } from 'src/configs/mapConfig';
+import { clamp } from 'src/services';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
 import {
   applyArchipelagoSeeds,
@@ -15,10 +16,6 @@ interface TApplyTerrainPresetOptions {
   seed: string;
   preset: TTerrainPreset;
   elevations: Float32Array;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
 }
 
 function applyGlobalScale(elevations: Float32Array, offset: number, scale: number) {

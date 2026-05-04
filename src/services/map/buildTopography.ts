@@ -1,8 +1,14 @@
+import { TOPOGRAPHY_CONFIG } from 'src/configs/mapConfig';
+import { clamp, distanceToSegment, smoothStep } from 'src/services';
 import { applyTerrainPreset } from 'src/services/map/applyTerrainPreset';
 import { classifyTerrain } from 'src/services/map/classifyTerrain';
 import { createSeededRandom, hashSeed } from 'src/services/map/seededRandom';
-import { TOPOGRAPHY_CONFIG } from 'src/configs/mapConfig';
-import { TMapMeshWithDelaunay, TTerrainPreset, TTopographyCellData } from 'src/types/map.types';
+import {
+  TLine,
+  TMapMeshWithDelaunay,
+  TTerrainPreset,
+  TTopographyCellData,
+} from 'src/types/map.types';
 
 interface TBuildTopographyOptions {
   mesh: TMapMeshWithDelaunay;
@@ -11,11 +17,7 @@ interface TBuildTopographyOptions {
   terrainPreset: TTerrainPreset;
 }
 
-type TBoundaryLine = {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
+type TBoundaryLine = TLine & {
   kind: 'collision' | 'rift';
   strength: number;
 };
@@ -33,15 +35,6 @@ type TNoiseSampler = {
   ridged: (x: number, y: number, seedHash: number) => number;
   billow: (x: number, y: number, seedHash: number) => number;
 };
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function smoothStep(value: number) {
-  const clamped = clamp(value, 0, 1);
-  return clamped * clamped * (3 - 2 * clamped);
-}
 
 function lerp(start: number, end: number, factor: number) {
   return start + (end - start) * factor;
@@ -134,22 +127,6 @@ function createNoiseSampler(): TNoiseSampler {
     ridged: sampleRidgedNoise,
     billow: sampleBillowyNoise,
   };
-}
-
-function distanceToSegment(x: number, y: number, line: TBoundaryLine): number {
-  const dx = line.x2 - line.x1;
-  const dy = line.y2 - line.y1;
-  const denominator = dx * dx + dy * dy;
-
-  if (denominator === 0) {
-    return Math.sqrt((x - line.x1) ** 2 + (y - line.y1) ** 2);
-  }
-
-  const t = clamp(((x - line.x1) * dx + (y - line.y1) * dy) / denominator, 0, 1);
-  const px = line.x1 + t * dx;
-  const py = line.y1 + t * dy;
-
-  return Math.sqrt((x - px) ** 2 + (y - py) ** 2);
 }
 
 function buildBoundaryLines(seed: string, width: number, height: number): TBoundaryLine[] {

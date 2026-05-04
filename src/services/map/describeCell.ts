@@ -1,18 +1,5 @@
+import { clamp, getNeighborAverageElevation } from 'src/services';
 import { TCellDescription, TMapCell, TMapMesh } from 'src/types/map.types';
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function getAverageNeighborElevation(cell: TMapCell, mesh: TMapMesh) {
-  if (cell.neighbors.length === 0) return cell.elevation;
-
-  let total = 0;
-  for (const neighborId of cell.neighbors) {
-    total += mesh.cells[neighborId].elevation;
-  }
-  return total / cell.neighbors.length;
-}
 
 function getTerrainType(cell: TMapCell, mesh: TMapMesh): string {
   if (cell.terrain === 'deep-water') return 'Ocean';
@@ -31,7 +18,7 @@ function getTerrainType(cell: TMapCell, mesh: TMapMesh): string {
   if (cell.terrain === 'volcanic') return 'Volcanic';
   if (cell.terrain === 'tundra') return 'Tundra';
 
-  const averageNeighborElevation = getAverageNeighborElevation(cell, mesh);
+  const averageNeighborElevation = getNeighborAverageElevation(cell, mesh.cells);
   if (cell.elevation - averageNeighborElevation > 0.018) return 'Plateau';
   return 'Plain';
 }

@@ -1,4 +1,5 @@
 import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
+import { clamp } from 'src/services';
 import { TTerrainRatioKey, TTerrainRatioMap } from 'src/types/map.types';
 
 export const TERRAIN_RATIO_FIELDS: Array<{ key: TTerrainRatioKey; label: string }> = [
@@ -12,10 +13,6 @@ export const TERRAIN_RATIO_FIELDS: Array<{ key: TTerrainRatioKey; label: string 
 ];
 
 const MIN_RATIO = 0.01;
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
 
 export function normalizeTerrainRatios(input: Partial<TTerrainRatioMap>): TTerrainRatioMap {
   const defaults = DEFAULT_CONFIG.terrainRatios;

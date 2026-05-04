@@ -10,8 +10,8 @@ import {
   DialogTitle,
 } from 'src/components/ui/dialog';
 import useEthnicStatistic from 'src/hooks/useEthnicStatistic';
+import { formatPopulation, getNationColor } from 'src/services';
 import { TMapMeshWithDelaunay } from 'src/types/map.types';
-import { formatPopulation, getNationColor } from 'src/utils/mapPanelHelpers';
 
 type TProps = {
   open: boolean;

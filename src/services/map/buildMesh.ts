@@ -1,4 +1,5 @@
 import { Delaunay } from 'd3-delaunay';
+import { clamp } from 'src/services';
 import { createSeededRandom } from 'src/services/map/seededRandom';
 import { TMapCell, TMapEdge, TMapMeshWithDelaunay, TMapVertex, TPoint } from 'src/types/map.types';
 
@@ -32,18 +33,11 @@ function generateJitteredGridPoints(
       points.push([x, y]);
     }
   }
-
   return points;
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function normalizePolygon(polygon: Iterable<[number, number]> | null | undefined): TPoint[] {
-  if (!polygon) {
-    return [];
-  }
+function normalizePolygon(polygon: Iterable<TPoint> | null | undefined): TPoint[] {
+  if (!polygon) return [];
 
   const points = Array.from(polygon, ([x, y]) => [x, y] as TPoint);
 
@@ -51,11 +45,8 @@ function normalizePolygon(polygon: Iterable<[number, number]> | null | undefined
     const [firstX, firstY] = points[0];
     const [lastX, lastY] = points[points.length - 1];
 
-    if (firstX === lastX && firstY === lastY) {
-      points.pop();
-    }
+    if (firstX === lastX && firstY === lastY) points.pop();
   }
-
   return points;
 }
 
