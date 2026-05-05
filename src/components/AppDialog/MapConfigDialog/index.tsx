@@ -20,12 +20,20 @@ import {
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import DisplayModePanel from './DisplayModePanel';
 import EthnicPanel from './EthnicPanel';
+import ExportTab from './ExportTab';
 import GenerateTab from './GenerateTab';
 import NationsPanel from './NationsPanel';
 import TerrainTab from './TerrainTab';
 
 const T_MAP_CONFIG_ACTIVE_PANEL_KEY = 'map-config-active-panel';
-const T_ALLOWED_PANELS = new Set(['terrain', 'generation', 'display', 'nations', 'ethnic']);
+const T_ALLOWED_PANELS = new Set([
+  'terrain',
+  'generation',
+  'display',
+  'nations',
+  'ethnic',
+  'export',
+]);
 
 export default function MapConfigDialog() {
   const { resetToDefaults } = useMapExplorerStore();
@@ -71,6 +79,7 @@ export default function MapConfigDialog() {
               <SelectItem value="display">Display</SelectItem>
               <SelectItem value="nations">Nations</SelectItem>
               <SelectItem value="ethnic">Ethnic</SelectItem>
+              <SelectItem value="export">Export</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -98,6 +107,7 @@ export default function MapConfigDialog() {
                 <EthnicPanel />
               </div>
             )}
+            {activePanel === 'export' && <ExportTab />}
           </div>
         </div>
       </DialogContent>

@@ -57,6 +57,9 @@ export const DEFAULT_CONFIG: {
   displaySettings: {
     terrain: true,
     populationHeatmap: false,
+    temperatureHeatmap: false,
+    precipitationHeatmap: false,
+    rainShadowHeatmap: false,
     rivers: false,
     countryBorders: false,
     countryFill: false,

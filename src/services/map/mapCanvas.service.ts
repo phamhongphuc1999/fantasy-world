@@ -136,6 +136,55 @@ export function getPopulationHeatmapColor(
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+export function getTemperatureHeatmapColor(
+  temperature: number,
+  minTemperature: number,
+  maxTemperature: number
+) {
+  const cold = { r: 37, g: 99, b: 235 }; // #2563eb
+  const mild = { r: 250, g: 204, b: 21 }; // #facc15
+  const hot = { r: 220, g: 38, b: 38 }; // #dc2626
+
+  if (maxTemperature <= minTemperature) {
+    return `rgb(${mild.r}, ${mild.g}, ${mild.b})`;
+  }
+
+  const normalized = clamp01((temperature - minTemperature) / (maxTemperature - minTemperature));
+  if (normalized <= 0.5) {
+    const blend = normalized / 0.5;
+    const r = interpolateChannel(cold.r, mild.r, blend);
+    const g = interpolateChannel(cold.g, mild.g, blend);
+    const b = interpolateChannel(cold.b, mild.b, blend);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  const blend = (normalized - 0.5) / 0.5;
+  const r = interpolateChannel(mild.r, hot.r, blend);
+  const g = interpolateChannel(mild.g, hot.g, blend);
+  const b = interpolateChannel(mild.b, hot.b, blend);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+export function getPrecipitationHeatmapColor(precipitation: number) {
+  const dry = { r: 245, g: 158, b: 11 }; // #f59e0b
+  const wet = { r: 14, g: 116, b: 144 }; // #0e7490
+  const normalized = clamp01(precipitation);
+  const r = interpolateChannel(dry.r, wet.r, normalized);
+  const g = interpolateChannel(dry.g, wet.g, normalized);
+  const b = interpolateChannel(dry.b, wet.b, normalized);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+export function getRainShadowHeatmapColor(rainShadow: number) {
+  const low = { r: 191, g: 219, b: 254 }; // #bfdbfe
+  const high = { r: 146, g: 64, b: 14 }; // #92400e
+  const normalized = clamp01(rainShadow);
+  const r = interpolateChannel(low.r, high.r, normalized);
+  const g = interpolateChannel(low.g, high.g, normalized);
+  const b = interpolateChannel(low.b, high.b, normalized);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 export function drawCountryFill(context: CanvasRenderingContext2D, cells: TMapCell[]) {
   const fillOpacity = 0.86;
   for (const cell of cells) {

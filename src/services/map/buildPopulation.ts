@@ -13,16 +13,46 @@ function populationMultiplier(
   cell: TMapMeshWithDelaunay['cells'][number],
   cells: TMapMeshWithDelaunay['cells']
 ) {
-  if (cell.terrain === 'plains') {
-    const nearWater = cell.neighbors.some((neighborId) => cells[neighborId]?.isWater);
-    return nearWater ? 15 : 7;
+  const isNearWater = cell.neighbors.some((neighborId) => {
+    const n = cells[neighborId];
+    return n?.terrain === 'lake' || n?.terrain === 'shallow-water' || n?.terrain === 'inland-sea';
+  });
+
+  switch (cell.terrain) {
+    case 'valley':
+      return isNearWater ? 20 : 12;
+    case 'plains':
+      return isNearWater ? 15 : 8;
+    case 'coast':
+      return 14;
+    case 'lake':
+      return 10;
+    case 'forest':
+      return isNearWater ? 7 : 4;
+    case 'hills':
+      return isNearWater ? 6 : 3;
+    case 'plateau':
+      return 5;
+    case 'volcanic':
+      return 4;
+    case 'tundra':
+      return 0.8;
+    case 'swamp':
+      return 0.5;
+    case 'desert':
+      return isNearWater ? 3 : 0.2;
+    case 'badlands':
+      return 0.1;
+    case 'mountains':
+      return 0.1;
+    case 'inland-sea':
+    case 'shallow-water':
+    case 'deep-water':
+      return 0;
+
+    default:
+      return 0.1;
   }
-  if (cell.terrain === 'coast') return 3;
-  if (cell.terrain === 'valley') return 6;
-  if (cell.terrain === 'swamp') return 0.7;
-  if (cell.terrain === 'hills') return 1;
-  if (cell.terrain === 'mountains' || cell.terrain === 'volcanic') return 0.5;
-  return 0.1;
 }
 
 function buildWaterAccessibility(cells: TMapMeshWithDelaunay['cells']) {

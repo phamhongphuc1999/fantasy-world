@@ -120,6 +120,9 @@ export type TMapMeshWithDelaunay = TMapMesh & {
 export interface TMapDisplaySettings {
   terrain: boolean;
   populationHeatmap: boolean;
+  temperatureHeatmap: boolean;
+  precipitationHeatmap: boolean;
+  rainShadowHeatmap: boolean;
   rivers: boolean;
   countryBorders: boolean;
   countryFill: boolean;

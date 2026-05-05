@@ -8,7 +8,7 @@ import { getProvinceSeedScore } from './costPolicies';
 import { getBoundaryStepCost, isLand } from './geopoliticsShared';
 
 function getMinimumProvinceCells(nationCellCount: number) {
-  return Math.max(10, Math.floor(nationCellCount * 0.02));
+  return Math.max(5, Math.floor(nationCellCount * 0.015));
 }
 
 function shouldForceSmallNationSplit(nationPopulation: number, nationCellCount: number) {

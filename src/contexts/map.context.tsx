@@ -14,11 +14,13 @@ import {
 import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
 import { MapGenerator } from 'src/services/map/map.generator';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
+import { TMapExportSnapshot } from 'src/types/mapExport';
 import { TMapMeshWithDelaunay } from 'src/types/map.types';
 
 interface TMapContextType {
   mesh: TMapMeshWithDelaunay;
   isGenerating: boolean;
+  importFromSnapshot: (snapshot: TMapExportSnapshot) => { ok: true } | { ok: false; error: string };
   handlePointerMove: (x: number, y: number) => void;
   handleCellCountChange: (nextValue: number) => void;
 }
@@ -35,6 +37,7 @@ const mapContextDefault: TMapContextType = {
     delaunay: Delaunay.from([[0, 0]]),
   },
   isGenerating: true,
+  importFromSnapshot: () => ({ ok: false, error: 'Map context not ready' }),
   handlePointerMove: () => {},
   handleCellCountChange: () => {},
 };
@@ -60,6 +63,34 @@ export default function MapProvider({ children }: TProps) {
 
   const [mesh, setMesh] = useState<TMapMeshWithDelaunay>(mapContextDefault.mesh);
   const [isGenerating, setIsGenerating] = useState(true);
+
+  const importFromSnapshot = useCallback(
+    (snapshot: TMapExportSnapshot) => {
+      if (snapshot.schemaVersion !== 1) {
+        return { ok: false as const, error: 'Unsupported schema version' };
+      }
+
+      if (
+        !snapshot.mesh ||
+        !Array.isArray(snapshot.mesh.cells) ||
+        snapshot.mesh.cells.length === 0
+      ) {
+        return { ok: false as const, error: 'Invalid mesh payload' };
+      }
+
+      const nextMesh: TMapMeshWithDelaunay = {
+        ...snapshot.mesh,
+        delaunay: Delaunay.from(snapshot.mesh.cells.map((cell) => cell.site)),
+      };
+
+      generationIdRef.current += 1;
+      setMesh(nextMesh);
+      setIsGenerating(false);
+      setHoverIndex(null);
+      return { ok: true as const };
+    },
+    [setHoverIndex]
+  );
 
   useEffect(() => {
     generationIdRef.current += 1;
@@ -107,8 +138,14 @@ export default function MapProvider({ children }: TProps) {
   );
 
   const contextData = useMemo<TMapContextType>(() => {
-    return { mesh, isGenerating, handlePointerMove, handleCellCountChange };
-  }, [mesh, isGenerating, handlePointerMove, handleCellCountChange]);
+    return {
+      mesh,
+      isGenerating,
+      importFromSnapshot,
+      handlePointerMove,
+      handleCellCountChange,
+    };
+  }, [mesh, isGenerating, importFromSnapshot, handlePointerMove, handleCellCountChange]);
 
   return <MapContext.Provider value={contextData}>{children}</MapContext.Provider>;
 }
