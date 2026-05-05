@@ -133,6 +133,7 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
   const random = createSeededRandom(`${seed}:population`);
   const score = new Float64Array(cells.length);
   const waterAccessibility = buildWaterAccessibility(cells);
+  let landCellCount = 0;
 
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     const cell = cells[cellId];
@@ -140,6 +141,7 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
       score[cellId] = 0;
       continue;
     }
+    landCellCount += 1;
 
     let value = TERRAIN_CONFIG[cell.terrain].baseWeight;
     if (cell.terrain === 'coast') value += 0.3;
@@ -160,18 +162,15 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
     score[cellId] = Math.max(0, value);
   }
 
-  const urbanCandidates = cells
-    .map((cell) => ({
-      id: cell.id,
-      score:
-        cell.isWater || cell.terrain === 'mountains' || cell.terrain === 'desert'
-          ? -1
-          : score[cell.id] + cell.suitability * 0.6,
-    }))
-    .filter((entry) => entry.score > 0.25)
-    .sort((a, b) => b.score - a.score);
+  const urbanCandidates: Array<{ id: number; score: number }> = [];
+  for (const cell of cells) {
+    if (cell.isWater || cell.terrain === 'mountains' || cell.terrain === 'desert') continue;
+    const candidateScore = score[cell.id] + cell.suitability * 0.6;
+    if (candidateScore <= 0.25) continue;
+    urbanCandidates.push({ id: cell.id, score: candidateScore });
+  }
+  urbanCandidates.sort((a, b) => b.score - a.score);
 
-  const landCellCount = cells.filter((cell) => !cell.isWater).length;
   const cityCount = Math.max(4, Math.min(18, Math.floor(landCellCount / 900)));
   const citySeeds: number[] = [];
 

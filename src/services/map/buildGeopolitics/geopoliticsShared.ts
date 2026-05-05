@@ -201,6 +201,10 @@ function isRidgeBarrier(left: TMapCell, right: TMapCell) {
   return ruggedLeft && ruggedRight;
 }
 
+function isRuggedTerrain(cell: TMapCell) {
+  return cell.terrain === 'mountains' || cell.terrain === 'hills' || cell.terrain === 'volcanic';
+}
+
 function getTerrainCrossCost(cell: TMapCell, profile: TBorderLevelProfile) {
   const terrainCost = profile.terrainCost[cell.terrain as keyof typeof profile.terrainCost];
   return terrainCost ?? 1.2;
@@ -217,12 +221,24 @@ function getNaturalBarrierPenalty(left: TMapCell, right: TMapCell, profile: TBor
   }
   if (isRidgeBarrier(left, right)) {
     penalty += profile.featurePenalty.ridgeCross + Math.abs(left.elevation - right.elevation) * 6;
+  } else {
+    const leftRugged = isRuggedTerrain(left);
+    const rightRugged = isRuggedTerrain(right);
+    if (leftRugged !== rightRugged) {
+      penalty += profile.featurePenalty.ridgeCross * 0.35;
+    }
   }
   return penalty;
 }
 
-function isShorelineEdge(left: TMapCell, right: TMapCell) {
-  return left.isWater !== right.isWater || left.isLake !== right.isLake;
+function isCoastalLand(cell: TMapCell, cells: TMapCell[]) {
+  if (cell.isWater) return false;
+  if (cell.terrain === 'coast') return true;
+  for (const neighborId of cell.neighbors) {
+    const neighbor = cells[neighborId];
+    if (neighbor.isWater || neighbor.isLake || neighbor.terrain === 'coast') return true;
+  }
+  return false;
 }
 
 function countOwnedNeighbors(
@@ -251,7 +267,7 @@ export function getBoundaryStepCost(
   const neighbor = cells[neighborId];
   let step = getTerrainCrossCost(neighbor, profile);
   step += getNaturalBarrierPenalty(currentCell, neighbor, profile);
-  if (isShorelineEdge(currentCell, neighbor)) step += profile.featurePenalty.shorelineEdgeBias;
+  if (isCoastalLand(neighbor, cells)) step += profile.featurePenalty.shorelineEdgeBias;
   const sameOwnerNeighbors = countOwnedNeighbors(cells, owner, neighborId, ownerId);
   step += (2 - Math.min(2, sameOwnerNeighbors)) * profile.smoothness.jaggedPenalty;
   const noise = (edgeNoise(seedHash, currentId, neighborId) - 0.5) * 2;

@@ -168,7 +168,7 @@ function runHydrologyInternal(
     }
   });
 
-  const baseCells = mesh.cells.map((cell, cellIndex) => {
+  const cells = mesh.cells.map((cell, cellIndex) => {
     const nextCell = {
       ...cell,
       elevation: adjustedElevations[cellIndex],
@@ -205,9 +205,20 @@ function runHydrologyInternal(
     return nextCell;
   });
 
-  const cells = measure('climateAndTerrainMs', () => {
-    const waterInfluence = buildWaterInfluence(baseCells);
-    return baseCells.map((cell, cellIndex) => {
+  measure('climateAndTerrainMs', () => {
+    const waterInfluence = buildWaterInfluence(cells);
+    const rainShadowByCell = new Float32Array(cells.length);
+    const reliefByCell = new Float32Array(cells.length);
+
+    for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+      const cell = cells[cellIndex];
+      rainShadowByCell[cellIndex] = getRainShadow(cell, cells);
+      const neighborAverage = getNeighborAverageElevation(cell, cells);
+      reliefByCell[cellIndex] = cell.elevation - neighborAverage;
+    }
+
+    for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+      const cell = cells[cellIndex];
       const latitude = Math.abs((cell.site[1] / mesh.height) * 2 - 1);
       const temperature = clamp(
         1 -
@@ -217,7 +228,7 @@ function runHydrologyInternal(
         0,
         1
       );
-      const rainShadow = getRainShadow(cell, baseCells);
+      const rainShadow = rainShadowByCell[cellIndex];
       const orographicRain = clamp(
         Math.max(0, cell.elevation - HYDROLOGY_CONFIG.orographicElevationStart) *
           HYDROLOGY_CONFIG.orographicWeight,
@@ -234,8 +245,7 @@ function runHydrologyInternal(
         1
       );
 
-      const neighborAverage = getNeighborAverageElevation(cell, baseCells);
-      const relief = cell.elevation - neighborAverage;
+      const relief = reliefByCell[cellIndex];
       const terrain = getTerrainBand(
         cell,
         seaLevel,
@@ -245,16 +255,13 @@ function runHydrologyInternal(
         relief
       );
 
-      return {
-        ...cell,
-        terrain,
-        biome: TERRAIN_CONFIG[terrain].label,
-        suitability: getSuitability(terrain, precipitation, temperature),
-        temperature,
-        precipitation,
-        rainShadow,
-      };
-    });
+      cell.terrain = terrain;
+      cell.biome = TERRAIN_CONFIG[terrain].label;
+      cell.suitability = getSuitability(terrain, precipitation, temperature);
+      cell.temperature = temperature;
+      cell.precipitation = precipitation;
+      cell.rainShadow = rainShadow;
+    }
   });
 
   measure('lakesAndEnclosedWaterMs', () => {

@@ -57,47 +57,83 @@ function waterProximityScore(cell: TMapCell, cells: TMapCell[]) {
     if (neighbor.isWater || neighbor.isRiver || neighbor.isLake) return 1;
   }
 
-  let secondRingWater = 0;
+  const visitedWater = new Set<number>();
   for (const neighborId of cell.neighbors) {
     for (const secondNeighborId of cells[neighborId].neighbors) {
       const secondNeighbor = cells[secondNeighborId];
       if (secondNeighbor.isWater || secondNeighbor.isRiver || secondNeighbor.isLake) {
-        secondRingWater += 1;
+        visitedWater.add(secondNeighborId);
       }
     }
   }
-  return Math.min(0.85, secondRingWater * 0.08);
+  return Math.min(0.85, visitedWater.size * 0.08);
 }
 
-function strategicCapitalScore(
-  cellId: number,
-  cells: TMapCell[],
+function normalizeByStats(value: number, min: number, max: number) {
+  return (value - min) / (max - min + 1e-9);
+}
+
+function getMetricRange(values: number[]) {
+  if (values.length === 0) return { min: 0, max: 1 };
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const value of values) {
+    if (value < min) min = value;
+    if (value > max) max = value;
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: 0, max: 1 };
+  return { min, max };
+}
+
+function safeDistanceScore(
+  distance: number,
+  thresholds: { nearMax: number; farMin: number; nearPenalty: number; farBonus: number }
+) {
+  if (distance === -1) return 0;
+  if (distance <= thresholds.nearMax) return -thresholds.nearPenalty;
+  if (distance >= thresholds.farMin) return thresholds.farBonus;
+  return 0;
+}
+
+function terrainSafetyScore(cell: TMapCell) {
+  if (cell.terrain === 'mountains' || cell.terrain === 'desert' || cell.terrain === 'forest') {
+    return -0.7;
+  }
+  if (cell.terrain === 'badlands' || cell.terrain === 'volcanic' || cell.terrain === 'swamp') {
+    return -0.35;
+  }
+  if (cell.terrain === 'hills' || cell.terrain === 'tundra') return -0.1;
+  if (cell.terrain === 'coast') return -0.08;
+  if (cell.terrain === 'plains') return 0.2;
+  if (cell.terrain === 'valley') return 0.16;
+  if (cell.terrain === 'plateau') return 0.08;
+  return 0;
+}
+
+function capitalBaseScore(
+  cell: TMapCell,
+  populationNorm: number,
+  economyNorm: number,
   borderDistanceMap: Int32Array,
   coastDistanceMap: Int32Array,
-  hubCellIds: number[],
   mapWidth: number,
   mapHeight: number
 ) {
-  const cell = cells[cellId];
-  if (cell.terrain === 'mountains' || cell.terrain === 'desert' || cell.terrain === 'forest') {
-    return -1000;
-  }
+  const borderDistance = borderDistanceMap[cell.id];
+  const coastDistance = coastDistanceMap[cell.id];
 
-  let score = 0;
-  if (cell.terrain === 'plains') score += 50;
-  else if (cell.terrain === 'valley') score += 42;
-  else if (cell.terrain === 'coast') score += 28;
-  else if (cell.terrain === 'plateau') score += 20;
-
-  score += waterProximityScore(cell, cells) * 30;
-
-  const borderDistance = borderDistanceMap[cellId];
-  if (borderDistance >= 4) score += 20;
-  else if (borderDistance <= 2) score -= 50;
-
-  const coastDistance = coastDistanceMap[cellId];
-  if (coastDistance >= 3) score += 15;
-  else if (coastDistance <= 1) score -= 18;
+  const borderCentrality = safeDistanceScore(borderDistance, {
+    nearMax: 2,
+    farMin: 4,
+    nearPenalty: 0.35,
+    farBonus: 0.14,
+  });
+  const coastCentrality = safeDistanceScore(coastDistance, {
+    nearMax: 1,
+    farMin: 3,
+    nearPenalty: 0.12,
+    farBonus: 0.1,
+  });
 
   const edgeDistance = Math.min(
     cell.site[0],
@@ -105,16 +141,28 @@ function strategicCapitalScore(
     cell.site[1],
     mapHeight - cell.site[1]
   );
-  if (edgeDistance >= CAPITAL_VIEWPORT_MARGIN + 6) score += 16;
-  else if (edgeDistance < CAPITAL_VIEWPORT_MARGIN) score -= 120;
+  const edgeSafety =
+    edgeDistance < CAPITAL_VIEWPORT_MARGIN
+      ? -0.9
+      : edgeDistance >= CAPITAL_VIEWPORT_MARGIN + 6
+        ? 0.1
+        : 0;
 
-  for (const hubCellId of hubCellIds) {
-    const hubSite = cells[hubCellId].site;
-    const distance = Math.hypot(cell.site[0] - hubSite[0], cell.site[1] - hubSite[1]);
-    if (distance < 40) score -= 14;
-    else if (distance < 70) score -= 6;
-  }
-  return score;
+  const centralityScore = borderCentrality + coastCentrality + edgeSafety;
+  const safetyScore = terrainSafetyScore(cell);
+
+  return populationNorm * 0.34 + economyNorm * 0.28 + centralityScore * 0.23 + safetyScore * 0.15;
+}
+
+function economicHubScore(
+  cell: TMapCell,
+  cells: TMapCell[],
+  populationNorm: number,
+  economyNorm: number
+) {
+  const geoScore = TERRAIN_CONFIG[cell.terrain].flatness;
+  const waterScore = waterProximityScore(cell, cells);
+  return populationNorm * 0.35 + economyNorm * 0.4 + geoScore * 0.15 + waterScore * 0.1;
 }
 
 function isCellInSafeViewport(cell: TMapCell, mapWidth: number, mapHeight: number) {
@@ -143,7 +191,7 @@ export function pickEconomicAndCapital(
     const safeMainlandCells = mainlandCells.filter((cell) =>
       isCellInSafeViewport(cell, mapWidth, mapHeight)
     );
-    const capitalPool = safeMainlandCells.length > 0 ? safeMainlandCells : mainlandCells;
+    const candidateMainlandCells = safeMainlandCells.length > 0 ? safeMainlandCells : mainlandCells;
     const landSize = mainlandCells.length;
     const random = createSeededRandom(`${seed}:capital:${nationId}`);
 
@@ -152,27 +200,6 @@ export function pickEconomicAndCapital(
     else if (landSize >= GEOPOLITICAL_CONFIG.hubCount.smallNationMinLand) hubCount = 2;
     hubCount = Math.min(hubCount, GEOPOLITICAL_CONFIG.hubCount.maxHubsPerNation);
 
-    const scored = capitalPool
-      .map((cell) => {
-        const waterScore = waterProximityScore(cell, cells);
-        const capitalScore = TERRAIN_CONFIG[cell.terrain].flatness * 0.6 + waterScore * 0.4;
-        return { cellId: cell.id, capitalScore };
-      })
-      .sort((a, b) => b.capitalScore - a.capitalScore);
-
-    const hubCellIds: number[] = [];
-    for (const entry of scored) {
-      if (hubCellIds.length >= hubCount) break;
-      const candidateSite = cells[entry.cellId].site;
-      const tooClose = hubCellIds.some((hubCellId) => {
-        const hubSite = cells[hubCellId].site;
-        return Math.hypot(candidateSite[0] - hubSite[0], candidateSite[1] - hubSite[1]) < 60;
-      });
-      if (tooClose) continue;
-      hubCellIds.push(entry.cellId);
-    }
-
-    if (hubCellIds.length === 0 && scored.length > 0) hubCellIds.push(scored[0].cellId);
     const borderDistanceMap = getLandDistanceMap(cells, mainlandSet, (cellId) => {
       for (const neighborId of cells[cellId].neighbors) {
         if (!mainlandSet.has(neighborId)) return true;
@@ -186,21 +213,36 @@ export function pickEconomicAndCapital(
       return false;
     });
 
-    const capitalCandidates = mainland
-      .filter((cellId) => isCellInSafeViewport(cells[cellId], mapWidth, mapHeight))
-      .map((cellId) => ({
-        cellId,
-        score: strategicCapitalScore(
-          cellId,
-          cells,
-          borderDistanceMap,
-          coastDistanceMap,
-          hubCellIds,
-          mapWidth,
-          mapHeight
-        ),
-      }))
-      .filter((entry) => entry.score > -200)
+    const populationValues = candidateMainlandCells.map((cell) => Math.max(0, cell.population));
+    const economyValues = candidateMainlandCells.map((cell) => Math.max(0, cell.economy));
+    const populationRange = getMetricRange(populationValues);
+    const economyRange = getMetricRange(economyValues);
+
+    const capitalCandidates = candidateMainlandCells
+      .map((cell) => {
+        const populationNorm = normalizeByStats(
+          Math.max(0, cell.population),
+          populationRange.min,
+          populationRange.max
+        );
+        const economyNorm = normalizeByStats(
+          Math.max(0, cell.economy),
+          economyRange.min,
+          economyRange.max
+        );
+        return {
+          cellId: cell.id,
+          score: capitalBaseScore(
+            cell,
+            populationNorm,
+            economyNorm,
+            borderDistanceMap,
+            coastDistanceMap,
+            mapWidth,
+            mapHeight
+          ),
+        };
+      })
       .sort((a, b) => b.score - a.score);
 
     const topCount = Math.max(1, Math.floor(capitalCandidates.length * 0.1));
@@ -210,25 +252,74 @@ export function pickEconomicAndCapital(
     if (topCandidates.length > 0) {
       let totalWeight = 0;
       for (const candidate of topCandidates) {
-        totalWeight += Math.max(1, candidate.score + 160);
+        totalWeight += Math.max(
+          1e-6,
+          candidate.score - (topCandidates[topCandidates.length - 1]?.score ?? 0) + 1e-6
+        );
       }
       let needle = random() * totalWeight;
       for (const candidate of topCandidates) {
-        needle -= Math.max(1, candidate.score + 160);
+        needle -= Math.max(
+          1e-6,
+          candidate.score - (topCandidates[topCandidates.length - 1]?.score ?? 0) + 1e-6
+        );
         if (needle <= 0) {
           capitalCellId = candidate.cellId;
           break;
         }
       }
       if (capitalCellId === null) capitalCellId = topCandidates[topCandidates.length - 1].cellId;
-    } else if (hubCellIds.length > 0) {
-      const safeHubId = hubCellIds.find((cellId) =>
-        isCellInSafeViewport(cells[cellId], mapWidth, mapHeight)
-      );
-      capitalCellId = safeHubId ?? hubCellIds[0];
     }
 
-    if (capitalCellId === null && capitalPool.length > 0) capitalCellId = capitalPool[0].id;
+    if (capitalCellId === null && capitalCandidates.length > 0) {
+      capitalCellId = capitalCandidates[0].cellId;
+    }
+
+    const hubScored = candidateMainlandCells
+      .map((cell) => {
+        const populationNorm = normalizeByStats(
+          Math.max(0, cell.population),
+          populationRange.min,
+          populationRange.max
+        );
+        const economyNorm = normalizeByStats(
+          Math.max(0, cell.economy),
+          economyRange.min,
+          economyRange.max
+        );
+        let score = economicHubScore(cell, cells, populationNorm, economyNorm);
+
+        if (capitalCellId !== null) {
+          const capitalSite = cells[capitalCellId].site;
+          const distToCapital = Math.hypot(
+            cell.site[0] - capitalSite[0],
+            cell.site[1] - capitalSite[1]
+          );
+          if (distToCapital < 45) score -= 0.12;
+          else if (distToCapital < 70) score -= 0.05;
+        }
+
+        return { cellId: cell.id, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const hubCellIds: number[] = [];
+    for (const entry of hubScored) {
+      if (hubCellIds.length >= hubCount) break;
+      const candidateSite = cells[entry.cellId].site;
+      const tooClose = hubCellIds.some((hubCellId) => {
+        const hubSite = cells[hubCellId].site;
+        return Math.hypot(candidateSite[0] - hubSite[0], candidateSite[1] - hubSite[1]) < 60;
+      });
+      if (tooClose) continue;
+      hubCellIds.push(entry.cellId);
+    }
+
+    if (hubCellIds.length === 0 && hubScored.length > 0) hubCellIds.push(hubScored[0].cellId);
+
+    if (capitalCellId === null && candidateMainlandCells.length > 0) {
+      capitalCellId = candidateMainlandCells[0].id;
+    }
     const nationName = createRegionalName(seed, 'nation', nationId);
     const profile = nationProfiles.get(nationId);
 

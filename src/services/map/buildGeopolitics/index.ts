@@ -18,6 +18,7 @@ import {
 } from './nations';
 import {
   buildNationProvinces,
+  enforceHardProvincePopulationFloor,
   enforceMinimumProvinceArea,
   enforceProvinceContiguity,
 } from './provinces';
@@ -244,6 +245,7 @@ function postProcessProvinces(
   enforceMinimumProvinceArea(cells, owner, provinceOwner);
   enforceProvinceContiguity(cells, owner, provinceOwner);
   enforceMinimumProvinceArea(cells, owner, provinceOwner);
+  enforceHardProvincePopulationFloor(cells, owner, provinceOwner);
 }
 
 function assignEthnic(cells: TMapMeshWithDelaunay['cells'], owner: Int32Array, seed: string) {

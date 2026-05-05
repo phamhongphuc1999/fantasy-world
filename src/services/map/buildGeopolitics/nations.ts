@@ -430,6 +430,46 @@ function selectNationSeeds(
 }
 
 type TNationFrontierState = { cellId: number; nationId: number; cost: number };
+const T_COUNTRY_REASSIGN_HASH = makeFrontierHash('postprocess', 'country-reassign');
+
+function pickBestNationForCellByTerrainAwareScore(
+  cells: TMapCell[],
+  owner: Int32Array,
+  cellId: number,
+  candidates: Map<number, number>
+) {
+  const profile = GEOPOLITICAL_CONFIG.borderLevels.country;
+  let bestNationId = -1;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  for (const [nationId, neighborCount] of candidates) {
+    let minStep = Number.POSITIVE_INFINITY;
+
+    for (const neighborId of cells[cellId].neighbors) {
+      if (owner[neighborId] !== nationId) continue;
+      const step = getBoundaryStepCost(
+        cells,
+        owner,
+        neighborId,
+        cellId,
+        nationId,
+        T_COUNTRY_REASSIGN_HASH,
+        profile
+      );
+      if (step < minStep) minStep = step;
+    }
+
+    if (!Number.isFinite(minStep)) continue;
+
+    const score = neighborCount * 1.2 - minStep * 0.8;
+    if (score > bestScore) {
+      bestScore = score;
+      bestNationId = nationId;
+    }
+  }
+
+  return bestNationId;
+}
 
 function getNationStepCost(
   cells: TMapCell[],
@@ -623,15 +663,14 @@ export function alignNaturalTerrainClusters(cells: TMapCell[], owner: Int32Array
       }
 
       if (sameTerrainNeighbors < 3) continue;
-      let bestNationId = owner[cellId];
-      let bestCount = nationCounts.get(bestNationId) || 0;
-      for (const [nationId, count] of nationCounts) {
-        if (count > bestCount) {
-          bestNationId = nationId;
-          bestCount = count;
-        }
-      }
-      if (bestNationId !== owner[cellId] && bestCount >= 3) {
+      const bestNationId = pickBestNationForCellByTerrainAwareScore(
+        cells,
+        owner,
+        cellId,
+        nationCounts
+      );
+      const bestCount = bestNationId >= 0 ? nationCounts.get(bestNationId) || 0 : 0;
+      if (bestNationId >= 0 && bestNationId !== owner[cellId] && bestCount >= 3) {
         nextOwner[cellId] = bestNationId;
       }
     }
@@ -701,16 +740,13 @@ export function enforceMinimumNationArea(
       let movedAnyCell = false;
       for (const cellId of nationCells) {
         const neighborCounts = getNationNeighborCounts(cells, owner, cellId);
-        let bestNationId = -1;
-        let bestCount = 0;
-
-        for (const [candidateNationId, count] of neighborCounts) {
-          if (candidateNationId === nationId) continue;
-          if (count > bestCount) {
-            bestCount = count;
-            bestNationId = candidateNationId;
-          }
-        }
+        neighborCounts.delete(nationId);
+        let bestNationId = pickBestNationForCellByTerrainAwareScore(
+          cells,
+          owner,
+          cellId,
+          neighborCounts
+        );
         if (bestNationId < 0) {
           bestNationId = findNearestForeignNationId(cells, owner, landCellIds, cellId, nationId);
         }
@@ -868,16 +904,13 @@ export function enforceMainlandContiguity(cells: TMapCell[], owner: Int32Array) 
     for (let componentIndex = 1; componentIndex < components.length; componentIndex += 1) {
       for (const cellId of components[componentIndex]) {
         const neighborCounts = getNationNeighborCounts(cells, owner, cellId);
-        let bestNationId = -1;
-        let bestCount = 0;
-
-        for (const [candidateNationId, count] of neighborCounts) {
-          if (candidateNationId === nationId) continue;
-          if (count > bestCount) {
-            bestCount = count;
-            bestNationId = candidateNationId;
-          }
-        }
+        neighborCounts.delete(nationId);
+        const bestNationId = pickBestNationForCellByTerrainAwareScore(
+          cells,
+          owner,
+          cellId,
+          neighborCounts
+        );
         if (bestNationId >= 0) owner[cellId] = bestNationId;
       }
     }
@@ -891,14 +924,12 @@ function fillUnclaimedLand(cells: TMapCell[], owner: Int32Array) {
     for (let cellId = 0; cellId < cells.length; cellId += 1) {
       if (!isLand(cells[cellId]) || owner[cellId] >= 0) continue;
       const neighborCounts = getNationNeighborCounts(cells, owner, cellId);
-      let bestNationId = -1;
-      let bestCount = 0;
-      for (const [nationId, count] of neighborCounts) {
-        if (count > bestCount) {
-          bestCount = count;
-          bestNationId = nationId;
-        }
-      }
+      const bestNationId = pickBestNationForCellByTerrainAwareScore(
+        cells,
+        owner,
+        cellId,
+        neighborCounts
+      );
       if (bestNationId >= 0) {
         owner[cellId] = bestNationId;
         changed = true;

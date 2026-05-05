@@ -1,6 +1,6 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { TMapCell } from 'src/types/map.types';
-import { buildLakeSizeMap, buildPlainsRegionSizeMap } from './lakes';
+import { buildHydrologyRegionMaps } from './lakes';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 function validateRivers(
@@ -9,15 +9,9 @@ function validateRivers(
   downstream: Int32Array,
   isRiver: Uint8Array
 ) {
-  const lakeSizeByCell = buildLakeSizeMap(cells);
+  const { lakeSizeByCell, plainsRegionSizeByCell, hasLargePlains, hasVeryLargePlains } =
+    buildHydrologyRegionMaps(cells);
   const validRiver = new Uint8Array(cells.length);
-  const plainsRegionSizeByCell = buildPlainsRegionSizeMap(cells);
-  const hasLargePlains = plainsRegionSizeByCell.some(
-    (size) => size >= HYDROLOGY_CONFIG.largePlainMinCells
-  );
-  const hasVeryLargePlains = plainsRegionSizeByCell.some(
-    (size) => size >= HYDROLOGY_CONFIG.veryLargePlainMinCells
-  );
   const candidates: Array<{
     chain: number[];
     peakFlow: number;
@@ -71,7 +65,7 @@ function validateRivers(
         }
 
         if (cells[next].isLake) {
-          const lakeSize = lakeSizeByCell.get(next) || 1;
+          const lakeSize = lakeSizeByCell[next] || 1;
           endType = lakeSize >= HYDROLOGY_CONFIG.largeLakeMinCells ? 'large-lake' : 'invalid';
           break;
         }
@@ -96,7 +90,7 @@ function validateRivers(
       }
 
       const sourceCell = cells[cellIndex];
-      const sourceLakeSize = sourceCell.isLake ? lakeSizeByCell.get(cellIndex) || 1 : 0;
+      const sourceLakeSize = sourceCell.isLake ? lakeSizeByCell[cellIndex] || 1 : 0;
       const validPlainSource =
         sourceCell.terrain === 'plains' &&
         flow[cellIndex] >= HYDROLOGY_CONFIG.plainRiverSourceFlowMin;

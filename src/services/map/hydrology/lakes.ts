@@ -6,6 +6,8 @@ import { TMapCell, TTerrainBand } from 'src/types/map.types';
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 function expandLakes(cells: TMapCell[], flow: Float32Array, downstream: Int32Array) {
   const candidateLakeSeeds: number[] = [];
+  const visitMark = new Uint32Array(cells.length);
+  let stamp = 1;
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
@@ -24,15 +26,16 @@ function expandLakes(cells: TMapCell[], flow: Float32Array, downstream: Int32Arr
     let expanded = 1;
     const queue = new TFifoQueue<number>();
     queue.enqueue(seedId);
-    const visited = new Set<number>([seedId]);
+    stamp += 1;
+    visitMark[seedId] = stamp;
 
     while (queue.size > 0 && expanded < targetMax) {
       const currentId = queue.dequeue() as number;
       const currentCell = cells[currentId];
 
       for (const neighborId of currentCell.neighbors) {
-        if (visited.has(neighborId)) continue;
-        visited.add(neighborId);
+        if (visitMark[neighborId] === stamp) continue;
+        visitMark[neighborId] = stamp;
 
         const neighbor = cells[neighborId];
         if (neighbor.isWater || neighbor.isLake) continue;
@@ -254,7 +257,38 @@ function buildPlainsRegionSizeMap(cells: TMapCell[]) {
   return regionSizeByCell;
 }
 
+type THydrologyRegionMaps = {
+  lakeSizeByCell: Int32Array;
+  plainsRegionSizeByCell: Int32Array;
+  hasLargePlains: boolean;
+  hasVeryLargePlains: boolean;
+};
+
+function buildHydrologyRegionMaps(cells: TMapCell[]): THydrologyRegionMaps {
+  const lakeSizeByCell = new Int32Array(cells.length);
+  const lakeRegions = buildLakeRegions(cells);
+
+  for (const region of lakeRegions) {
+    const size = region.length;
+    for (const cellId of region) lakeSizeByCell[cellId] = size;
+  }
+
+  const plainsRegionSizeByCell = buildPlainsRegionSizeMap(cells);
+  let hasLargePlains = false;
+  let hasVeryLargePlains = false;
+
+  for (let cellId = 0; cellId < plainsRegionSizeByCell.length; cellId += 1) {
+    const size = plainsRegionSizeByCell[cellId];
+    if (size >= HYDROLOGY_CONFIG.largePlainMinCells) hasLargePlains = true;
+    if (size >= HYDROLOGY_CONFIG.veryLargePlainMinCells) hasVeryLargePlains = true;
+    if (hasLargePlains && hasVeryLargePlains) break;
+  }
+
+  return { lakeSizeByCell, plainsRegionSizeByCell, hasLargePlains, hasVeryLargePlains };
+}
+
 export {
+  buildHydrologyRegionMaps,
   buildLakeSizeMap,
   buildPlainsRegionSizeMap,
   classifyEnclosedWaterBodies,
