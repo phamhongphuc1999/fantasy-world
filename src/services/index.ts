@@ -1,5 +1,5 @@
-import { NATION_COLOR } from 'src/configs/mapConfig';
-import { TLine, TMapCell, TPoint } from 'src/types/map.types';
+import { NATION_COLORS } from 'src/configs/mapConfig';
+import { TLine, TCell, TPoint } from 'src/types/map.types';
 
 export function toPercent(count: number, total: number) {
   return parseFloat(((count / Math.max(1, total)) * 100).toFixed(2));
@@ -11,11 +11,11 @@ export function formatPopulation(value: number) {
 
 export function getNationColor(nationId: number | null) {
   if (nationId === null) return '#334155';
-  const paletteIndex = Math.abs(nationId) % NATION_COLOR.length;
-  return NATION_COLOR[paletteIndex];
+  const paletteIndex = Math.abs(nationId) % NATION_COLORS.length;
+  return NATION_COLORS[paletteIndex];
 }
 
-export function sumCellPopulation(cells: TMapCell[]) {
+export function sumCellPopulation(cells: TCell[]) {
   return cells.reduce((sum, cell) => sum + cell.population, 0);
 }
 
@@ -28,7 +28,7 @@ export function smoothStep(value: number) {
   return clamped * clamped * (3 - 2 * clamped);
 }
 
-export function getNeighborAverageElevation(cell: TMapCell, cells: TMapCell[]) {
+export function getAvgNeighbor(cell: TCell, cells: TCell[]) {
   if (cell.neighbors.length === 0) return cell.elevation;
 
   let total = 0;
@@ -43,9 +43,7 @@ export function distanceToSegment(x: number, y: number, line: TLine): number {
   const dy = line.y2 - line.y1;
   const denominator = dx * dx + dy * dy;
 
-  if (denominator === 0) {
-    return Math.sqrt((x - line.x1) ** 2 + (y - line.y1) ** 2);
-  }
+  if (denominator === 0) return Math.sqrt((x - line.x1) ** 2 + (y - line.y1) ** 2);
 
   const t = clamp(((x - line.x1) * dx + (y - line.y1) * dy) / denominator, 0, 1);
   const projectionX = line.x1 + t * dx;
@@ -87,7 +85,7 @@ export function toUndirectedEdgeKey(
 }
 
 export function findNearestCellId(
-  cells: Pick<TMapCell, 'site'>[],
+  cells: Pick<TCell, 'site'>[],
   sourcePoint: TPoint,
   candidateCellIds: number[],
   isEligible?: (cellId: number) => boolean

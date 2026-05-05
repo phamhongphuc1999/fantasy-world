@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, RefObject } from 'react';
+import { RefObject, useEffect } from 'react';
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import {
   drawCellShape,
@@ -21,19 +21,19 @@ import {
   getTemperatureHeatmapColor,
   isLandCell,
   setupCanvas,
-} from 'src/services/map/mapCanvas.service';
-import { TMapCell, TMapDisplaySettings, TEthnicGroup, TNation } from 'src/types/map.types';
+} from 'src/services/mapCanvas.service';
+import { TCell, TDisplaySettings, TEthnic, TNation } from 'src/types/map.types';
 
 const T_SITE_MARKER_LIMIT = 4000;
 
 type TProps = {
   canvasRef: RefObject<HTMLCanvasElement | null>;
-  cells: TMapCell[];
+  cells: TCell[];
   width: number;
   height: number;
   nations: TNation[];
-  ethnicGroups: TEthnicGroup[];
-  displaySettings: TMapDisplaySettings;
+  ethnicGroups: TEthnic[];
+  displaySettings: TDisplaySettings;
   logisticsEnabled: boolean;
   routeCellIds: number[];
   startCellId: number | null;

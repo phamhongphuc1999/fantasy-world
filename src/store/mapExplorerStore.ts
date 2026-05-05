@@ -1,16 +1,27 @@
 'use client';
 
 import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
-import { normalizeTerrainRatios } from 'src/services/map/terrainRatios';
+import { normalizeTerrainRatios } from 'src/services/terrainRatios';
 import {
-  TMapDisplaySettings,
-  TMapExplorerState,
+  TDisplaySettings,
   TTerrainPreset,
   TTerrainRatioKey,
   TTerrainRatioMap,
 } from 'src/types/map.types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
+interface TMapExplorerState {
+  seed: string;
+  cellCount: number;
+  seaLevel: number;
+  terrainPreset: TTerrainPreset;
+  nationCount: number;
+  terrainRatios: TTerrainRatioMap;
+  displaySettings: TDisplaySettings;
+  hoverIndex: number | null;
+  hoverClientPoint: { x: number; y: number } | null;
+}
 
 type TMapExplorerActions = {
   setSeed: (seed: string) => void;
@@ -19,8 +30,8 @@ type TMapExplorerActions = {
   setTerrainPreset: (terrainPreset: TTerrainPreset) => void;
   setNationCount: (nationCount: number) => boolean;
   applyTerrainRatios: (terrainRatiosDraft: TTerrainRatioMap) => void;
-  setDisplaySettings: (displaySettings: TMapDisplaySettings) => void;
-  setDisplayLayer: <K extends keyof TMapDisplaySettings>(layer: K, enabled: boolean) => void;
+  setDisplaySettings: (displaySettings: TDisplaySettings) => void;
+  setDisplayLayer: <K extends keyof TDisplaySettings>(layer: K, enabled: boolean) => void;
   setHoverIndex: (hoverIndex: number | null) => void;
   setHoverClientPoint: (point: { x: number; y: number } | null) => void;
   resetSelection: () => void;
@@ -87,14 +98,14 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         if (!changed) return;
         set({ terrainRatios: terrainRatiosDraft, hoverIndex: null });
       },
-      setDisplaySettings(displaySettings: TMapDisplaySettings) {
+      setDisplaySettings(displaySettings: TDisplaySettings) {
         const normalizedBase = { ...DEFAULT_CONFIG.displaySettings, ...displaySettings };
         const normalizedSettings = normalizedBase.countryBorders
           ? normalizedBase
           : { ...normalizedBase, provinceBorders: false };
         set({ displaySettings: normalizedSettings });
       },
-      setDisplayLayer<K extends keyof TMapDisplaySettings>(layer: K, enabled: boolean) {
+      setDisplayLayer<K extends keyof TDisplaySettings>(layer: K, enabled: boolean) {
         const current = get().displaySettings;
         const nextSettings = { ...current, [layer]: enabled };
         if (!nextSettings.countryBorders) nextSettings.provinceBorders = false;
@@ -132,7 +143,7 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         const terrainRatios = migrateLegacyTerrainRatios(
           state.terrainRatios as unknown as Partial<Record<string, number>> | undefined
         );
-        const persistedDisplaySettings = state.displaySettings as TMapDisplaySettings | undefined;
+        const persistedDisplaySettings = state.displaySettings as TDisplaySettings | undefined;
         return {
           ...DEFAULT_STATE,
           ...state,

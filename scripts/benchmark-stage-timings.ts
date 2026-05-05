@@ -1,6 +1,6 @@
-import { performance } from 'node:perf_hooks';
 import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
-import { MapGenerator } from 'src/services/map/map.generator';
+import { measureMs } from 'src/services/debug/bench';
+import { MapGenerator } from 'src/services/map.generator';
 
 type TStage = 'mesh' | 'topography' | 'hydrology' | 'population' | 'geopolitics';
 
@@ -14,10 +14,8 @@ function runStageTimed(
   if (typeof stageFn !== 'function') {
     throw new Error(`Missing stage function: ${stageFnName}`);
   }
-  const start = performance.now();
-  const output = stageFn.call(generator, input);
-  const ms = performance.now() - start;
-  return { ms, output };
+  const { ms, value } = measureMs(() => stageFn.call(generator, input));
+  return { ms, output: value };
 }
 
 function benchmark(iterations: number) {

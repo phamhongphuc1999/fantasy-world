@@ -2,7 +2,7 @@ import { useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import { Button } from 'src/components/ui/button';
 import { Input } from 'src/components/ui/input';
-import { rebalanceTerrainRatio, TERRAIN_RATIO_FIELDS } from 'src/services/map/terrainRatios';
+import { rebalanceTerrainRatio, TERRAIN_RATIO_FIELDS } from 'src/services/terrainRatios';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import { TTerrainRatioKey } from 'src/types/map.types';
 

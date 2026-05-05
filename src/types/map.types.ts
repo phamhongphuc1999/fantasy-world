@@ -15,17 +15,18 @@ export type TTerrainConfig = {
   logisticsMoveCost: number;
   logisticsRisk: number;
   baseSuitability: number | null;
+  clusterMin?: number;
   baseWeight: number;
   cityFactor: number;
   flatness: number;
 };
 
-export interface TMapVertex {
+export interface TVertex {
   id: number;
   point: TPoint;
 }
 
-export interface TMapEdge {
+export interface TEdge {
   id: number;
   vertexIds: TPoint;
   cellIds: number[];
@@ -33,12 +34,8 @@ export interface TMapEdge {
 }
 
 // Topography & Terrain
-export type TTerrainBand =
-  | 'deep-water'
-  | 'shallow-water'
-  | 'inland-sea'
+export type TSoilTerrain =
   | 'coast'
-  | 'lake'
   | 'plains'
   | 'plateau'
   | 'forest'
@@ -51,17 +48,32 @@ export type TTerrainBand =
   | 'volcanic'
   | 'tundra';
 
+export type TTerrain = TSoilTerrain | 'lake' | 'deep-water' | 'shallow-water' | 'inland-sea';
+
+type TTerrainModifierNum = Record<TTerrain, number>;
+
+export type TBorderType = 'country' | 'province';
+export type TBorderConfig = {
+  cost: TTerrainModifierNum;
+  penalty: { riverCross: number; lakeCross: number; ridgeCross: number; shorelineEdgeBias: number };
+  fragmentation: {
+    maxMountainOwnersPerCluster: number;
+    largeMountainClusterMinCells: number;
+    clusterSplitPenalty: number;
+  };
+  smoothness: { edgeNoiseWeight: number; jaggedPenalty: number };
+};
+
 export type TTerrainPreset = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
 
-export interface TTopographyCellData {
+export interface TTopographyCell {
   elevation: number;
   isWater: boolean;
-  terrain: TTerrainBand;
+  terrain: TTerrain;
 }
 
 // Hydrology & Climate
 export type TZoneType = 'land' | 'internal-waters' | 'territorial-waters' | 'international-waters';
-export type TTerrainModifierMap = Record<TTerrainBand, number>;
 
 // Geopolitics: Nation / Ethnic / Province flags on cells
 export interface TNation {
@@ -69,21 +81,21 @@ export interface TNation {
   name: string;
   populationMultiplier: number;
   economyMultiplier: number;
-  terrainPopulationModifiers: TTerrainModifierMap;
-  terrainEconomyModifiers: TTerrainModifierMap;
+  terrainPopulationModifiers: TTerrainModifierNum;
+  terrainEconomyModifiers: TTerrainModifierNum;
   capitalCellId: number | null;
   capital_coords: TPoint | null;
   economicHubCellIds: number[];
   economic_hubs_coords: TPoint[];
 }
 
-export interface TEthnicGroup {
+export interface TEthnic {
   id: number;
   name: string;
   coreCellId: number;
 }
 
-export interface TMapCell {
+export interface TCell {
   id: number;
   site: TPoint;
   polygon: TPoint[];
@@ -92,7 +104,7 @@ export interface TMapCell {
   neighbors: number[];
   elevation: number;
   isWater: boolean;
-  terrain: TTerrainBand;
+  terrain: TTerrain;
   flow: number;
   downstreamId: number | null;
   erosion: number;
@@ -115,22 +127,22 @@ export interface TMapCell {
 }
 
 // Final Map / Mesh
-export interface TMapMesh {
+export interface TMesh {
   width: number;
   height: number;
-  cells: TMapCell[];
-  edges: TMapEdge[];
-  vertices: TMapVertex[];
+  cells: TCell[];
+  edges: TEdge[];
+  vertices: TVertex[];
   nations: TNation[];
-  ethnicGroups: TEthnicGroup[];
+  ethnicGroups: TEthnic[];
 }
 
-export type TMapMeshWithDelaunay = TMapMesh & {
+export type TMeshWithDelaunay = TMesh & {
   delaunay: Delaunay<TPoint>;
 };
 
 // Map Configuration & UI state
-export interface TMapDisplaySettings {
+export interface TDisplaySettings {
   terrain: boolean;
   populationHeatmap: boolean;
   temperatureHeatmap: boolean;
@@ -164,27 +176,8 @@ export interface TTerrainPresetOption {
   value: TTerrainPreset;
 }
 
-export interface TMapExplorerState {
-  seed: string;
-  cellCount: number;
-  seaLevel: number;
-  terrainPreset: TTerrainPreset;
-  nationCount: number;
-  terrainRatios: TTerrainRatioMap;
-  displaySettings: TMapDisplaySettings;
-  hoverIndex: number | null;
-  hoverClientPoint: { x: number; y: number } | null;
-}
-
-// Statistics & Tables
-export interface TTerrainStatistic {
-  terrain: string;
-  count: number;
-  percent: number;
-}
-
 // Generation Pipeline
-export interface TMapGenerationConfig {
+export interface TGenerationConfig {
   width: number;
   height: number;
   seed: string;
@@ -195,16 +188,16 @@ export interface TMapGenerationConfig {
   nationCount: number;
 }
 
-export interface TMapGenerationStages {
-  mesh: TMapMeshWithDelaunay;
-  topography: TMapMeshWithDelaunay;
-  hydrology: TMapMeshWithDelaunay;
-  population: TMapMeshWithDelaunay;
-  geopolitics: TMapMeshWithDelaunay;
+export interface TGenerationStages {
+  mesh: TMeshWithDelaunay;
+  topography: TMeshWithDelaunay;
+  hydrology: TMeshWithDelaunay;
+  population: TMeshWithDelaunay;
+  geopolitics: TMeshWithDelaunay;
 }
 
 // Hydrology Profiling
-export interface THydrologyProfile {
+export interface THydrology {
   initAndDownstreamMs: number;
   flowAccumulationMs: number;
   erosionAndAdjustMs: number;
@@ -234,12 +227,17 @@ export interface TCellDescription {
   zoneType: string;
 }
 
-// Geopolitics Borders
-export type TBorderLevelKey = 'country' | 'province';
-
 export type TLine = {
   x1: number;
   y1: number;
   x2: number;
   y2: number;
 };
+
+export interface TExportSnapshot {
+  schemaVersion: 1;
+  exportedAt: string;
+  config: TGenerationConfig;
+  displaySettings: TDisplaySettings;
+  mesh: TMesh;
+}

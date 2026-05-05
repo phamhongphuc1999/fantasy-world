@@ -11,13 +11,13 @@ import {
 } from 'src/components/ui/dialog';
 import useEthnicStatistic from 'src/hooks/useEthnicStatistic';
 import { formatPopulation, getNationColor } from 'src/services';
-import { TMapMeshWithDelaunay } from 'src/types/map.types';
+import { TMeshWithDelaunay } from 'src/types/map.types';
 
 type TProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ethnicGroupId: number | null;
-  mesh: TMapMeshWithDelaunay;
+  mesh: TMeshWithDelaunay;
 };
 
 export default function EthnicDetailDialog({ open, onOpenChange, ethnicGroupId, mesh }: TProps) {

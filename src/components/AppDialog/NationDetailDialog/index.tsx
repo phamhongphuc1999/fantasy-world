@@ -11,13 +11,13 @@ import {
 } from 'src/components/ui/dialog';
 import useNationStatistic from 'src/hooks/useNationStatistic';
 import { formatPopulation, getNationColor } from 'src/services';
-import { TMapMeshWithDelaunay } from 'src/types/map.types';
+import { TMeshWithDelaunay } from 'src/types/map.types';
 
 type TProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   nationId: number | null;
-  mesh: TMapMeshWithDelaunay;
+  mesh: TMeshWithDelaunay;
 };
 
 export default function NationDetailDialog({ open, onOpenChange, nationId, mesh }: TProps) {
@@ -36,6 +36,15 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
     );
   }
 
+  const populationRows = [
+    `Total Population: ${data.totalPopulation.toLocaleString()} (${(
+      data.totalPopulation / data.nationCells.length
+    ).toFixed(2)} people per cell)`,
+    `Total Economy: ${formatPopulation(data.totalEconomy)} (${(
+      data.totalEconomy / Math.max(1, data.totalPopulation)
+    ).toFixed(4)} per person)`,
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -53,11 +62,9 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
         </DialogHeader>
         <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1 text-sm">
           <BlurCard title="Population">
-            Total Population: {data.totalPopulation.toLocaleString()} (
-            {(data.totalPopulation / data.nationCells.length).toFixed(2)} people per cell)
-            <br />
-            Total Economy: {formatPopulation(data.totalEconomy)} (
-            {(data.totalEconomy / Math.max(1, data.totalPopulation)).toFixed(4)} per person)
+            {populationRows.map((row) => (
+              <div key={row}>{row}</div>
+            ))}
           </BlurCard>
           <TerrainStatistic terrains={data.terrains} />
           <BlurCard title="Population" containerProps={{ className: 'flex flex-col gap-1' }}>

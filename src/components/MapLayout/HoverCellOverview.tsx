@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMapContext } from 'src/contexts/map.context';
 import { clamp } from 'src/services';
-import { describeCell } from 'src/services/map/describeCell';
+import { describeCell } from 'src/services/describeCell';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
 const PANEL_OFFSET = 16;

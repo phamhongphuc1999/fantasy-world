@@ -1,0 +1,291 @@
+import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { collectConnectedComponents, floodFromSeeds } from 'src/services/core/graph';
+import { TFifoQueue } from 'src/services/core/queue';
+import { isMarineWaterTerrain } from 'src/services/terrainRules';
+import { TCell } from 'src/types/map.types';
+
+const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutlet;
+function expandLakes(cells: TCell[], flow: Float32Array, downstream: Int32Array) {
+  const candidateLakeSeeds: number[] = [];
+  const visitMark = new Uint32Array(cells.length);
+  let stamp = 1;
+
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+    const cell = cells[cellIndex];
+    if (!cell.isLake) continue;
+    if (cell.rainShadow > HYDROLOGY_CONFIG.lakeExpandRainShadowMax) continue;
+    if (cell.precipitation < HYDROLOGY_CONFIG.lakeExpandPrecipMin) continue;
+    candidateLakeSeeds.push(cellIndex);
+  }
+
+  for (const seedId of candidateLakeSeeds) {
+    const seedCell = cells[seedId];
+    const targetMax = Math.min(
+      HYDROLOGY_CONFIG.lakeExpandMaxCells,
+      2 + Math.floor(Math.log2(flow[seedId] + 1) * 2)
+    );
+    let expanded = 1;
+    const queue = new TFifoQueue<number>();
+    queue.enqueue(seedId);
+    stamp += 1;
+    visitMark[seedId] = stamp;
+
+    while (queue.size > 0 && expanded < targetMax) {
+      const currentId = queue.dequeue() as number;
+      const currentCell = cells[currentId];
+
+      for (const neighborId of currentCell.neighbors) {
+        if (visitMark[neighborId] === stamp) continue;
+        visitMark[neighborId] = stamp;
+
+        const neighbor = cells[neighborId];
+        if (neighbor.isWater || neighbor.isLake) continue;
+        if (neighbor.rainShadow > HYDROLOGY_CONFIG.lakeExpandRainShadowMax) continue;
+        if (neighbor.precipitation < HYDROLOGY_CONFIG.lakeExpandPrecipMin) continue;
+        if (neighbor.elevation > seedCell.elevation + HYDROLOGY_CONFIG.lakeExpandElevSlack) {
+          continue;
+        }
+        if (downstream[neighborId] === T_COAST_OUTLET) continue;
+
+        neighbor.isLake = true;
+        neighbor.isWater = true;
+        neighbor.terrain = 'lake';
+        neighbor.biome = 'Freshwater Lake';
+        neighbor.suitability = 0.12;
+        expanded += 1;
+        queue.enqueue(neighborId);
+
+        if (expanded >= targetMax) break;
+      }
+    }
+  }
+
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+    const cell = cells[cellIndex];
+    if (!cell.isLake) continue;
+    cell.terrain = 'lake';
+    cell.biome = 'Freshwater Lake';
+    cell.suitability = 0.12;
+  }
+}
+
+function buildLakeRegions(cells: TCell[]) {
+  return collectConnectedComponents(
+    cells,
+    (cell) => cell.isLake,
+    (_current, neighbor) => neighbor.isLake
+  );
+}
+
+function touchesMapBoundary(cell: TCell, width: number, height: number) {
+  const epsilon = 1;
+  if (cell.site[0] <= epsilon || cell.site[0] >= width - epsilon) return true;
+  if (cell.site[1] <= epsilon || cell.site[1] >= height - epsilon) return true;
+  for (const [x, y] of cell.polygon) {
+    if (x <= epsilon || x >= width - epsilon) return true;
+    if (y <= epsilon || y >= height - epsilon) return true;
+  }
+  return false;
+}
+
+function buildOceanConnectedWaterMask(cells: TCell[], width: number, height: number) {
+  const seedIds: number[] = [];
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+    if (!cells[cellIndex].isWater) continue;
+    if (!touchesMapBoundary(cells[cellIndex], width, height)) continue;
+    seedIds.push(cellIndex);
+  }
+  return floodFromSeeds(cells, seedIds, (_current, neighbor) => neighbor.isWater);
+}
+
+function classifyEnclosedWaterBodies(
+  cells: TCell[],
+  width: number,
+  height: number,
+  seaLevel: number,
+  downstream: Int32Array
+) {
+  const oceanConnected = buildOceanConnectedWaterMask(cells, width, height);
+  const threshold = seaLevel + HYDROLOGY_CONFIG.enclosedWaterElevBuffer;
+  const visited = new Uint8Array(cells.length);
+  const stack: number[] = [];
+
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+    if (visited[cellIndex] === 1) continue;
+    if (oceanConnected[cellIndex] === 1) continue;
+    const isEnclosedSeedCandidate =
+      cells[cellIndex].isWater || cells[cellIndex].isLake || downstream[cellIndex] === -1;
+    if (!isEnclosedSeedCandidate) continue;
+    if (cells[cellIndex].elevation > threshold) continue;
+
+    stack.length = 0;
+    stack.push(cellIndex);
+    const component: number[] = [];
+    visited[cellIndex] = 1;
+    let minElevation = cells[cellIndex].elevation;
+
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (current === undefined) continue;
+      const currentCell = cells[current];
+      component.push(current);
+      minElevation = Math.min(minElevation, currentCell.elevation);
+
+      for (const neighborId of currentCell.neighbors) {
+        if (visited[neighborId] === 1) continue;
+        if (oceanConnected[neighborId] === 1) continue;
+        if (cells[neighborId].elevation > threshold) continue;
+        visited[neighborId] = 1;
+        stack.push(neighborId);
+      }
+    }
+
+    const basinDepth = seaLevel - minElevation;
+    const shouldPersistWater =
+      basinDepth >= HYDROLOGY_CONFIG.enclosedWaterDepthMin ||
+      component.some((id) => cells[id].isWater);
+    if (!shouldPersistWater) continue;
+
+    const isLake = component.length <= HYDROLOGY_CONFIG.enclosedLakeMax;
+    const shorelineRise = Math.min(
+      HYDROLOGY_CONFIG.enclosedWaterShoreMax,
+      basinDepth * HYDROLOGY_CONFIG.enclosedWaterShoreFactor
+    );
+    const waterSurface = seaLevel + Math.max(0, shorelineRise);
+
+    for (const waterCellId of component) {
+      const waterCell = cells[waterCellId];
+      if (waterCell.elevation > waterSurface) continue;
+      waterCell.isWater = true;
+      waterCell.isLake = isLake;
+      waterCell.isRiver = false;
+      waterCell.terrain = isLake ? 'lake' : 'inland-sea';
+      waterCell.biome = isLake ? 'Freshwater Lake' : 'Inland Sea';
+      waterCell.suitability = isLake ? 0.12 : 0;
+    }
+  }
+}
+
+function filterAndLimitLakes(cells: TCell[], flow: Float32Array) {
+  const regions = buildLakeRegions(cells);
+  const candidateRegions: number[][] = [];
+
+  for (const region of regions) {
+    let touchesSea = false;
+
+    for (const cellId of region) {
+      for (const neighborId of cells[cellId].neighbors) {
+        if (isMarineWaterTerrain(cells[neighborId].terrain)) {
+          touchesSea = true;
+          break;
+        }
+      }
+      if (touchesSea) break;
+    }
+
+    if (touchesSea) {
+      for (const cellId of region) {
+        const cell = cells[cellId];
+        cell.isLake = false;
+        cell.isWater = false;
+        cell.terrain = 'coast';
+        cell.biome = 'Coastal Littoral';
+        cell.suitability = 0.6;
+      }
+      continue;
+    }
+
+    candidateRegions.push(region);
+  }
+
+  const regionScore = candidateRegions.map((region) => {
+    let maxFlow = 0;
+    for (const cellId of region) {
+      maxFlow = Math.max(maxFlow, flow[cellId]);
+    }
+    return { region, score: maxFlow + region.length * 0.8 };
+  });
+
+  regionScore.sort((a, b) => b.score - a.score);
+  const keptRegions = new Set(
+    regionScore.slice(0, HYDROLOGY_CONFIG.lakeMaxCount).map((v) => v.region)
+  );
+
+  for (const entry of regionScore) {
+    if (keptRegions.has(entry.region)) continue;
+    for (const cellId of entry.region) {
+      const cell = cells[cellId];
+      cell.isLake = false;
+      cell.isWater = false;
+      cell.terrain = 'valley';
+      cell.biome = 'River Valley';
+      cell.suitability = 0.52;
+    }
+  }
+}
+
+function buildLakeSizeMap(cells: TCell[]) {
+  const lakeSizeByCell = new Map<number, number>();
+  const regions = buildLakeRegions(cells);
+
+  for (const region of regions) {
+    const size = region.length;
+    for (const cellId of region) {
+      lakeSizeByCell.set(cellId, size);
+    }
+  }
+  return lakeSizeByCell;
+}
+
+function buildPlainsRegionSizeMap(cells: TCell[]) {
+  const regionSizeByCell = new Int32Array(cells.length);
+  const plainsRegions = collectConnectedComponents(
+    cells,
+    (cell) => cell.terrain === 'plains',
+    (_current, neighbor) => neighbor.terrain === 'plains'
+  );
+
+  for (const region of plainsRegions) {
+    for (const id of region) regionSizeByCell[id] = region.length;
+  }
+  return regionSizeByCell;
+}
+
+type THydrologyRegionMaps = {
+  lakeSizeByCell: Int32Array;
+  plainsRegionSizeByCell: Int32Array;
+  hasLargePlains: boolean;
+  hasVeryLargePlains: boolean;
+};
+
+function buildHydrologyRegionMaps(cells: TCell[]): THydrologyRegionMaps {
+  const lakeSizeByCell = new Int32Array(cells.length);
+  const lakeRegions = buildLakeRegions(cells);
+
+  for (const region of lakeRegions) {
+    const size = region.length;
+    for (const cellId of region) lakeSizeByCell[cellId] = size;
+  }
+
+  const plainsRegionSizeByCell = buildPlainsRegionSizeMap(cells);
+  let hasLargePlains = false;
+  let hasVeryLargePlains = false;
+
+  for (let cellId = 0; cellId < plainsRegionSizeByCell.length; cellId += 1) {
+    const size = plainsRegionSizeByCell[cellId];
+    if (size >= HYDROLOGY_CONFIG.largePlainMin) hasLargePlains = true;
+    if (size >= HYDROLOGY_CONFIG.vLargePlainMin) hasVeryLargePlains = true;
+    if (hasLargePlains && hasVeryLargePlains) break;
+  }
+
+  return { lakeSizeByCell, plainsRegionSizeByCell, hasLargePlains, hasVeryLargePlains };
+}
+
+export {
+  buildHydrologyRegionMaps,
+  buildLakeSizeMap,
+  buildPlainsRegionSizeMap,
+  classifyEnclosedWaterBodies,
+  expandLakes,
+  filterAndLimitLakes,
+};

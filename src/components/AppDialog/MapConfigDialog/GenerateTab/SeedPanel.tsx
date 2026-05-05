@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import { Button } from 'src/components/ui/button';
 import { Input } from 'src/components/ui/input';
-import { createSeededRandom } from 'src/services/map/seededRandom';
+import { createSeededRandom } from 'src/services/seededRandom';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
 export default function SeedPanel() {

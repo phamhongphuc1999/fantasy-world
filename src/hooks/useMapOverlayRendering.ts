@@ -1,12 +1,12 @@
 'use client';
 
 import { RefObject, useEffect } from 'react';
-import { drawCellShape, drawSiteMarker, setupCanvas } from 'src/services/map/mapCanvas.service';
-import { TMapCell } from 'src/types/map.types';
+import { drawCellShape, drawSiteMarker, setupCanvas } from 'src/services/mapCanvas.service';
+import { TCell } from 'src/types/map.types';
 
 type TProps = {
   canvasRef: RefObject<HTMLCanvasElement | null>;
-  cells: TMapCell[];
+  cells: TCell[];
   width: number;
   height: number;
   hoverIndex: number | null;

@@ -12,15 +12,14 @@ import {
   useState,
 } from 'react';
 import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
-import { MapGenerator } from 'src/services/map/map.generator';
+import { MapGenerator } from 'src/services/map.generator';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TMapExportSnapshot } from 'src/types/mapExport';
-import { TMapMeshWithDelaunay } from 'src/types/map.types';
+import { TExportSnapshot, TMeshWithDelaunay } from 'src/types/map.types';
 
 interface TMapContextType {
-  mesh: TMapMeshWithDelaunay;
+  mesh: TMeshWithDelaunay;
   isGenerating: boolean;
-  importFromSnapshot: (snapshot: TMapExportSnapshot) => { ok: true } | { ok: false; error: string };
+  importFromSnapshot: (snapshot: TExportSnapshot) => { ok: true } | { ok: false; error: string };
   handlePointerMove: (x: number, y: number) => void;
   handleCellCountChange: (nextValue: number) => void;
 }
@@ -61,11 +60,11 @@ export default function MapProvider({ children }: TProps) {
     setHoverIndex,
   } = useMapExplorerStore();
 
-  const [mesh, setMesh] = useState<TMapMeshWithDelaunay>(mapContextDefault.mesh);
+  const [mesh, setMesh] = useState<TMeshWithDelaunay>(mapContextDefault.mesh);
   const [isGenerating, setIsGenerating] = useState(true);
 
   const importFromSnapshot = useCallback(
-    (snapshot: TMapExportSnapshot) => {
+    (snapshot: TExportSnapshot) => {
       if (snapshot.schemaVersion !== 1) {
         return { ok: false as const, error: 'Unsupported schema version' };
       }
@@ -78,7 +77,7 @@ export default function MapProvider({ children }: TProps) {
         return { ok: false as const, error: 'Invalid mesh payload' };
       }
 
-      const nextMesh: TMapMeshWithDelaunay = {
+      const nextMesh: TMeshWithDelaunay = {
         ...snapshot.mesh,
         delaunay: Delaunay.from(snapshot.mesh.cells.map((cell) => cell.site)),
       };

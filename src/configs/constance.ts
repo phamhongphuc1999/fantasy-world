@@ -1,5 +1,5 @@
 import type { TSiteMetadata } from 'src/types/global';
-import type { TTerrainBand, TTerrainConfig, TTerrainPresetOption } from 'src/types/map.types';
+import type { TTerrain, TTerrainConfig, TTerrainPresetOption } from 'src/types/map.types';
 import { ImageAsset } from './ImageAssets';
 
 export const APP_NAME = 'Fantasy World';
@@ -24,7 +24,7 @@ export const TERRAIN_PRESET_OPTIONS: TTerrainPresetOption[] = [
   { label: 'Rifted', value: 'rifted' },
 ];
 
-export const TERRAIN_CONFIG: Record<TTerrainBand, TTerrainConfig> = {
+export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   'deep-water': {
     label: 'Ocean',
     color: '#0b2f6b',
@@ -130,6 +130,7 @@ export const TERRAIN_CONFIG: Record<TTerrainBand, TTerrainConfig> = {
     logisticsMoveCost: 1,
     logisticsRisk: 0,
     baseSuitability: null,
+    clusterMin: 5,
     baseWeight: 0.7,
     cityFactor: 1,
     flatness: 0.9,
@@ -145,6 +146,7 @@ export const TERRAIN_CONFIG: Record<TTerrainBand, TTerrainConfig> = {
     logisticsMoveCost: 1.65,
     logisticsRisk: 0.7,
     baseSuitability: null,
+    clusterMin: 10,
     baseWeight: 0.2,
     cityFactor: 0.7,
     flatness: 0.7,
@@ -160,6 +162,7 @@ export const TERRAIN_CONFIG: Record<TTerrainBand, TTerrainConfig> = {
     logisticsMoveCost: 2.8,
     logisticsRisk: 1.2,
     baseSuitability: 0.34,
+    clusterMin: 6,
     baseWeight: 0.3,
     cityFactor: 0.32,
     flatness: 0.5,
@@ -175,6 +178,7 @@ export const TERRAIN_CONFIG: Record<TTerrainBand, TTerrainConfig> = {
     logisticsMoveCost: 2.15,
     logisticsRisk: 0,
     baseSuitability: null,
+    clusterMin: 7,
     baseWeight: 0.42,
     cityFactor: 0.45,
     flatness: 0.45,
@@ -190,6 +194,7 @@ export const TERRAIN_CONFIG: Record<TTerrainBand, TTerrainConfig> = {
     logisticsMoveCost: 1.35,
     logisticsRisk: 0,
     baseSuitability: null,
+    clusterMin: 7,
     baseWeight: 0.38,
     cityFactor: 0.3,
     flatness: 0.64,
@@ -205,6 +210,7 @@ export const TERRAIN_CONFIG: Record<TTerrainBand, TTerrainConfig> = {
     logisticsMoveCost: 4.2,
     logisticsRisk: 1.4,
     baseSuitability: 0.14,
+    clusterMin: 8,
     baseWeight: 0.1,
     cityFactor: 0.16,
     flatness: 0.2,
@@ -220,6 +226,7 @@ export const TERRAIN_CONFIG: Record<TTerrainBand, TTerrainConfig> = {
     logisticsMoveCost: 4.8,
     logisticsRisk: 1.4,
     baseSuitability: 0.18,
+    clusterMin: 4,
     baseWeight: 0.1,
     cityFactor: 0.16,
     flatness: 0.2,
@@ -235,6 +242,7 @@ export const TERRAIN_CONFIG: Record<TTerrainBand, TTerrainConfig> = {
     logisticsMoveCost: 2.3,
     logisticsRisk: 0,
     baseSuitability: 0.22,
+    clusterMin: 6,
     baseWeight: 0.04,
     cityFactor: 0.14,
     flatness: 0.6,
@@ -250,6 +258,7 @@ export const TERRAIN_CONFIG: Record<TTerrainBand, TTerrainConfig> = {
     logisticsMoveCost: 2.3,
     logisticsRisk: 0,
     baseSuitability: 0.18,
+    clusterMin: 5,
     baseWeight: 0.04,
     cityFactor: 0.14,
     flatness: 0.35,

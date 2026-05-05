@@ -4,9 +4,9 @@ import { ChangeEventHandler } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import { Button } from 'src/components/ui/button';
 import { useMapContext } from 'src/contexts/map.context';
-import { buildMapSvg, exportCanvasToPng, exportTextFile } from 'src/services/map/exportPipeline';
+import { buildMapSvg, exportCanvasToPng, exportTextFile } from 'src/services/exportPipeline';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TMapExportSnapshot } from 'src/types/mapExport';
+import { TExportSnapshot } from 'src/types/map.types';
 
 function makeTimestamp() {
   return new Date().toISOString().replace(/[:.]/g, '-');
@@ -27,7 +27,7 @@ export default function ExportTab() {
   };
 
   const handleExportJson = () => {
-    const payload: TMapExportSnapshot = {
+    const payload: TExportSnapshot = {
       schemaVersion: 1,
       exportedAt: new Date().toISOString(),
       config: {
@@ -65,7 +65,7 @@ export default function ExportTab() {
     if (!file) return;
     const content = await file.text();
     try {
-      const payload = JSON.parse(content) as TMapExportSnapshot;
+      const payload = JSON.parse(content) as TExportSnapshot;
       const result = importFromSnapshot(payload);
       if (!result.ok) {
         window.alert(result.error);

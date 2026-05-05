@@ -6,7 +6,7 @@ import NationDetailDialog from 'src/components/AppDialog/NationDetailDialog';
 import { useMapContext } from 'src/contexts/map.context';
 import useMapCanvasRendering from 'src/hooks/useMapCanvasRendering';
 import useMapOverlayRendering from 'src/hooks/useMapOverlayRendering';
-import { getCanvasPoint } from 'src/services/map/mapCanvas.service';
+import { getCanvasPoint } from 'src/services/mapCanvas.service';
 import { useLogisticsGameStore } from 'src/store/logisticsGameStore';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
