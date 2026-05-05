@@ -1,7 +1,8 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { collectConnectedComponents, floodFromSeeds } from 'src/services/map/core/graph';
 import { TFifoQueue } from 'src/services/map/core/queue';
-import { TMapCell, TTerrainBand } from 'src/types/map.types';
+import { isMarineWaterTerrain } from 'src/services/map/terrainRules';
+import { TMapCell } from 'src/types/map.types';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 function expandLakes(cells: TMapCell[], flow: Float32Array, downstream: Int32Array) {
@@ -77,10 +78,6 @@ function buildLakeRegions(cells: TMapCell[]) {
     (cell) => cell.isLake,
     (_current, neighbor) => neighbor.isLake
   );
-}
-
-function isSeaTerrain(terrain: TTerrainBand) {
-  return terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea';
 }
 
 function touchesMapBoundary(cell: TMapCell, width: number, height: number) {
@@ -181,7 +178,7 @@ function filterAndLimitLakes(cells: TMapCell[], flow: Float32Array) {
 
     for (const cellId of region) {
       for (const neighborId of cells[cellId].neighbors) {
-        if (isSeaTerrain(cells[neighborId].terrain)) {
+        if (isMarineWaterTerrain(cells[neighborId].terrain)) {
           touchesSea = true;
           break;
         }

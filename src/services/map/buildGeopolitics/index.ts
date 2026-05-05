@@ -1,4 +1,5 @@
 import { TMapMeshWithDelaunay } from 'src/types/map.types';
+import { validateProvinceAssignments } from '../debug/invariants';
 import { createSeededRandom } from '../seededRandom';
 import { pickEconomicAndCapital } from './capitals';
 import { buildEthnicRegions } from './ethnic';
@@ -241,10 +242,10 @@ function postProcessProvinces(
   provinceOwner: Int32Array
 ) {
   limitMountainClusterSplit(cells, provinceOwner, 'province', owner);
-  enforceProvinceContiguity(cells, owner, provinceOwner);
-  enforceMinimumProvinceArea(cells, owner, provinceOwner);
-  enforceProvinceContiguity(cells, owner, provinceOwner);
-  enforceMinimumProvinceArea(cells, owner, provinceOwner);
+  for (let pass = 0; pass < 2; pass += 1) {
+    enforceProvinceContiguity(cells, owner, provinceOwner);
+    enforceMinimumProvinceArea(cells, owner, provinceOwner);
+  }
   enforceHardProvincePopulationFloor(cells, owner, provinceOwner);
 }
 
@@ -319,6 +320,9 @@ export function buildGeopolitics({
   const scaledMesh = { ...mesh, cells: normalizedCells };
   const { provinceOwner } = assignProvinces(scaledMesh.cells, owner, seed);
   postProcessProvinces(scaledMesh.cells, owner, provinceOwner);
+  if (process.env.NODE_ENV !== 'production') {
+    validateProvinceAssignments(scaledMesh.cells, owner, provinceOwner);
+  }
   const { ethnicOwner, ethnicGroups } = assignEthnic(scaledMesh.cells, owner, seed);
   return finalizeOwnershipProjection(
     scaledMesh,

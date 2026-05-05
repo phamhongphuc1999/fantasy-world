@@ -1,5 +1,6 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { clamp } from 'src/services';
+import { terrainBaseSuitability } from 'src/services/map/terrainRules';
 import { TMapCell, TTerrainBand } from 'src/types/map.types';
 
 export function buildWaterInfluence(cells: TMapCell[]): Float32Array {
@@ -142,12 +143,8 @@ export function getSuitability(
   precipitation: number,
   temperature: number
 ): number {
-  if (terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea') return 0;
-  if (terrain === 'lake') return 0.12;
-  if (terrain === 'mountains' || terrain === 'tundra') return 0.14;
-  if (terrain === 'volcanic' || terrain === 'badlands') return 0.18;
-  if (terrain === 'desert') return 0.22;
-  if (terrain === 'swamp') return 0.34;
+  const baseSuitability = terrainBaseSuitability(terrain);
+  if (baseSuitability !== null) return baseSuitability;
 
   const climateScore = 1 - Math.abs(temperature - 0.52) * 1.15;
   const moistureScore = 1 - Math.abs(precipitation - 0.52) * 0.95;

@@ -1,3 +1,4 @@
+import { logisticsMoveCost, logisticsRisk } from 'src/services/map/terrainRules';
 import { TMapCell } from 'src/types/map.types';
 
 type TLogisticsRouteResult = {
@@ -19,36 +20,8 @@ function edgeKey(a: number, b: number) {
   return a < b ? `${a}-${b}` : `${b}-${a}`;
 }
 
-function terrainMoveCost(terrain: TMapCell['terrain']) {
-  switch (terrain) {
-    case 'plains':
-    case 'valley':
-      return 1;
-    case 'coast':
-    case 'plateau':
-      return 1.35;
-    case 'forest':
-      return 1.65;
-    case 'hills':
-      return 2.15;
-    case 'swamp':
-      return 2.8;
-    case 'mountains':
-      return 4.2;
-    case 'volcanic':
-      return 4.8;
-    case 'desert':
-    case 'badlands':
-      return 2.3;
-    case 'tundra':
-      return 2.6;
-    default:
-      return 1.5;
-  }
-}
-
 function stepCost(from: TMapCell, to: TMapCell, hasRoad: boolean) {
-  let cost = (terrainMoveCost(from.terrain) + terrainMoveCost(to.terrain)) * 0.5;
+  let cost = (logisticsMoveCost(from.terrain) + logisticsMoveCost(to.terrain)) * 0.5;
 
   if (from.isRiver || to.isRiver) {
     cost += 1.6;
@@ -72,9 +45,7 @@ function estimateRisk(pathCellIds: number[], cells: TMapCell[]) {
   let risk = 0;
   for (let index = 0; index < pathCellIds.length; index += 1) {
     const cell = cells[pathCellIds[index]];
-    if (cell.terrain === 'mountains' || cell.terrain === 'volcanic') risk += 1.4;
-    if (cell.terrain === 'swamp') risk += 1.2;
-    if (cell.terrain === 'forest' || cell.terrain === 'tundra') risk += 0.7;
+    risk += logisticsRisk(cell.terrain);
     if (index > 0) {
       const prev = cells[pathCellIds[index - 1]];
       if (prev.nationId !== cell.nationId) risk += 0.8;

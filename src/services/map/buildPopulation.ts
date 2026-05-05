@@ -137,13 +137,14 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
 
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     const cell = cells[cellId];
+    const terrainConfig = TERRAIN_CONFIG[cell.terrain];
     if (cell.isWater) {
       score[cellId] = 0;
       continue;
     }
     landCellCount += 1;
 
-    let value = TERRAIN_CONFIG[cell.terrain].baseWeight;
+    let value = terrainConfig.baseWeight;
     if (cell.terrain === 'coast') value += 0.3;
     if (cell.isRiver) value += 0.24;
     if (cell.isLake) value += 0.2;

@@ -1,5 +1,3 @@
-import { TTerrainBand } from 'src/types/map.types';
-
 export function sortIndicesByElevation(elevations: Float32Array) {
   const bucketCount = 1024;
   const buckets = Array.from({ length: bucketCount }, () => [] as number[]);
@@ -19,14 +17,4 @@ export function sortIndicesByElevation(elevations: Float32Array) {
     }
   }
   return indices;
-}
-
-export function isWaterTerrain(terrain: TTerrainBand) {
-  return (
-    terrain === 'deep-water' ||
-    terrain === 'shallow-water' ||
-    terrain === 'inland-sea' ||
-    terrain === 'coast' ||
-    terrain === 'lake'
-  );
 }

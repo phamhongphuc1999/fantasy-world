@@ -334,14 +334,3 @@ export function buildHydrology({
 }: TBuildHydrologyOptions): TMapMeshWithDelaunay {
   return runHydrologyInternal({ mesh, seaLevel, terrainRatios });
 }
-
-export function buildHydrologyProfiled({ mesh, seaLevel, terrainRatios }: TBuildHydrologyOptions): {
-  mesh: TMapMeshWithDelaunay;
-  profile: THydrologyProfile;
-} {
-  let hydrologyProfile = createEmptyHydrologyProfile();
-  const builtMesh = runHydrologyInternal({ mesh, seaLevel, terrainRatios }, (profile) => {
-    hydrologyProfile = profile;
-  });
-  return { mesh: builtMesh, profile: hydrologyProfile };
-}

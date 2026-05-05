@@ -818,7 +818,6 @@ export function diversifySmallNationSizes(cells: TMapCell[], owner: Int32Array, 
   for (const nationId of smallNationIds) {
     if (donorPool <= 0) break;
     if (random() < 0.1) continue;
-    // const startSize = sizeByNation.get(nationId) || minNationCells;
     const targetSize = Math.min(hardCapTargetSize, 13 + Math.floor(random() * 12));
 
     while ((sizeByNation.get(nationId) || 0) < targetSize && donorPool > 0) {

@@ -1,12 +1,12 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { clamp, getNeighborAverageElevation } from 'src/services';
 import { collectConnectedComponents } from 'src/services/map/core/graph';
+import { isHydrologyWaterTerrain } from 'src/services/map/terrainRules';
 import { TMapCell, TTerrainBand, TTerrainRatioMap } from 'src/types/map.types';
-import { isWaterTerrain } from './hydrologyUtils';
 
 type TTerrainBalance = typeof HYDROLOGY_CONFIG.terrainBalance;
 function isLockedTerrain(cell: TMapCell, terrain: TTerrainBand) {
-  if (isWaterTerrain(terrain)) return true;
+  if (isHydrologyWaterTerrain(terrain)) return true;
   if (terrain === 'mountains' || terrain === 'tundra') return true;
   if (terrain === 'volcanic') return true;
   if (cell.isRiver && terrain === 'valley') return true;
@@ -88,7 +88,7 @@ function getNeighborTerrainCounts(cell: TMapCell, cells: TMapCell[]) {
 
   for (const neighborId of cell.neighbors) {
     const neighborTerrain = cells[neighborId].terrain;
-    if (isWaterTerrain(neighborTerrain)) continue;
+    if (isHydrologyWaterTerrain(neighborTerrain)) continue;
 
     counts.set(neighborTerrain, (counts.get(neighborTerrain) || 0) + 1);
   }
@@ -98,8 +98,9 @@ function getNeighborTerrainCounts(cell: TMapCell, cells: TMapCell[]) {
 function findSmallTerrainRegions(cells: TMapCell[], minRegionSize: number) {
   const regions = collectConnectedComponents(
     cells,
-    (cell) => !isWaterTerrain(cell.terrain),
-    (current, neighbor) => !isWaterTerrain(neighbor.terrain) && current.terrain === neighbor.terrain
+    (cell) => !isHydrologyWaterTerrain(cell.terrain),
+    (current, neighbor) =>
+      !isHydrologyWaterTerrain(neighbor.terrain) && current.terrain === neighbor.terrain
   );
   return regions.filter((region) => region.length < minRegionSize);
 }
@@ -118,7 +119,7 @@ function clusterLandTerrains(cells: TMapCell[], seaLevel: number) {
     for (const cellId of region) {
       for (const neighborId of cells[cellId].neighbors) {
         const neighborTerrain = cells[neighborId].terrain;
-        if (isWaterTerrain(neighborTerrain)) continue;
+        if (isHydrologyWaterTerrain(neighborTerrain)) continue;
         if (regionSet.has(neighborId)) continue;
         borderTerrains.add(neighborTerrain);
       }
@@ -233,7 +234,7 @@ function toTerrainBalance(terrainRatios: TTerrainRatioMap): TTerrainBalance {
 function rebalanceTerrainDistribution(cells: TMapCell[], terrainBalance: TTerrainBalance) {
   const landCellIds = cells
     .map((cell, cellIndex) => ({ cell, cellIndex }))
-    .filter(({ cell }) => !isWaterTerrain(cell.terrain))
+    .filter(({ cell }) => !isHydrologyWaterTerrain(cell.terrain))
     .map(({ cellIndex }) => cellIndex);
   const landCount = landCellIds.length;
   if (landCount === 0) return;
@@ -563,7 +564,7 @@ function antiAliasTerrains(cells: TMapCell[]) {
 
     for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
       const cell = cells[cellIndex];
-      if (isWaterTerrain(cell.terrain)) continue;
+      if (isHydrologyWaterTerrain(cell.terrain)) continue;
       if (cell.isRiver && cell.terrain === 'valley') continue;
 
       const counts = getNeighborTerrainCounts(cell, cells);
@@ -575,7 +576,7 @@ function antiAliasTerrains(cells: TMapCell[]) {
       let dominantTerrain = cell.terrain;
       let dominantCount = 0;
       for (const [terrain, count] of counts) {
-        if (isWaterTerrain(terrain)) continue;
+        if (isHydrologyWaterTerrain(terrain)) continue;
         if (count > dominantCount) {
           dominantCount = count;
           dominantTerrain = terrain;
@@ -600,7 +601,7 @@ function mergeSmallTerrainClusters(cells: TMapCell[], seaLevel: number) {
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     if (visited[cellIndex] === 1) continue;
     const terrain = cells[cellIndex].terrain;
-    if (isWaterTerrain(terrain)) continue;
+    if (isHydrologyWaterTerrain(terrain)) continue;
 
     stack.length = 0;
     stack.push(cellIndex);
@@ -615,7 +616,7 @@ function mergeSmallTerrainClusters(cells: TMapCell[], seaLevel: number) {
       for (const neighborId of cells[current].neighbors) {
         if (visited[neighborId] === 1) continue;
         if (cells[neighborId].terrain !== terrain) continue;
-        if (isWaterTerrain(cells[neighborId].terrain)) continue;
+        if (isHydrologyWaterTerrain(cells[neighborId].terrain)) continue;
         visited[neighborId] = 1;
         stack.push(neighborId);
       }
@@ -636,7 +637,7 @@ function mergeSmallTerrainClusters(cells: TMapCell[], seaLevel: number) {
       for (const neighborId of cell.neighbors) {
         if (regionSet.has(neighborId)) continue;
         const neighborTerrain = cells[neighborId].terrain;
-        if (isWaterTerrain(neighborTerrain)) continue;
+        if (isHydrologyWaterTerrain(neighborTerrain)) continue;
         borderCounts.set(neighborTerrain, (borderCounts.get(neighborTerrain) || 0) + 1);
       }
 

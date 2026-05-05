@@ -28,7 +28,7 @@ export default function HoverCellOverview() {
 
   const { cell, description } = useMemo(() => {
     const nextCell = hoverIndex !== null ? mesh.cells[hoverIndex] : null;
-    if (nextCell) return { cell: nextCell, description: describeCell(nextCell, mesh) };
+    if (nextCell) return { cell: nextCell, description: describeCell(nextCell) };
     return { cell: undefined, description: undefined };
   }, [hoverIndex, mesh]);
 

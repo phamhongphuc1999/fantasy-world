@@ -1,30 +1,9 @@
-import { clamp, getNeighborAverageElevation } from 'src/services';
-import { TCellDescription, TMapCell, TMapMesh } from 'src/types/map.types';
+import { clamp } from 'src/services';
+import { terrainLabel } from 'src/services/map/terrainRules';
+import { TCellDescription, TMapCell } from 'src/types/map.types';
 
-function getTerrainType(cell: TMapCell, mesh: TMapMesh): string {
-  if (cell.terrain === 'deep-water') return 'Ocean';
-  if (cell.terrain === 'shallow-water') return 'Sea';
-  if (cell.terrain === 'inland-sea') return 'Inland Sea';
-  if (cell.terrain === 'lake') return 'Lake';
-  if (cell.terrain === 'coast') return 'Coast';
-  if (cell.terrain === 'plateau') return 'Plateau';
-  if (cell.terrain === 'desert') return 'Desert';
-  if (cell.terrain === 'badlands') return 'Badlands';
-  if (cell.terrain === 'forest') return 'Forest';
-  if (cell.terrain === 'swamp') return 'Swamp';
-  if (cell.terrain === 'valley') return 'Valley';
-  if (cell.terrain === 'hills') return 'Hill';
-  if (cell.terrain === 'mountains') return 'Mountain';
-  if (cell.terrain === 'volcanic') return 'Volcanic';
-  if (cell.terrain === 'tundra') return 'Tundra';
-
-  const averageNeighborElevation = getNeighborAverageElevation(cell, mesh.cells);
-  if (cell.elevation - averageNeighborElevation > 0.018) return 'Plateau';
-  return 'Plain';
-}
-
-export function describeCell(cell: TMapCell, mesh: TMapMesh): TCellDescription {
-  const terrainType = getTerrainType(cell, mesh);
+export function describeCell(cell: TMapCell): TCellDescription {
+  const terrainType = terrainLabel(cell.terrain);
   const suitabilityPercent = Math.round(clamp(cell.suitability, 0, 1) * 100);
   const temperatureC = Math.round(-12 + cell.temperature * 44);
   const precipitationPercent = Math.round(cell.precipitation * 100);

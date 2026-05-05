@@ -8,6 +8,13 @@ export type TTerrainConfig = {
   color: string;
   icon: string;
   isWater?: boolean;
+  isHydrologyWater: boolean;
+  isMarineWater: boolean;
+  isRenderWater: boolean;
+  provinceEffectiveSizeFactor: number;
+  logisticsMoveCost: number;
+  logisticsRisk: number;
+  baseSuitability: number | null;
   baseWeight: number;
   cityFactor: number;
   flatness: number;
