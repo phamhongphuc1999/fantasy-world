@@ -4,9 +4,10 @@ import { cn } from 'src/lib/utils';
 interface TProps extends ComponentProps<'section'> {
   title: string;
   titleComponent?: ReactNode;
+  containerProps?: ComponentProps<'div'>;
 }
 
-export default function BlurCard({ title, titleComponent, ...props }: TProps) {
+export default function BlurCard({ title, titleComponent, containerProps, ...props }: TProps) {
   return (
     <section
       {...props}
@@ -16,7 +17,9 @@ export default function BlurCard({ title, titleComponent, ...props }: TProps) {
         <h4 className="text-xs font-semibold tracking-wide text-slate-300 uppercase">{title}</h4>
         {titleComponent}
       </div>
-      <div className="mt-2">{props.children}</div>
+      <div {...containerProps} className={cn('mt-2', containerProps?.className)}>
+        {props.children}
+      </div>
     </section>
   );
 }

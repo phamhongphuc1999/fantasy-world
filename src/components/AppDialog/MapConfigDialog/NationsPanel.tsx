@@ -60,14 +60,9 @@ export default function NationsPanel(_props: TProps) {
             className="rounded-xl border border-white/10 bg-slate-950/55 px-3 py-2 text-xs text-slate-200"
           >
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span
-                  className="inline-block size-3 rounded-full border border-white/25"
-                  style={{ backgroundColor: getNationColor(row.id) }}
-                  title={getNationColor(row.id)}
-                />
-                <span className="font-semibold text-slate-100">{row.name}</span>
-              </div>
+              <span className="font-bold" style={{ color: getNationColor(row.id) }}>
+                {row.name}
+              </span>
               <span className="text-slate-400">#{row.id}</span>
             </div>
             <div className="mt-1 text-[11px] text-slate-200">

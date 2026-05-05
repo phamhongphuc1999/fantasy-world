@@ -54,11 +54,16 @@ export interface TTopographyCellData {
 
 // Hydrology & Climate
 export type TZoneType = 'land' | 'internal-waters' | 'territorial-waters' | 'international-waters';
+export type TTerrainModifierMap = Record<TTerrainBand, number>;
 
 // Geopolitics: Nation / Ethnic / Province flags on cells
 export interface TNation {
   id: number;
   name: string;
+  populationMultiplier: number;
+  economyMultiplier: number;
+  terrainPopulationModifiers: TTerrainModifierMap;
+  terrainEconomyModifiers: TTerrainModifierMap;
   capitalCellId: number | null;
   capital_coords: TPoint | null;
   economicHubCellIds: number[];
@@ -92,6 +97,7 @@ export interface TMapCell {
   precipitation: number;
   rainShadow: number;
   population: number;
+  economy: number;
   waterAccessibility: number;
   nationId: number | null;
   provinceId: number | null;
@@ -123,12 +129,14 @@ export interface TMapDisplaySettings {
   temperatureHeatmap: boolean;
   precipitationHeatmap: boolean;
   rainShadowHeatmap: boolean;
+  economyHeatmap: boolean;
   rivers: boolean;
   countryBorders: boolean;
   countryFill: boolean;
   provinceBorders: boolean;
   ethnicBorders: boolean;
   ethnicFill: boolean;
+  ethnicLabels: boolean;
   labels: boolean;
   cellData: boolean;
 }

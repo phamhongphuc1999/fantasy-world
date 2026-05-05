@@ -53,6 +53,11 @@ export default function DisplayModePanel() {
         onChange={(checked) => setDisplayLayer('rainShadowHeatmap', checked)}
       />
       <LayerToggle
+        label="Economy"
+        checked={displaySettings.economyHeatmap}
+        onChange={(checked) => setDisplayLayer('economyHeatmap', checked)}
+      />
+      <LayerToggle
         label="Rivers"
         checked={displaySettings.rivers}
         onChange={(checked) => setDisplayLayer('rivers', checked)}
@@ -82,6 +87,11 @@ export default function DisplayModePanel() {
         label="Ethnic Fill"
         checked={displaySettings.ethnicFill}
         onChange={(checked) => setDisplayLayer('ethnicFill', checked)}
+      />
+      <LayerToggle
+        label="Ethnic Labels"
+        checked={displaySettings.ethnicLabels}
+        onChange={(checked) => setDisplayLayer('ethnicLabels', checked)}
       />
       <LayerToggle
         label="Labels"

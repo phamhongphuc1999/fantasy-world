@@ -55,6 +55,43 @@ function populationMultiplier(
   }
 }
 
+function economyTerrainMultiplier(cell: TMapMeshWithDelaunay['cells'][number]) {
+  switch (cell.terrain) {
+    case 'valley':
+      return 1.22;
+    case 'plains':
+      return 1.2;
+    case 'coast':
+      return 1.3;
+    case 'forest':
+      return 1.04;
+    case 'hills':
+      return 0.94;
+    case 'plateau':
+      return 0.9;
+    case 'volcanic':
+      return 0.76;
+    case 'tundra':
+      return 0.6;
+    case 'swamp':
+      return 0.62;
+    case 'desert':
+      return 0.54;
+    case 'badlands':
+      return 0.48;
+    case 'mountains':
+      return 0.46;
+    case 'lake':
+      return 1.06;
+    case 'deep-water':
+    case 'shallow-water':
+    case 'inland-sea':
+      return 0;
+    default:
+      return 0.7;
+  }
+}
+
 function buildWaterAccessibility(cells: TMapMeshWithDelaunay['cells']) {
   const distances = new Int32Array(cells.length);
   distances.fill(-1);
@@ -204,14 +241,44 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMapMe
   const normalizedMax = Math.max(0.0001, maxScore);
   const nextCells = cells.map((cell) => {
     if (cell.isWater)
-      return { ...cell, population: 0, waterAccessibility: waterAccessibility[cell.id] };
+      return {
+        ...cell,
+        population: 0,
+        economy: 0,
+        waterAccessibility: waterAccessibility[cell.id],
+      };
     const density = clamp(score[cell.id] / normalizedMax, 0, 1);
     const shaped = Math.pow(density, 1.08);
     const basePopulation = Math.round(shaped * 5000);
     const population = Math.round(
       basePopulation * populationMultiplier(cell, cells) * waterAccessibility[cell.id]
     );
-    return { ...cell, population, waterAccessibility: waterAccessibility[cell.id] };
+
+    const terrainFactor = economyTerrainMultiplier(cell);
+    const riverWaterBonus = cell.isRiver ? 0.08 : 0;
+    const lakeWaterBonus = cell.isLake ? 0.06 : 0;
+    const coastWaterBonus = cell.terrain === 'coast' ? 0.09 : 0;
+    const nearWaterNeighborBonus = cell.neighbors.some((neighborId) => {
+      const neighbor = cells[neighborId];
+      return neighbor.isWater || neighbor.isRiver || neighbor.isLake;
+    })
+      ? 0.16
+      : 0;
+    const waterFactor =
+      0.72 +
+      waterAccessibility[cell.id] * 1.34 +
+      riverWaterBonus +
+      lakeWaterBonus +
+      coastWaterBonus +
+      nearWaterNeighborBonus;
+    const popNorm = clamp(population / 120000, 0, 1);
+    const waterNorm = clamp(waterAccessibility[cell.id], 0, 1);
+    const synergyMultiplier = 1 + popNorm * waterNorm * 1.35;
+    const economy = Math.round(
+      Math.pow(Math.max(0, population), 1.12) * terrainFactor * waterFactor * synergyMultiplier
+    );
+
+    return { ...cell, population, economy, waterAccessibility: waterAccessibility[cell.id] };
   });
   return { ...mesh, cells: nextCells };
 }

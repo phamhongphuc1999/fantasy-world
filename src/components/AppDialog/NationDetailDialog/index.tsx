@@ -55,16 +55,28 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
           <BlurCard title="Population">
             Total Population: {data.totalPopulation.toLocaleString()} (
             {(data.totalPopulation / data.nationCells.length).toFixed(2)} people per cell)
+            <br />
+            Total Economy: {formatPopulation(data.totalEconomy)} (
+            {(data.totalEconomy / Math.max(1, data.totalPopulation)).toFixed(4)} per person)
           </BlurCard>
           <TerrainStatistic terrains={data.terrains} />
-          <BlurCard title="Population">
+          <BlurCard title="Population" containerProps={{ className: 'flex flex-col gap-1' }}>
             {data.provinces.length > 0 ? (
               data.provinces.map((province) => (
-                <div key={province.provinceId} className="flex items-center justify-between gap-2">
-                  <span>
-                    Province #{province.provinceId} ({province.cellCount} cells)
-                  </span>
-                  <span>{formatPopulation(province.population)}</span>
+                <div
+                  key={province.provinceId}
+                  className="rounded-lg border border-white/8 px-2 py-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span>
+                      Province #{province.provinceId} ({province.cellCount} cells)
+                    </span>
+                    <span>{formatPopulation(province.population)}</span>
+                  </div>
+                  <div className="mt-0.5 text-xs text-slate-300">
+                    Economy: {formatPopulation(province.economy)} (
+                    {(province.economy / Math.max(1, province.population)).toFixed(4)} per person)
+                  </div>
                 </div>
               ))
             ) : (
@@ -79,7 +91,8 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
                 </span>
                 <span>
                   {item.count} cells ({item.percent}%), <span className="font-bold">Pop</span>{' '}
-                  {item.population.toLocaleString()} ({item.populationPercent}%)
+                  {item.population.toLocaleString()} ({item.populationPercent}%),
+                  <span className="font-bold"> Economy</span> {formatPopulation(item.economy)}
                 </span>
               </div>
             ))}

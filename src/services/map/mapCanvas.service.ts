@@ -185,6 +185,21 @@ export function getRainShadowHeatmapColor(rainShadow: number) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+export function getEconomyHeatmapColor(economy: number, minEconomy: number, maxEconomy: number) {
+  const low = { r: 254, g: 240, b: 138 }; // #fef08a
+  const high = { r: 120, g: 53, b: 15 }; // #78350f
+
+  if (maxEconomy <= minEconomy) {
+    return `rgb(${low.r}, ${low.g}, ${low.b})`;
+  }
+
+  const normalized = clamp01((economy - minEconomy) / (maxEconomy - minEconomy));
+  const r = interpolateChannel(low.r, high.r, normalized);
+  const g = interpolateChannel(low.g, high.g, normalized);
+  const b = interpolateChannel(low.b, high.b, normalized);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 export function drawCountryFill(context: CanvasRenderingContext2D, cells: TMapCell[]) {
   const fillOpacity = 0.86;
   for (const cell of cells) {
@@ -499,7 +514,7 @@ export function drawRegionNames(
 
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  context.font = "600 13px 'Trebuchet MS', 'Segoe UI', sans-serif";
+  context.font = "600 11px 'Trebuchet MS', 'Segoe UI', sans-serif";
   context.lineWidth = 3.2;
   context.strokeStyle = 'rgba(2, 6, 23, 0.82)';
   context.fillStyle = 'rgba(241, 245, 249, 0.95)';

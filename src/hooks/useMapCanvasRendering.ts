@@ -14,6 +14,7 @@ import {
   drawRegionNames,
   drawSiteMarker,
   drawUrbanHierarchy,
+  getEconomyHeatmapColor,
   getPopulationHeatmapColor,
   getPrecipitationHeatmapColor,
   getRainShadowHeatmapColor,
@@ -75,6 +76,7 @@ export default function useMapCanvasRendering({
       !displaySettings.temperatureHeatmap &&
       !displaySettings.precipitationHeatmap &&
       !displaySettings.rainShadowHeatmap &&
+      !displaySettings.economyHeatmap &&
       !displaySettings.countryFill &&
       !displaySettings.ethnicFill;
 
@@ -82,6 +84,8 @@ export default function useMapCanvasRendering({
     let maxPopulation = Number.NEGATIVE_INFINITY;
     let minTemperature = Number.POSITIVE_INFINITY;
     let maxTemperature = Number.NEGATIVE_INFINITY;
+    let minEconomy = Number.POSITIVE_INFINITY;
+    let maxEconomy = Number.NEGATIVE_INFINITY;
 
     if (displaySettings.populationHeatmap) {
       for (const cell of cells) {
@@ -96,6 +100,14 @@ export default function useMapCanvasRendering({
         if (!isLandCell(cell)) continue;
         if (cell.temperature < minTemperature) minTemperature = cell.temperature;
         if (cell.temperature > maxTemperature) maxTemperature = cell.temperature;
+      }
+    }
+
+    if (displaySettings.economyHeatmap) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        if (cell.economy < minEconomy) minEconomy = cell.economy;
+        if (cell.economy > maxEconomy) maxEconomy = cell.economy;
       }
     }
 
@@ -162,6 +174,20 @@ export default function useMapCanvasRendering({
       }
     }
 
+    if (displaySettings.economyHeatmap) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        drawCellShape(
+          context,
+          cell,
+          getEconomyHeatmapColor(cell.economy, minEconomy, maxEconomy),
+          0.96,
+          'transparent',
+          0
+        );
+      }
+    }
+
     if (showUniformLand) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
@@ -199,7 +225,9 @@ export default function useMapCanvasRendering({
     if (displaySettings.countryBorders && displaySettings.provinceBorders)
       drawProvinceBorders(context, cells);
 
-    if (displaySettings.labels) {
+    if (displaySettings.ethnicLabels) {
+      drawRegionNames(context, cells, nations, ethnicGroups, 'ethnic');
+    } else if (displaySettings.labels) {
       if (displaySettings.ethnicFill || displaySettings.ethnicBorders) {
         drawRegionNames(context, cells, nations, ethnicGroups, 'ethnic');
       } else if (displaySettings.countryBorders) {
@@ -213,6 +241,7 @@ export default function useMapCanvasRendering({
       !displaySettings.temperatureHeatmap &&
       !displaySettings.precipitationHeatmap &&
       !displaySettings.rainShadowHeatmap &&
+      !displaySettings.economyHeatmap &&
       cells.length <= T_SITE_MARKER_LIMIT
     ) {
       for (const cell of cells) {

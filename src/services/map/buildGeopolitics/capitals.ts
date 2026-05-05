@@ -6,6 +6,14 @@ import { createSeededRandom } from 'src/services/map/seededRandom';
 import { TMapCell, TNation } from 'src/types/map.types';
 import { CAPITAL_VIEWPORT_MARGIN, createRegionalName, isLand } from './geopoliticsShared';
 
+type TNationProfile = Pick<
+  TNation,
+  | 'populationMultiplier'
+  | 'economyMultiplier'
+  | 'terrainPopulationModifiers'
+  | 'terrainEconomyModifiers'
+>;
+
 function getLandDistanceMap(
   cells: TMapCell[],
   nationLandSet: Set<number>,
@@ -123,7 +131,8 @@ export function pickEconomicAndCapital(
   owner: Int32Array,
   seed: string,
   mapWidth: number,
-  mapHeight: number
+  mapHeight: number,
+  nationProfiles: Map<number, TNationProfile>
 ): TNation[] {
   const nationIds = Array.from(new Set(owner)).filter((nationId) => nationId >= 0);
   return nationIds.map((nationId) => {
@@ -221,10 +230,49 @@ export function pickEconomicAndCapital(
 
     if (capitalCellId === null && capitalPool.length > 0) capitalCellId = capitalPool[0].id;
     const nationName = createRegionalName(seed, 'nation', nationId);
+    const profile = nationProfiles.get(nationId);
 
     return {
       id: nationId,
       name: nationName,
+      populationMultiplier: profile?.populationMultiplier ?? 1,
+      economyMultiplier: profile?.economyMultiplier ?? 1,
+      terrainPopulationModifiers: profile?.terrainPopulationModifiers ?? {
+        'deep-water': 0,
+        'shallow-water': 0,
+        'inland-sea': 0,
+        coast: 1,
+        lake: 1,
+        plains: 1,
+        plateau: 1,
+        forest: 1,
+        desert: 1,
+        badlands: 1,
+        swamp: 1,
+        valley: 1,
+        hills: 1,
+        mountains: 1,
+        volcanic: 1,
+        tundra: 1,
+      },
+      terrainEconomyModifiers: profile?.terrainEconomyModifiers ?? {
+        'deep-water': 0,
+        'shallow-water': 0,
+        'inland-sea': 0,
+        coast: 1,
+        lake: 1,
+        plains: 1,
+        plateau: 1,
+        forest: 1,
+        desert: 1,
+        badlands: 1,
+        swamp: 1,
+        valley: 1,
+        hills: 1,
+        mountains: 1,
+        volcanic: 1,
+        tundra: 1,
+      },
       capitalCellId,
       capital_coords: capitalCellId !== null ? cells[capitalCellId].site : null,
       economicHubCellIds: hubCellIds,

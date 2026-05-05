@@ -12,17 +12,18 @@ function getMinimumProvinceCells(nationCellCount: number) {
 }
 
 function shouldForceSmallNationSplit(nationPopulation: number, nationCellCount: number) {
-  return nationPopulation < 300000 && nationCellCount < 20;
+  const averagePopulationPerCell = nationPopulation / Math.max(1, nationCellCount);
+  return averagePopulationPerCell < 2000 && nationCellCount < 20;
 }
 
 function shouldIgnorePopulationConstraints(nationPopulation: number, nationCellCount: number) {
-  return nationCellCount >= 30 && nationPopulation <= 150000;
+  const averagePopulationPerCell = nationPopulation / Math.max(1, nationCellCount);
+  return nationCellCount >= 30 && averagePopulationPerCell < 1200;
 }
 
 function getMinimumProvincePopulation(nationPopulation: number) {
-  if (nationPopulation <= 100000) return 0;
-  if (nationPopulation < 300000) return 50000;
-  return 100000;
+  if (nationPopulation <= 20000) return 0;
+  return Math.max(MANDATORY_MIN_PROVINCE_POPULATION, Math.floor(nationPopulation * 0.06));
 }
 
 const MANDATORY_MIN_PROVINCE_POPULATION = 500;
@@ -444,12 +445,15 @@ export function enforceMinimumProvinceArea(
       );
     }
 
+    const enforceMandatoryPopulationFloor =
+      !ignorePopulationConstraints && nationPopulation > 20000;
     const smallProvinceIds = Array.from(provinceSize.keys()).filter((provinceId) => {
       const size = provinceSize.get(provinceId) || 0;
       const population = provincePopulation.get(provinceId) || 0;
       const tooSmallByArea = size < minProvinceCells;
       const tooSmallByPopulation = minProvincePopulation > 0 && population < minProvincePopulation;
-      const tooSmallByMandatoryPopulation = population < MANDATORY_MIN_PROVINCE_POPULATION;
+      const tooSmallByMandatoryPopulation =
+        enforceMandatoryPopulationFloor && population < MANDATORY_MIN_PROVINCE_POPULATION;
       return tooSmallByArea || tooSmallByPopulation || tooSmallByMandatoryPopulation;
     });
 

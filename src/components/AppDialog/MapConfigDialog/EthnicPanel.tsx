@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useMapContext } from 'src/contexts/map.context';
-import { formatPopulation } from 'src/services';
+import { formatPopulation, getNationColor } from 'src/services';
 
 type TProps = Record<string, never>;
 
@@ -45,7 +45,9 @@ export default function EthnicPanel(_props: TProps) {
             className="rounded-xl border border-white/10 bg-slate-950/55 px-3 py-2 text-xs text-slate-200"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold text-slate-100">{row.name}</span>
+              <span className="font-bold" style={{ color: getNationColor(row.id) }}>
+                {row.name}
+              </span>
               <span className="text-slate-400">#{row.id}</span>
             </div>
 
