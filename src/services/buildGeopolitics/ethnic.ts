@@ -1,13 +1,13 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { findNearestCellId } from 'src/services';
+import { sortStableDesc } from 'src/services/common';
 import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
 import { collectConnectedComponents } from 'src/services/core/graph';
 import { TFifoQueue } from 'src/services/core/queue';
-import { sortStableDescByScore } from 'src/services/core/sort';
 import { createSeededRandom, hashSeed } from 'src/services/seededRandom';
-import { TEthnic, TCell } from 'src/types/map.types';
-import { createRegionalName, edgeNoise, isLand } from './geopoliticsShared';
+import { TCell, TEthnic } from 'src/types/map.types';
 import Cost from '../core/cost';
+import { createRegionalName, edgeNoise, isLand } from './geopoliticsShared';
 
 type TEthnicConfig = typeof GEOPOLITICAL_CONFIG.ethnic;
 const T_MIN_ETHNIC_POPULATION = 1000;
@@ -31,7 +31,7 @@ function collectLandComponents(cells: TCell[]) {
 
 function pickEthnicCoreSeeds(cells: TCell[], cellIds: number[], count: number, seed: string) {
   const random = createSeededRandom(`${seed}:ethnic:cores`);
-  const candidates = sortStableDescByScore(
+  const candidates = sortStableDesc(
     cellIds
       .map((cellId) => cells[cellId])
       .map((cell) => {

@@ -11,14 +11,16 @@ export type TTerrainConfig = {
   isHydrologyWater: boolean;
   isMarineWater: boolean;
   isRenderWater: boolean;
-  provinceEffectiveSizeFactor: number;
+  sizeFactor: number;
   logisticsMoveCost: number;
   logisticsRisk: number;
   baseSuitability: number | null;
   clusterMin?: number;
   baseWeight: number;
   cityFactor: number;
+  economyFactor: number;
   flatness: number;
+  safetyScore: number;
 };
 
 export interface TVertex {

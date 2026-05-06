@@ -106,3 +106,31 @@ export function findNearestCellId(
   }
   return nearestCellId;
 }
+
+export function normalize(value: number, min: number, max: number) {
+  return (value - min) / (max - min + 1e-9);
+}
+
+export function getMetricRange(values: number[]) {
+  if (values.length === 0) return { min: 0, max: 1 };
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const value of values) {
+    if (value < min) min = value;
+    if (value > max) max = value;
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: 0, max: 1 };
+  return { min, max };
+}
+
+export function getRiverStrokeWidth(cell: TCell) {
+  return Math.min(4.8, Math.max(0.75, cell.riverWidth || 0.9));
+}
+
+export function sortStableDesc<T extends { score: number; cellId: number }>(items: T[]) {
+  items.sort((left, right) => {
+    if (right.score !== left.score) return right.score - left.score;
+    return left.cellId - right.cellId;
+  });
+  return items;
+}

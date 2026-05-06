@@ -2,6 +2,7 @@
 
 import { RefObject, useEffect } from 'react';
 import { TERRAIN_CONFIG } from 'src/configs/constance';
+import { getRiverStrokeWidth } from 'src/services/common';
 import {
   drawCellShape,
   drawCountryFill,
@@ -205,7 +206,7 @@ export default function useMapCanvasRendering({
         if (!downstreamCell) continue;
         drawCurvedRiverSegment(context, cell, downstreamCell);
         context.strokeStyle = '#00f2ff';
-        context.lineWidth = Math.min(4.8, Math.max(0.75, cell.riverWidth || 0.9));
+        context.lineWidth = getRiverStrokeWidth(cell);
         context.lineCap = 'round';
         context.globalAlpha = 0.96;
         context.shadowColor = '#7dd3fc';

@@ -1,8 +1,9 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
-import { collectConnectedComponents } from 'src/services/core/graph';
-import { TFifoQueue } from 'src/services/core/queue';
+import { getMetricRange, normalize } from 'src/services/common';
+import { buildMultiSourceDistanceMap, collectConnectedComponents } from 'src/services/core/graph';
 import { createSeededRandom } from 'src/services/seededRandom';
+import { isWaterOrRiverCell } from 'src/services/terrainRules';
 import { TCell, TNation } from 'src/types/map.types';
 import { CAPITAL_VIEWPORT_MARGIN, createRegionalName, isLand } from './geopoliticsShared';
 
@@ -38,27 +39,10 @@ function getDistanceMap(
   nationLand: Set<number>,
   sourcePredicate: (cellId: number) => boolean
 ) {
-  const distances = new Int32Array(cells.length);
-  distances.fill(-1);
-  const queue = new TFifoQueue<number>();
-
-  for (const cellId of nationLand) {
-    if (!sourcePredicate(cellId)) continue;
-    distances[cellId] = 0;
-    queue.enqueue(cellId);
-  }
-
-  while (queue.size > 0) {
-    const current = queue.dequeue() as number;
-    const currentDistance = distances[current];
-    for (const neighborId of cells[current].neighbors) {
-      if (!nationLand.has(neighborId)) continue;
-      if (distances[neighborId] >= 0) continue;
-      distances[neighborId] = currentDistance + 1;
-      queue.enqueue(neighborId);
-    }
-  }
-  return distances;
+  return buildMultiSourceDistanceMap(cells, {
+    isSeed: (cellId) => nationLand.has(cellId) && sourcePredicate(cellId),
+    canVisit: (neighborId) => nationLand.has(neighborId),
+  });
 }
 
 function getNationComponents(cells: TCell[], owner: Int32Array, nationId: number) {
@@ -73,35 +57,19 @@ function getNationComponents(cells: TCell[], owner: Int32Array, nationId: number
 function waterProximityScore(cell: TCell, cells: TCell[]) {
   for (const neighborId of cell.neighbors) {
     const neighbor = cells[neighborId];
-    if (neighbor.isWater || neighbor.isRiver || neighbor.isLake) return 1;
+    if (isWaterOrRiverCell(neighbor)) return 1;
   }
 
   const visitedWater = new Set<number>();
   for (const neighborId of cell.neighbors) {
     for (const secondNeighborId of cells[neighborId].neighbors) {
       const secondNeighbor = cells[secondNeighborId];
-      if (secondNeighbor.isWater || secondNeighbor.isRiver || secondNeighbor.isLake) {
+      if (isWaterOrRiverCell(secondNeighbor)) {
         visitedWater.add(secondNeighborId);
       }
     }
   }
   return Math.min(0.85, visitedWater.size * 0.08);
-}
-
-function normalize(value: number, min: number, max: number) {
-  return (value - min) / (max - min + 1e-9);
-}
-
-function getMetricRange(values: number[]) {
-  if (values.length === 0) return { min: 0, max: 1 };
-  let min = Number.POSITIVE_INFINITY;
-  let max = Number.NEGATIVE_INFINITY;
-  for (const value of values) {
-    if (value < min) min = value;
-    if (value > max) max = value;
-  }
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: 0, max: 1 };
-  return { min, max };
 }
 
 function distanceScore(
@@ -111,21 +79,6 @@ function distanceScore(
   if (distance === -1) return 0;
   if (distance <= thresholds.nearMax) return -thresholds.nearPenalty;
   if (distance >= thresholds.farMin) return thresholds.farBonus;
-  return 0;
-}
-
-function terrainSafetyScore(cell: TCell) {
-  if (cell.terrain === 'mountains' || cell.terrain === 'desert' || cell.terrain === 'forest') {
-    return -0.7;
-  }
-  if (cell.terrain === 'badlands' || cell.terrain === 'volcanic' || cell.terrain === 'swamp') {
-    return -0.35;
-  }
-  if (cell.terrain === 'hills' || cell.terrain === 'tundra') return -0.1;
-  if (cell.terrain === 'coast') return -0.08;
-  if (cell.terrain === 'plains') return 0.2;
-  if (cell.terrain === 'valley') return 0.16;
-  if (cell.terrain === 'plateau') return 0.08;
   return 0;
 }
 
@@ -168,7 +121,7 @@ function scoreCapital(
         : 0;
 
   const centralityScore = borderCentrality + coastCentrality + edgeSafety;
-  const safetyScore = terrainSafetyScore(cell);
+  const safetyScore = TERRAIN_CONFIG[cell.terrain].safetyScore;
 
   return populationNorm * 0.34 + economyNorm * 0.28 + centralityScore * 0.23 + safetyScore * 0.15;
 }

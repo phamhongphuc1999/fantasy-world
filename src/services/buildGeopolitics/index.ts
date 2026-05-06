@@ -21,8 +21,8 @@ import {
   buildLandNations,
   diversifySmallNationSizes,
   enforceMainlandContiguity,
-  enforceMinimumNationArea,
-  reconcileNationClaims,
+  enforceMinNationArea,
+  finalizeNationBorders,
 } from './nations';
 import {
   buildNationProvinces,
@@ -189,7 +189,7 @@ function limitNationPopulation(cells: TCell[], owner: Int32Array, seed: string) 
 function runNationStabilityPass(cells: TCell[], owner: Int32Array, preserveNationCount: number) {
   alignNaturalTerrainClusters(cells, owner);
   limitMountainSplit(cells, owner, 'country');
-  enforceMinimumNationArea(cells, owner, preserveNationCount);
+  enforceMinNationArea(cells, owner, preserveNationCount);
 }
 
 function assignNations(mesh: TDelaunayMesh, seed: string, nationCount: number): TNationAssignment {
@@ -200,18 +200,13 @@ function assignNations(mesh: TDelaunayMesh, seed: string, nationCount: number): 
   return { owner, preserveNationCount };
 }
 
-function postProcessNations(
-  cells: TCell[],
-  owner: Int32Array,
-  preserveNationCount: number,
-  seed: string
-) {
-  runNationStabilityPass(cells, owner, preserveNationCount);
+function postProcessNations(cells: TCell[], owner: Int32Array, nationCount: number, seed: string) {
+  runNationStabilityPass(cells, owner, nationCount);
   enforceMainlandContiguity(cells, owner);
-  runNationStabilityPass(cells, owner, preserveNationCount);
-  reconcileNationClaims(cells, owner, preserveNationCount);
+  runNationStabilityPass(cells, owner, nationCount);
+  finalizeNationBorders(cells, owner, nationCount);
   diversifySmallNationSizes(cells, owner, seed);
-  reconcileNationClaims(cells, owner, preserveNationCount);
+  finalizeNationBorders(cells, owner, nationCount);
 }
 
 function assignProvinces(cells: TCell[], owner: Int32Array, seed: string) {

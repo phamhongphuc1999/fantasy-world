@@ -1,8 +1,8 @@
-import { RIVER_GEN_CONFIG } from 'src/configs/mapConfig';
+import { HYDROLOGY_CONFIG, RIVER_GEN_CONFIG } from 'src/configs/mapConfig';
 import { createSeededRandom } from 'src/services/seededRandom';
 import { TCell, TRiver, TRiverEndType, TRiverKind } from 'src/types/map.types';
 
-const T_COAST_OUTLET = -2;
+const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutlet;
 
 type TRiverGenerationResult = {
   downstream: Int32Array;

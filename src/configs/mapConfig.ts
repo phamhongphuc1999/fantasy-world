@@ -25,7 +25,7 @@ export const NATION_COLORS = [
   '#aaffc3',
   '#808000',
   '#ffd8b1',
-  '#000075',
+  '#4D4DC1',
   '#808080',
   '#ffffff',
   '#ffd700',
