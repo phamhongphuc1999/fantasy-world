@@ -1,9 +1,9 @@
+import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { clamp, findNearestCellId } from 'src/services';
+import { sortStableDesc } from 'src/services/common';
 import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
-import { sortStableDescByScore } from 'src/services/core/sort';
 import { hashSeed } from 'src/services/seededRandom';
-import { provinceEffectiveSizeFactor } from 'src/services/terrainRules';
-import { TCell } from 'src/types/map.types';
+import { TCell, TCellOwnerParams } from 'src/types/map.types';
 import { getProvinceSeedScore } from './costPolicies';
 import { getBoundaryStepCost, isLand } from './geopoliticsShared';
 
@@ -30,13 +30,13 @@ const PROVINCE_TUNING = {
   },
 } as const;
 
-function computeEffectiveSize(cellIds: number[], effectiveCellWeightById: Float32Array) {
+function computeSize(cellIds: number[], cellsWeight: Float32Array) {
   let sum = 0;
-  for (const cellId of cellIds) sum += effectiveCellWeightById[cellId];
+  for (const cellId of cellIds) sum += cellsWeight[cellId];
   return sum;
 }
 
-function getDistanceSquared(a: TCell, b: TCell) {
+function getSquaredDistance(a: TCell, b: TCell) {
   const dx = a.site[0] - b.site[0];
   const dy = a.site[1] - b.site[1];
   return dx * dx + dy * dy;
@@ -74,33 +74,26 @@ function buildProvinceAggregates(
   return { provinceSize, provincePopulation, provinceEconomy };
 }
 
-function getMinimumProvinceEffectiveSize(
-  totalEffectiveNationSize: number,
-  nationCellCount: number
-) {
-  if (nationCellCount < 10) return totalEffectiveNationSize;
-  return Math.max(6, Math.ceil(totalEffectiveNationSize * 0.02));
+function getMinProvinceSize(nationSize: number, nationCellCount: number) {
+  if (nationCellCount < 10) return nationSize;
+  return Math.max(6, Math.ceil(nationSize * 0.02));
 }
 
-function shouldForceSmallNationSplit(
-  nationPopulation: number,
-  nationCellCount: number,
-  totalEffectiveNationSize: number
-) {
+function isNationSplit(nationPopulation: number, nationCellCount: number, nationSize: number) {
   const averagePopulationPerCell = nationPopulation / Math.max(1, nationCellCount);
-  return averagePopulationPerCell < 2000 && nationCellCount < 20 && totalEffectiveNationSize < 26;
+  return averagePopulationPerCell < 2000 && nationCellCount < 20 && nationSize < 26;
 }
 
-function shouldIgnorePopulationConstraints(
+function isIgnorePopulationRules(
   nationPopulation: number,
   nationCellCount: number,
-  totalEffectiveNationSize: number
+  nationSize: number
 ) {
   const averagePopulationPerCell = nationPopulation / Math.max(1, nationCellCount);
   const ruggedSparseNation =
     nationCellCount >= 24 &&
     averagePopulationPerCell < 1300 &&
-    totalEffectiveNationSize / Math.max(1, nationCellCount) > 1.35;
+    nationSize / Math.max(1, nationCellCount) > 1.35;
   return (nationCellCount >= 30 && averagePopulationPerCell < 1200) || ruggedSparseNation;
 }
 
@@ -108,7 +101,7 @@ function isSmallNation(nationPopulation: number) {
   return nationPopulation <= SMALL_NATION_POPULATION_THRESHOLD;
 }
 
-function getAbsoluteMinimumProvincePopulation(nationPopulation: number) {
+function getAbsoluteMinProvincePopulation(nationPopulation: number) {
   return isSmallNation(nationPopulation)
     ? SMALL_NATION_MIN_PROVINCE_POPULATION
     : DEFAULT_MIN_PROVINCE_POPULATION;
@@ -121,12 +114,12 @@ function getRuleBasedMinimumProvinceCount(nationPopulation: number) {
 
 function getMinimumProvincePopulation(targetProvincePopulation: number, nationPopulation: number) {
   return Math.max(
-    getAbsoluteMinimumProvincePopulation(nationPopulation),
+    getAbsoluteMinProvincePopulation(nationPopulation),
     Math.floor(targetProvincePopulation * 0.7)
   );
 }
 
-function getMinimumProvinceCountByPopulation(nationPopulation: number) {
+function getMinProvincePopulation(nationPopulation: number) {
   if (nationPopulation > 1_000_000) return Math.ceil(nationPopulation / IDEAL_PROVINCE_POP);
   if (nationPopulation > 500_000 && nationPopulation <= 1_000_000) return 3;
   if (nationPopulation >= 300_000 && nationPopulation <= 500_000) return 2;
@@ -137,15 +130,13 @@ function getRequiredMinimumProvinceCount(
   nationPopulation: number,
   nationCellCount: number,
   minProvincePopulation: number,
-  forceSmallNationSplit: boolean,
-  ignorePopulationConstraints: boolean
+  isNationSplit: boolean,
+  isIgnore: boolean
 ) {
   const ruleBasedMinimumProvinceCount = getRuleBasedMinimumProvinceCount(nationPopulation);
   const originalMinProvinceCount = Math.max(
-    getMinimumProvinceCountByPopulation(nationPopulation),
-    forceSmallNationSplit || ignorePopulationConstraints || nationPopulation >= 200000
-      ? 2
-      : ruleBasedMinimumProvinceCount
+    getMinProvincePopulation(nationPopulation),
+    isNationSplit || isIgnore || nationPopulation >= 200000 ? 2 : ruleBasedMinimumProvinceCount
   );
   const populationDrivenMinProvinceCount = Math.ceil(nationPopulation / IDEAL_PROVINCE_POP);
   const cellDrivenMinProvinceCount = Math.floor(nationCellCount / 25);
@@ -172,18 +163,13 @@ function getRequiredMinimumProvinceCount(
 function getProvincePlanningMetrics(
   nationPopulation: number,
   nationCellCount: number,
-  totalEffectiveNationSize: number,
-  forceSmallNationSplit: boolean,
-  ignorePopulationConstraints: boolean
+  nationSize: number,
+  isNationSplit: boolean,
+  isIgnore: boolean
 ) {
-  const minProvinceEffectiveSize = forceSmallNationSplit
-    ? 1
-    : getMinimumProvinceEffectiveSize(totalEffectiveNationSize, nationCellCount);
-  const maxByEffectiveSize = Math.max(
-    1,
-    Math.floor(totalEffectiveNationSize / Math.max(1, minProvinceEffectiveSize))
-  );
-  const baselineByPopulation = getMinimumProvinceCountByPopulation(nationPopulation);
+  const minProvinceSize = isNationSplit ? 1 : getMinProvinceSize(nationSize, nationCellCount);
+  const maxByEffectiveSize = Math.max(1, Math.floor(nationSize / Math.max(1, minProvinceSize)));
+  const baselineByPopulation = getMinProvincePopulation(nationPopulation);
   let baselineTarget = Math.max(1, Math.min(maxByEffectiveSize, baselineByPopulation));
   if (nationPopulation > 1_000_000) {
     baselineTarget = clamp(
@@ -201,13 +187,10 @@ function getProvincePlanningMetrics(
     nationPopulation,
     nationCellCount,
     minProvincePopulation,
-    forceSmallNationSplit,
-    ignorePopulationConstraints
+    isNationSplit,
+    isIgnore
   );
-  const maxByCells = Math.max(
-    1,
-    Math.floor(totalEffectiveNationSize / Math.max(1, minProvinceEffectiveSize))
-  );
+  const maxByCells = Math.max(1, Math.floor(nationSize / Math.max(1, minProvinceSize)));
   const maxByPopulation =
     minProvincePopulation > 0
       ? Math.max(1, Math.floor(nationPopulation / minProvincePopulation))
@@ -221,7 +204,7 @@ function getProvincePlanningMetrics(
     Math.min(maxByCells, cappedMaxByPopulation, maxByRule)
   );
   return {
-    minProvinceEffectiveSize,
+    minProvinceSize,
     baselineTarget,
     minProvincePopulation,
     requiredMinimumProvinceCount,
@@ -242,22 +225,22 @@ function getPopulationBounds(nationPopulation: number, targetProvinceCount: numb
   };
 }
 
-function isMetropolisException(
-  provinceCells: number[],
-  provincePopulation: number,
+function isMetropolis(
+  cells: number[],
+  population: number,
   maxPopulation: number,
-  minProvinceEffectiveSize: number,
-  effectiveCellWeightById: Float32Array
+  minSize: number,
+  cellsWeight: Float32Array
 ) {
-  if (provinceCells.length > 2) return false;
-  if (provincePopulation <= maxPopulation) return false;
-  const effectiveSize = computeEffectiveSize(provinceCells, effectiveCellWeightById);
-  return effectiveSize <= minProvinceEffectiveSize;
+  if (cells.length > 2) return false;
+  if (population <= maxPopulation) return false;
+  const effectiveSize = computeSize(cells, cellsWeight);
+  return effectiveSize <= minSize;
 }
 
-function getAverageTerrainFactor(cellIds: number[], effectiveCellWeightById: Float32Array) {
+function getAverageTerrainFactor(cellIds: number[], cellsWeight: Float32Array) {
   if (cellIds.length === 0) return 1;
-  return computeEffectiveSize(cellIds, effectiveCellWeightById) / cellIds.length;
+  return computeSize(cellIds, cellsWeight) / cellIds.length;
 }
 
 function getDominantTerrain(cellIds: number[], cells: TCell[]) {
@@ -356,8 +339,8 @@ function enforceMinimumProvinceCount(
 
 function getProvinceTargetCount(
   cells: TCell[],
-  minProvinceEffectiveSize: number,
-  totalEffectiveNationSize: number,
+  minProvinceSize: number,
+  nationSize: number,
   maxProvinceCount: number
 ) {
   if (cells.length < 10) return 1;
@@ -402,7 +385,7 @@ function getProvinceTargetCount(
   }, 0);
 
   const pressureAverage = pressureSum / Math.max(1, cells.length);
-  const baseCount = totalEffectiveNationSize / Math.max(1, minProvinceEffectiveSize * 2.8);
+  const baseCount = nationSize / Math.max(1, minProvinceSize * 2.8);
   const pressureScaled = baseCount * (0.7 + pressureAverage * 0.9);
   const target = Math.max(1, Math.round(pressureScaled));
   return clamp(target, 1, maxProvinceCount);
@@ -475,9 +458,9 @@ export function buildNationProvinces(cells: TCell[], owner: Int32Array, seed: st
   const provinceOwner = new Int32Array(cells.length);
   provinceOwner.fill(-1);
   // Compute terrain-adjusted management weight once for performance.
-  const effectiveCellWeightById = new Float32Array(cells.length);
+  const cellsWeight = new Float32Array(cells.length);
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
-    effectiveCellWeightById[cellId] = provinceEffectiveSizeFactor(cells[cellId].terrain);
+    cellsWeight[cellId] = TERRAIN_CONFIG[cells[cellId].terrain].sizeFactor;
   }
   let nextProvinceId = 0;
   const nationIds = Array.from(new Set(owner)).filter((nationId) => nationId >= 0);
@@ -487,46 +470,33 @@ export function buildNationProvinces(cells: TCell[], owner: Int32Array, seed: st
     if (nationCells.length === 0) continue;
     const nationCellIds = nationCells.map((cell) => cell.id);
     const nationPopulation = nationCells.reduce((sum, cell) => sum + cell.population, 0);
-    const totalEffectiveNationSize = computeEffectiveSize(nationCellIds, effectiveCellWeightById);
-    const forceSmallNationSplit = shouldForceSmallNationSplit(
-      nationPopulation,
-      nationCells.length,
-      totalEffectiveNationSize
-    );
-    const ignorePopulationConstraints = shouldIgnorePopulationConstraints(
-      nationPopulation,
-      nationCells.length,
-      totalEffectiveNationSize
-    );
+    const nationSize = computeSize(nationCellIds, cellsWeight);
+    const smallNationSplit = isNationSplit(nationPopulation, nationCells.length, nationSize);
+    const isIgnore = isIgnorePopulationRules(nationPopulation, nationCells.length, nationSize);
     if (
-      (nationCells.length < 10 || totalEffectiveNationSize < 10.5 || nationPopulation < 1200) &&
-      !forceSmallNationSplit
+      (nationCells.length < 10 || nationSize < 10.5 || nationPopulation < 1200) &&
+      !smallNationSplit
     ) {
       for (const cell of nationCells) provinceOwner[cell.id] = nextProvinceId;
       nextProvinceId += 1;
       continue;
     }
 
-    const { minProvinceEffectiveSize, requiredMinimumProvinceCount, maxProvinceCount } =
+    const { minProvinceSize, requiredMinimumProvinceCount, maxProvinceCount } =
       getProvincePlanningMetrics(
         nationPopulation,
         nationCells.length,
-        totalEffectiveNationSize,
-        forceSmallNationSplit,
-        ignorePopulationConstraints
+        nationSize,
+        smallNationSplit,
+        isIgnore
       );
     const initialTarget = Math.max(
       requiredMinimumProvinceCount,
-      getProvinceTargetCount(
-        nationCells,
-        minProvinceEffectiveSize,
-        totalEffectiveNationSize,
-        maxProvinceCount
-      )
+      getProvinceTargetCount(nationCells, minProvinceSize, nationSize, maxProvinceCount)
     );
     const basePopulationBounds = getPopulationBounds(nationPopulation, initialTarget);
 
-    const scored = sortStableDescByScore(
+    const scored = sortStableDesc(
       nationCells.map((cell) => ({ cellId: cell.id, score: getProvinceSeedScore(cell) }))
     );
     if (scored.length === 0) continue;
@@ -541,7 +511,7 @@ export function buildNationProvinces(cells: TCell[], owner: Int32Array, seed: st
           : PROVINCE_TUNING.seedDistance.other;
       const minDistanceSquared = requiredDistance * requiredDistance;
       const tooClose = seeds.some(
-        (seedCellId) => getDistanceSquared(candidate, cells[seedCellId]) < minDistanceSquared
+        (seedCellId) => getSquaredDistance(candidate, cells[seedCellId]) < minDistanceSquared
       );
       if (tooClose) continue;
       seeds.push(entry.cellId);
@@ -603,21 +573,18 @@ export function buildNationProvinces(cells: TCell[], owner: Int32Array, seed: st
         for (const [provinceId, provinceCells] of prioritizedByPopulation) {
           const provincePopulation = provincePopulationById.get(provinceId) || 0;
           const cellCapByDensity = getCellCapByDensity(provincePopulation, provinceCells.length);
-          const effectiveProvinceSize = computeEffectiveSize(
-            provinceCells,
-            effectiveCellWeightById
-          );
+          const effectiveProvinceSize = computeSize(provinceCells, cellsWeight);
           const maxProvincePopulationShare = getMaxProvincePopulationShare(nationPopulation);
           const provincePopulationShare = provincePopulation / Math.max(1, nationPopulation);
           const exceedsHardPopulationCap = provincePopulation > dynamicPopulationBounds.max;
           const canUseMetropolisException =
             !metropolisExceptionUsed &&
-            isMetropolisException(
+            isMetropolis(
               provinceCells,
               provincePopulation,
               dynamicPopulationBounds.max,
-              minProvinceEffectiveSize,
-              effectiveCellWeightById
+              minProvinceSize,
+              cellsWeight
             );
           if (canUseMetropolisException) {
             metropolisExceptionUsed = true;
@@ -630,8 +597,7 @@ export function buildNationProvinces(cells: TCell[], owner: Int32Array, seed: st
               provincePopulation > basePopulationBounds.target * 1.05);
           const shouldSplitByDensityArea = provinceCells.length > cellCapByDensity;
           const shouldSplitByArea =
-            effectiveProvinceSize >
-            minProvinceEffectiveSize * PROVINCE_TUNING.split.maxProvinceAreaFactor;
+            effectiveProvinceSize > minProvinceSize * PROVINCE_TUNING.split.maxProvinceAreaFactor;
           if (!shouldSplitByPopulation && !shouldSplitByArea && !shouldSplitByDensityArea) continue;
 
           const seedCellId = seeds[provinceId - nationStartProvinceId];
@@ -654,7 +620,7 @@ export function buildNationProvinces(cells: TCell[], owner: Int32Array, seed: st
           const tooClose = seeds.some((existingSeedId) => {
             if (existingSeedId === seedCellId) return false;
             return (
-              getDistanceSquared(cells[existingSeedId], cells[farthestCellId]) <
+              getSquaredDistance(cells[existingSeedId], cells[farthestCellId]) <
               minSeedDistanceSquared
             );
           });
@@ -672,16 +638,13 @@ export function buildNationProvinces(cells: TCell[], owner: Int32Array, seed: st
   return provinceOwner;
 }
 
-export function enforceMinimumProvinceArea(
-  cells: TCell[],
-  owner: Int32Array,
-  provinceOwner: Int32Array
-) {
+export function minProvinceArea(params: TCellOwnerParams) {
+  const { cells, owner, provinceOwner } = params;
   const nationIds = Array.from(new Set(owner)).filter((nationId) => nationId >= 0);
   // Compute terrain-adjusted management weight once for performance.
-  const effectiveCellWeightById = new Float32Array(cells.length);
+  const cellsWeight = new Float32Array(cells.length);
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
-    effectiveCellWeightById[cellId] = provinceEffectiveSizeFactor(cells[cellId].terrain);
+    cellsWeight[cellId] = TERRAIN_CONFIG[cells[cellId].terrain].sizeFactor;
   }
   const nextProvinceIdRef = { value: Math.max(0, ...Array.from(provinceOwner)) + 1 };
 
@@ -694,38 +657,26 @@ export function enforceMinimumProvinceArea(
       (sum, cellId) => sum + cells[cellId].population,
       0
     );
-    const totalEffectiveNationSize = computeEffectiveSize(nationCellIds, effectiveCellWeightById);
-    const forceSmallNationSplit = shouldForceSmallNationSplit(
-      nationPopulation,
-      nationCellIds.length,
-      totalEffectiveNationSize
-    );
-    const ignorePopulationConstraints = shouldIgnorePopulationConstraints(
-      nationPopulation,
-      nationCellIds.length,
-      totalEffectiveNationSize
-    );
+    const nationSize = computeSize(nationCellIds, cellsWeight);
+    const smallNationSplit = isNationSplit(nationPopulation, nationCellIds.length, nationSize);
+    const isIgnore = isIgnorePopulationRules(nationPopulation, nationCellIds.length, nationSize);
     if (
-      (nationCellIds.length < 10 || totalEffectiveNationSize < 10.5 || nationPopulation < 1200) &&
-      !forceSmallNationSplit
+      (nationCellIds.length < 10 || nationSize < 10.5 || nationPopulation < 1200) &&
+      !smallNationSplit
     ) {
       const provinceId = provinceOwner[nationCellIds[0] as number];
       for (const cellId of nationCellIds) provinceOwner[cellId] = provinceId;
       continue;
     }
 
-    const {
-      minProvinceEffectiveSize,
-      baselineTarget,
-      minProvincePopulation,
-      requiredMinimumProvinceCount,
-    } = getProvincePlanningMetrics(
-      nationPopulation,
-      nationCellIds.length,
-      totalEffectiveNationSize,
-      forceSmallNationSplit,
-      ignorePopulationConstraints
-    );
+    const { minProvinceSize, baselineTarget, minProvincePopulation, requiredMinimumProvinceCount } =
+      getProvincePlanningMetrics(
+        nationPopulation,
+        nationCellIds.length,
+        nationSize,
+        smallNationSplit,
+        isIgnore
+      );
     const populationBounds = getPopulationBounds(nationPopulation, Math.max(1, baselineTarget));
     const assignedProvinceIds = Array.from(
       new Set(nationCellIds.map((cellId) => provinceOwner[cellId]).filter((id) => id >= 0))
@@ -745,25 +696,22 @@ export function enforceMinimumProvinceArea(
       nationCellIds.reduce((sum, cellId) => sum + cells[cellId].economy, 0) /
       Math.max(1, nationCellIds.length);
 
-    const mandatoryMinProvincePopulation = getAbsoluteMinimumProvincePopulation(nationPopulation);
-    const enforceMandatoryPopulationFloor = !ignorePopulationConstraints;
+    const mandatoryMinProvincePopulation = getAbsoluteMinProvincePopulation(nationPopulation);
+    const enforceMandatoryPopulationFloor = !isIgnore;
     const smallProvinceIds = Array.from(provinceSize.keys()).filter((provinceId) => {
       const population = provincePopulation.get(provinceId) || 0;
       const provinceCellIds = nationCellIds.filter(
         (cellId) => provinceOwner[cellId] === provinceId
       );
-      const effectiveProvinceSize = computeEffectiveSize(provinceCellIds, effectiveCellWeightById);
-      const averageTerrainFactor = getAverageTerrainFactor(
-        provinceCellIds,
-        effectiveCellWeightById
-      );
+      const effectiveProvinceSize = computeSize(provinceCellIds, cellsWeight);
+      const averageTerrainFactor = getAverageTerrainFactor(provinceCellIds, cellsWeight);
       const terrainAdjustedPopulationMin =
         averageTerrainFactor >= 1.45
           ? Math.floor(
               minProvincePopulation * PROVINCE_TUNING.thresholds.geography.terrainAdjustedMinFactor
             )
           : minProvincePopulation;
-      const tooSmallByArea = effectiveProvinceSize < minProvinceEffectiveSize;
+      const tooSmallByArea = effectiveProvinceSize < minProvinceSize;
       const tooSmallByPopulation =
         terrainAdjustedPopulationMin > 0 && population < terrainAdjustedPopulationMin;
       const tooSmallByMandatoryPopulation =
@@ -782,9 +730,8 @@ export function enforceMinimumProvinceArea(
       if (isSpecialEconomyProvince) return false;
       const isGeographicallyLargeSparseProvince =
         effectiveProvinceSize >=
-        minProvinceEffectiveSize * PROVINCE_TUNING.thresholds.geography.largeSparseFactor;
+        minProvinceSize * PROVINCE_TUNING.thresholds.geography.largeSparseFactor;
       if (isGeographicallyLargeSparseProvince && tooSmallByPopulation) return false;
-      // Trade-off: accept around +/-30% population variance to preserve terrain-shaped provinces.
       return (
         isUnderpopulatedHardFloor ||
         (tooSmallByArea && tooSmallByPopulation) ||
@@ -981,11 +928,8 @@ export function enforceMinimumProvinceArea(
   }
 }
 
-export function enforceHardProvincePopulationFloor(
-  cells: TCell[],
-  owner: Int32Array,
-  provinceOwner: Int32Array
-) {
+export function limitProvincePopulation(params: TCellOwnerParams) {
+  const { cells, owner, provinceOwner } = params;
   const nationIds = Array.from(new Set(owner)).filter((nationId) => nationId >= 0);
 
   for (const nationId of nationIds) {
@@ -1056,11 +1000,8 @@ export function enforceHardProvincePopulationFloor(
   }
 }
 
-export function enforceProvinceContiguity(
-  cells: TCell[],
-  owner: Int32Array,
-  provinceOwner: Int32Array
-) {
+export function enforceProvinceConnect(params: TCellOwnerParams) {
+  const { cells, owner, provinceOwner } = params;
   const provinceIds = Array.from(new Set(provinceOwner)).filter((provinceId) => provinceId >= 0);
   const stack: number[] = [];
   for (const provinceId of provinceIds) {

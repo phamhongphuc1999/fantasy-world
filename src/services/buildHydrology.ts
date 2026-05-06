@@ -6,17 +6,12 @@ import {
   getSuitability,
   getTerrain,
 } from 'src/services/hydrology/climateTerrain';
-import { sortIndicesByElevation } from 'src/services/hydrology/hydrologyUtils';
 import {
   classifyEnclosedWaterBodies,
   expandLakes,
   filterAndLimitLakes,
 } from 'src/services/hydrology/lakes';
-import {
-  addInlandPlainTributaries,
-  extendRiversTowardHighlands,
-  validateRivers,
-} from 'src/services/hydrology/rivers';
+import { runRiverGeneration } from 'src/services/hydrology/riverGeneration';
 import {
   antiAliasTerrains,
   clusterLandTerrains,
@@ -24,12 +19,13 @@ import {
   rebalanceTerrain,
   toTerrainBalance,
 } from 'src/services/hydrology/terrain';
-import { THydrology, TMeshWithDelaunay, TTerrain, TTerrainRatioMap } from 'src/types/map.types';
+import { TCell, TDelaunayMesh, THydrology, TTerrain, TTerrainRatioMap } from 'src/types/map.types';
 import { clamp, getAvgNeighbor } from '.';
 
 interface TBuildHydrologyOptions {
-  mesh: TMeshWithDelaunay;
+  mesh: TDelaunayMesh;
   seaLevel: number;
+  seed: string;
   terrainRatios?: TTerrainRatioMap;
 }
 
@@ -39,6 +35,12 @@ function nowMs() {
     return globalThis.performance.now();
   }
   return Date.now();
+}
+
+function sortIndicesByElevation(elevations: Float32Array) {
+  const indices = Array.from({ length: elevations.length }, (_, index) => index);
+  indices.sort((left, right) => elevations[right] - elevations[left]);
+  return indices;
 }
 
 function createEmptyHydrologyProfile(): THydrology {
@@ -56,9 +58,9 @@ function createEmptyHydrologyProfile(): THydrology {
 }
 
 function runHydrologyInternal(
-  { mesh, seaLevel, terrainRatios }: TBuildHydrologyOptions,
+  { mesh, seaLevel, seed, terrainRatios }: TBuildHydrologyOptions,
   onProfile?: (profile: THydrology) => void
-): TMeshWithDelaunay {
+): TDelaunayMesh {
   const profile = createEmptyHydrologyProfile();
   const totalStart = nowMs();
 
@@ -73,6 +75,7 @@ function runHydrologyInternal(
   const elevations = new Float32Array(cellCount);
   const adjustedElevations = new Float32Array(cellCount);
   const flow = new Float32Array(cellCount);
+  const effectiveFlow = new Float32Array(cellCount);
   const erosion = new Float32Array(cellCount);
   const deposit = new Float32Array(cellCount);
   const downstream = new Int32Array(cellCount);
@@ -86,6 +89,7 @@ function runHydrologyInternal(
       elevations[cellIndex] = mesh.cells[cellIndex].elevation;
       adjustedElevations[cellIndex] = mesh.cells[cellIndex].elevation;
       flow[cellIndex] = mesh.cells[cellIndex].isWater ? 0 : 1;
+      effectiveFlow[cellIndex] = 0;
     }
 
     for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
@@ -164,14 +168,20 @@ function runHydrologyInternal(
   });
 
   const cells = mesh.cells.map((cell, cellIndex) => {
-    const nextCell = {
+    const nextCell: TCell = {
       ...cell,
       elevation: adjustedElevations[cellIndex],
       isWater: cell.isWater || isLake[cellIndex] === 1,
       flow: flow[cellIndex],
+      effectiveFlow: effectiveFlow[cellIndex],
+      riverWidth: 0,
       downstreamId: downstream[cellIndex] >= 0 ? downstream[cellIndex] : null,
       erosion: erosion[cellIndex],
       isRiver: false,
+      riverId: null,
+      riverOrder: 0,
+      isRiverSource: false,
+      isRiverMouth: false,
       isLake: isLake[cellIndex] === 1,
       temperature: 0,
       precipitation: 0,
@@ -258,36 +268,41 @@ function runHydrologyInternal(
   });
 
   measure('riversMs', () => {
+    const precipitation = new Float32Array(cells.length);
     for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
-      const cell = cells[cellIndex];
-      const downstreamId = downstream[cellIndex];
-
-      if (cell.isWater) {
-        cell.isRiver = false;
-        continue;
-      }
-
-      const dryPenalty =
-        cell.precipitation < HYDROLOGY_CONFIG.dryRiverPrecipMax &&
-        cell.rainShadow > HYDROLOGY_CONFIG.dryRiverRainShadowMin
-          ? HYDROLOGY_CONFIG.dryRiverFlowPenalty
-          : 0;
-      const riverThreshold = HYDROLOGY_CONFIG.riverMinFlow + dryPenalty;
-
-      if (
-        flow[cellIndex] >= riverThreshold &&
-        (downstreamId >= 0 || downstreamId === T_COAST_OUTLET)
-      ) {
-        isRiver[cellIndex] = 1;
-        cell.isRiver = true;
-      } else {
-        cell.isRiver = false;
-      }
+      precipitation[cellIndex] = cells[cellIndex].precipitation;
     }
 
-    validateRivers(cells, flow, downstream, isRiver);
-    addInlandPlainTributaries(cells, flow, downstream);
-    extendRiversTowardHighlands(cells, flow, downstream, seaLevel);
+    const result = runRiverGeneration(cells, seaLevel, precipitation, seed);
+
+    for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+      flow[cellIndex] = result.flow[cellIndex];
+      effectiveFlow[cellIndex] = result.effectiveFlow[cellIndex];
+      downstream[cellIndex] = result.downstream[cellIndex];
+      const cell = cells[cellIndex];
+      const riverId = result.riverByCell[cellIndex];
+      cell.flow = flow[cellIndex];
+      cell.effectiveFlow = effectiveFlow[cellIndex];
+      cell.downstreamId = downstream[cellIndex] >= 0 ? downstream[cellIndex] : null;
+      cell.riverId = riverId >= 0 ? riverId : null;
+      cell.isRiver = riverId >= 0;
+      cell.riverWidth = riverId >= 0 ? result.riverWidthByCell[cellIndex] : 0;
+      isRiver[cellIndex] = riverId >= 0 ? 1 : 0;
+    }
+
+    const riverSource = new Set<number>();
+    const riverMouth = new Set<number>();
+    for (const river of result.rivers) {
+      riverSource.add(river.sourceCellId);
+      riverMouth.add(river.mouthCellId);
+    }
+    for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+      cells[cellIndex].isRiverSource = riverSource.has(cellIndex);
+      cells[cellIndex].isRiverMouth = riverMouth.has(cellIndex);
+      cells[cellIndex].riverOrder = cells[cellIndex].isRiver ? 1 : 0;
+    }
+
+    mesh.rivers = result.rivers;
   });
 
   measure('terrainPostProcessMs', () => {
@@ -311,13 +326,14 @@ function runHydrologyInternal(
 
   profile.totalMs = nowMs() - totalStart;
   onProfile?.(profile);
-  return { ...mesh, cells };
+  return { ...mesh, cells, rivers: mesh.rivers ?? [] };
 }
 
 export function buildHydrology({
   mesh,
   seaLevel,
+  seed,
   terrainRatios,
-}: TBuildHydrologyOptions): TMeshWithDelaunay {
-  return runHydrologyInternal({ mesh, seaLevel, terrainRatios });
+}: TBuildHydrologyOptions): TDelaunayMesh {
+  return runHydrologyInternal({ mesh, seaLevel, seed, terrainRatios });
 }

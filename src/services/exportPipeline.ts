@@ -1,6 +1,8 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { getNationColor } from 'src/services';
-import { TDisplaySettings, TMeshWithDelaunay } from 'src/types/map.types';
+import { getRiverStrokeWidth } from 'src/services/common';
+import { getRiverSegmentEndPoint } from 'src/services/mapCanvas.service';
+import { TDelaunayMesh, TDisplaySettings } from 'src/types/map.types';
 
 function toPolygonPath(points: [number, number][]) {
   if (points.length === 0) return '';
@@ -12,7 +14,7 @@ function toPolygonPath(points: [number, number][]) {
   return `M ${firstX.toFixed(2)} ${firstY.toFixed(2)} ${segments} Z`;
 }
 
-export function buildMapSvg(mesh: TMeshWithDelaunay, displaySettings: TDisplaySettings) {
+export function buildMapSvg(mesh: TDelaunayMesh, displaySettings: TDisplaySettings) {
   const background = `<rect width="${mesh.width}" height="${mesh.height}" fill="#09131f" />`;
   const landLayer = mesh.cells
     .map((cell) => {
@@ -35,8 +37,9 @@ export function buildMapSvg(mesh: TMeshWithDelaunay, displaySettings: TDisplaySe
         )
         .map((cell) => {
           const to = mesh.cells[cell.downstreamId as number];
-          const width = Math.min(4.4, 1.25 + Math.log2(cell.flow + 1) * 0.45);
-          return `<line x1="${cell.site[0].toFixed(2)}" y1="${cell.site[1].toFixed(2)}" x2="${to.site[0].toFixed(2)}" y2="${to.site[1].toFixed(2)}" stroke="#38bdf8" stroke-width="${width.toFixed(2)}" stroke-linecap="round" />`;
+          const end = getRiverSegmentEndPoint(cell, to);
+          const width = getRiverStrokeWidth(cell);
+          return `<line x1="${cell.site[0].toFixed(2)}" y1="${cell.site[1].toFixed(2)}" x2="${end[0].toFixed(2)}" y2="${end[1].toFixed(2)}" stroke="#00f2ff" stroke-width="${width.toFixed(2)}" stroke-linecap="round" />`;
         })
         .join('')
     : '';

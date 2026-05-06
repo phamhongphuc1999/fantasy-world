@@ -4,14 +4,14 @@ import { applyTerrainPreset } from 'src/services/applyTerrainPreset';
 import { createSeededRandom, hashSeed } from 'src/services/seededRandom';
 import {
   TLine,
-  TMeshWithDelaunay,
+  TDelaunayMesh,
   TTerrain,
   TTerrainPreset,
   TTopographyCell,
 } from 'src/types/map.types';
 
 interface TBuildTopographyOptions {
-  mesh: TMeshWithDelaunay;
+  mesh: TDelaunayMesh;
   seed: string;
   seaLevel: number;
   terrainPreset: TTerrainPreset;
@@ -258,7 +258,7 @@ export function buildTopography({
   seed,
   seaLevel,
   terrainPreset,
-}: TBuildTopographyOptions): TMeshWithDelaunay {
+}: TBuildTopographyOptions): TDelaunayMesh {
   const noise = createNoiseSampler();
   const macroHash = hashSeed(`${seed}:macro`);
   const warpHash = hashSeed(`${seed}:warp`);

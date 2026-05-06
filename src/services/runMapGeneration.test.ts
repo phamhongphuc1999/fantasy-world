@@ -1,5 +1,5 @@
 import { DEFAULT_CONFIG, MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
-import { TGenerationConfig, TMeshWithDelaunay } from 'src/types/map.types';
+import { TGenerationConfig, TDelaunayMesh } from 'src/types/map.types';
 import { describe, expect, it } from 'vitest';
 import { runMapGenerationStages } from './runMapGeneration';
 
@@ -38,7 +38,7 @@ function fnv1a64Hex(parts: readonly string[]) {
   return hash.toString(16).padStart(16, '0');
 }
 
-function toStageSignature(mesh: TMeshWithDelaunay): TStageSignature {
+function toStageSignature(mesh: TDelaunayMesh): TStageSignature {
   let landCells = 0;
   let riverCells = 0;
   let lakeCells = 0;
@@ -132,24 +132,24 @@ describe('runMapGenerationStages deterministic snapshots', () => {
         "geopolitics": {
           "cells": 2000,
           "edges": 6001,
-          "ethnicGroupCount": 16,
-          "hash": "874c10d4ef31e4db",
+          "ethnicGroupCount": 12,
+          "hash": "080365b2560cc051",
           "lakeCells": 123,
           "landCells": 727,
           "nationCount": 8,
-          "riverCells": 59,
-          "totalPopulation": 8745008,
+          "riverCells": 78,
+          "totalPopulation": 18084560,
           "vertices": 4002,
         },
         "hydrology": {
           "cells": 2000,
           "edges": 6001,
           "ethnicGroupCount": 0,
-          "hash": "e64b1e9edb4ef5de",
+          "hash": "4dee2db948b18f10",
           "lakeCells": 123,
           "landCells": 727,
           "nationCount": 0,
-          "riverCells": 59,
+          "riverCells": 78,
           "totalPopulation": 0,
           "vertices": 4002,
         },
@@ -169,12 +169,12 @@ describe('runMapGenerationStages deterministic snapshots', () => {
           "cells": 2000,
           "edges": 6001,
           "ethnicGroupCount": 0,
-          "hash": "25dcaace4e43363f",
+          "hash": "3f4a32b22105d355",
           "lakeCells": 123,
           "landCells": 727,
           "nationCount": 0,
-          "riverCells": 59,
-          "totalPopulation": 8745008,
+          "riverCells": 78,
+          "totalPopulation": 9133544,
           "vertices": 4002,
         },
         "topography": {

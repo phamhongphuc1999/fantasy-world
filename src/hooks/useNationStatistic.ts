@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react';
 import { toPercent } from 'src/services';
-import { TMeshWithDelaunay } from 'src/types/map.types';
+import { TDelaunayMesh } from 'src/types/map.types';
 
-export default function useNationStatistic(nationId: number | null, mesh: TMeshWithDelaunay) {
+export default function useNationStatistic(nationId: number | null, mesh: TDelaunayMesh) {
   const nation = useMemo(() => {
     return nationId !== null ? mesh.nations.find((item) => item.id === nationId) : undefined;
   }, [mesh.nations, nationId]);

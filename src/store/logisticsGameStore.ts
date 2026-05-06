@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { buildRoadEdgeKey, findLogisticsRoute } from 'src/services/logisticsRoute';
-import { TMeshWithDelaunay } from 'src/types/map.types';
+import { TDelaunayMesh } from 'src/types/map.types';
 
 type TLogisticsState = {
   enabled: boolean;
@@ -24,7 +24,7 @@ type TLogisticsActions = {
   setGoalCellId: (cellId: number | null) => void;
   handleMapCellClick: (cellId: number) => void;
   resetRouteSelection: () => void;
-  recalculateRoute: (mesh: TMeshWithDelaunay) => void;
+  recalculateRoute: (mesh: TDelaunayMesh) => void;
   buildRoadOnCurrentRoute: () => void;
   resetGame: () => void;
 };

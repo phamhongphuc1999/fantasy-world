@@ -11,13 +11,13 @@ import {
 } from 'src/components/ui/dialog';
 import useNationStatistic from 'src/hooks/useNationStatistic';
 import { formatPopulation, getNationColor } from 'src/services';
-import { TMeshWithDelaunay } from 'src/types/map.types';
+import { TDelaunayMesh } from 'src/types/map.types';
 
 type TProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   nationId: number | null;
-  mesh: TMeshWithDelaunay;
+  mesh: TDelaunayMesh;
 };
 
 export default function NationDetailDialog({ open, onOpenChange, nationId, mesh }: TProps) {

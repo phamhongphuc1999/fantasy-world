@@ -1,120 +1,72 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
-import { TFifoQueue } from 'src/services/core/queue';
+import { buildMultiSourceDistanceMap } from 'src/services/core/graph';
 import { createSeededRandom } from 'src/services/seededRandom';
-import { TMeshWithDelaunay } from 'src/types/map.types';
+import { isWaterOrRiverCell } from 'src/services/terrainRules';
+import { TCell, TDelaunayMesh } from 'src/types/map.types';
 import { clamp } from '.';
 
 interface TBuildPopulationOptions {
-  mesh: TMeshWithDelaunay;
+  mesh: TDelaunayMesh;
   seed: string;
 }
 
-function populationMultiplier(
-  cell: TMeshWithDelaunay['cells'][number],
-  cells: TMeshWithDelaunay['cells']
-) {
+function populationMultiplier(cell: TCell, cells: TCell[]) {
   const isNearWater = cell.neighbors.some((neighborId) => {
     const n = cells[neighborId];
-    return n?.terrain === 'lake' || n?.terrain === 'shallow-water' || n?.terrain === 'inland-sea';
+    return (
+      n?.terrain === 'lake' ||
+      n?.terrain === 'shallow-water' ||
+      n?.terrain === 'inland-sea' ||
+      n?.isRiver
+    );
   });
 
+  const riverBonus = cell.isRiver ? 3 : 0;
+  const waterProximityBonus = isNearWater ? 2 : 0;
+
   switch (cell.terrain) {
     case 'valley':
-      return isNearWater ? 20 : 12;
+      return 10 + riverBonus + waterProximityBonus;
     case 'plains':
-      return isNearWater ? 15 : 8;
+      return 6 + riverBonus + waterProximityBonus;
     case 'coast':
-      return 14;
+      return 9 + riverBonus;
     case 'lake':
-      return 10;
+      return 7;
     case 'forest':
-      return isNearWater ? 7 : 4;
-    case 'hills':
-      return isNearWater ? 6 : 3;
+      return 4 + (isNearWater ? 2 : 0);
     case 'plateau':
+      return 4 + riverBonus;
+    case 'hills':
+      return 3 + (isNearWater ? 1 : 0);
+    case 'volcanic':
       return 5;
-    case 'volcanic':
-      return 4;
     case 'tundra':
-      return 0.8;
-    case 'swamp':
-      return 0.5;
-    case 'desert':
-      return isNearWater ? 3 : 0.2;
-    case 'badlands':
-      return 0.1;
-    case 'mountains':
-      return 0.1;
-    case 'inland-sea':
-    case 'shallow-water':
-    case 'deep-water':
-      return 0;
-
-    default:
-      return 0.1;
-  }
-}
-
-function economyTerrainMultiplier(cell: TMeshWithDelaunay['cells'][number]) {
-  switch (cell.terrain) {
-    case 'valley':
-      return 1.22;
-    case 'plains':
       return 1.2;
-    case 'coast':
-      return 1.3;
-    case 'forest':
-      return 1.04;
-    case 'hills':
-      return 0.94;
-    case 'plateau':
-      return 0.9;
-    case 'volcanic':
-      return 0.76;
-    case 'tundra':
-      return 0.6;
     case 'swamp':
-      return 0.62;
+      return 0.8;
     case 'desert':
-      return 0.54;
+      return cell.isRiver ? 4 : 0.4;
     case 'badlands':
-      return 0.48;
     case 'mountains':
-      return 0.46;
-    case 'lake':
-      return 1.06;
-    case 'deep-water':
-    case 'shallow-water':
+      return 0.5;
     case 'inland-sea':
+    case 'shallow-water':
+      return 0.2;
+    case 'deep-water':
       return 0;
     default:
-      return 0.7;
+      return 0.5;
   }
 }
 
-function buildWaterAccessibility(cells: TMeshWithDelaunay['cells']) {
-  const distances = new Int32Array(cells.length);
-  distances.fill(-1);
-  const queue = new TFifoQueue<number>();
-
-  for (let cellId = 0; cellId < cells.length; cellId += 1) {
-    const terrain = cells[cellId].terrain;
-    const isMarineWater =
-      terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea';
-    if (!isMarineWater) continue;
-    distances[cellId] = 0;
-    queue.enqueue(cellId);
-  }
-
-  while (queue.size > 0) {
-    const currentId = queue.dequeue() as number;
-    const nextDistance = distances[currentId] + 1;
-    for (const neighborId of cells[currentId].neighbors) {
-      if (distances[neighborId] >= 0) continue;
-      distances[neighborId] = nextDistance;
-      queue.enqueue(neighborId);
-    }
-  }
+function buildWaterAccessibility(cells: TCell[]) {
+  const distances = buildMultiSourceDistanceMap(cells, {
+    isSeed: (cellId) => {
+      const terrain = cells[cellId].terrain;
+      return terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea';
+    },
+  });
 
   const accessibility = new Float64Array(cells.length);
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
@@ -128,7 +80,7 @@ function buildWaterAccessibility(cells: TMeshWithDelaunay['cells']) {
   return accessibility;
 }
 
-export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMeshWithDelaunay {
+export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelaunayMesh {
   const cells = mesh.cells;
   const random = createSeededRandom(`${seed}:population`);
   const score = new Float64Array(cells.length);
@@ -145,7 +97,6 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMeshW
     landCellCount += 1;
 
     let value = terrainConfig.baseWeight;
-    if (cell.terrain === 'coast') value += 0.3;
     if (cell.isRiver) value += 0.24;
     if (cell.isLake) value += 0.2;
 
@@ -249,18 +200,18 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMeshW
       };
     const density = clamp(score[cell.id] / normalizedMax, 0, 1);
     const shaped = Math.pow(density, 1.08);
-    const basePopulation = Math.round(shaped * 5000);
+    const basePopulation = Math.round(shaped * 2500);
     const population = Math.round(
       basePopulation * populationMultiplier(cell, cells) * waterAccessibility[cell.id]
     );
 
-    const terrainFactor = economyTerrainMultiplier(cell);
+    const terrainFactor = TERRAIN_CONFIG[cell.terrain].economyFactor;
     const riverWaterBonus = cell.isRiver ? 0.08 : 0;
     const lakeWaterBonus = cell.isLake ? 0.06 : 0;
     const coastWaterBonus = cell.terrain === 'coast' ? 0.09 : 0;
     const nearWaterNeighborBonus = cell.neighbors.some((neighborId) => {
       const neighbor = cells[neighborId];
-      return neighbor.isWater || neighbor.isRiver || neighbor.isLake;
+      return isWaterOrRiverCell(neighbor);
     })
       ? 0.16
       : 0;

@@ -1,4 +1,5 @@
 import { TCell } from 'src/types/map.types';
+import { TFifoQueue } from './queue';
 
 export function collectConnectedComponents(
   cells: TCell[],
@@ -66,4 +67,40 @@ export function floodFromSeeds(
     }
   }
   return visited;
+}
+
+type TBuildMultiSourceDistanceMapOptions = {
+  isSeed: (cellId: number) => boolean;
+  canTraverse?: (currentId: number, neighborId: number) => boolean;
+  canVisit?: (neighborId: number) => boolean;
+};
+
+export function buildMultiSourceDistanceMap(
+  cells: Pick<TCell, 'neighbors'>[],
+  options: TBuildMultiSourceDistanceMapOptions
+) {
+  const distances = new Int32Array(cells.length);
+  distances.fill(-1);
+  const queue = new TFifoQueue<number>();
+
+  for (let cellId = 0; cellId < cells.length; cellId += 1) {
+    if (!options.isSeed(cellId)) continue;
+    distances[cellId] = 0;
+    queue.enqueue(cellId);
+  }
+
+  while (queue.size > 0) {
+    const currentId = queue.dequeue() as number;
+    const nextDistance = distances[currentId] + 1;
+    const current = cells[currentId];
+    for (const neighborId of current.neighbors) {
+      if (distances[neighborId] >= 0) continue;
+      if (options.canVisit && !options.canVisit(neighborId)) continue;
+      if (options.canTraverse && !options.canTraverse(currentId, neighborId)) continue;
+      distances[neighborId] = nextDistance;
+      queue.enqueue(neighborId);
+    }
+  }
+
+  return distances;
 }

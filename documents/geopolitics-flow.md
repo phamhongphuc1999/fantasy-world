@@ -22,12 +22,12 @@ The main flow is implemented in `src/services/map/buildGeopolitics/index.ts`:
 
 In `postProcessProvinces(...)`, the current order is:
 
-1. `limitMountainClusterSplit(...)`
-2. `enforceProvinceContiguity(...)`
-3. `enforceMinimumProvinceArea(...)`
-4. `enforceProvinceContiguity(...)`
-5. `enforceMinimumProvinceArea(...)`
-6. `enforceHardProvincePopulationFloor(...)`
+1. `limitMountainSplit(...)`
+2. `enforceProvinceConnect(...)`
+3. `minProvinceArea(...)`
+4. `enforceProvinceConnect(...)`
+5. `minProvinceArea(...)`
+6. `limitProvincePopulation(...)`
 
 Meaning:
 

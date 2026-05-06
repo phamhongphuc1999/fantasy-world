@@ -25,7 +25,7 @@ export const NATION_COLORS = [
   '#aaffc3',
   '#808000',
   '#ffd8b1',
-  '#000075',
+  '#4D4DC1',
   '#808080',
   '#ffffff',
   '#ffd700',
@@ -356,6 +356,29 @@ export const HYDROLOGY_CONFIG = {
     plateau: 7,
   },
   antiAlias: { isolatedMax: 1, dominantMin: 3, passes: 2 },
+};
+
+export const RIVER_GEN_CONFIG = {
+  minFluxToFormRiver: 30,
+  landWaterThreshold: 0.2,
+  cellsNumberModifierExp: 0.25,
+  depression: {
+    maxIterations: 200,
+    epsilon: 0.0001,
+    coastLift: 0.0015,
+  },
+  width: {
+    fluxFactor: 500,
+    maxFluxWidth: 1,
+    lengthFactor: 200,
+    minWidth: 0.8,
+    maxWidth: 4.8,
+  },
+  meander: {
+    base: 0.5,
+    minSegmentLength: 16,
+  },
+  minRiverCells: 6,
 };
 
 export const BORDER_CONFIG: Record<TBorderType, TBorderConfig> = {

@@ -11,14 +11,16 @@ export type TTerrainConfig = {
   isHydrologyWater: boolean;
   isMarineWater: boolean;
   isRenderWater: boolean;
-  provinceEffectiveSizeFactor: number;
+  sizeFactor: number;
   logisticsMoveCost: number;
   logisticsRisk: number;
   baseSuitability: number | null;
   clusterMin?: number;
   baseWeight: number;
   cityFactor: number;
+  economyFactor: number;
   flatness: number;
+  safetyScore: number;
 };
 
 export interface TVertex {
@@ -50,11 +52,11 @@ export type TSoilTerrain =
 
 export type TTerrain = TSoilTerrain | 'lake' | 'deep-water' | 'shallow-water' | 'inland-sea';
 
-type TTerrainModifierNum = Record<TTerrain, number>;
+export type TNumRecordTerrain = Record<TTerrain, number>;
 
 export type TBorderType = 'country' | 'province';
 export type TBorderConfig = {
-  cost: TTerrainModifierNum;
+  cost: TNumRecordTerrain;
   penalty: { riverCross: number; lakeCross: number; ridgeCross: number; shorelineEdgeBias: number };
   fragmentation: {
     maxMountainOwnersPerCluster: number;
@@ -74,6 +76,27 @@ export interface TTopographyCell {
 
 // Hydrology & Climate
 export type TZoneType = 'land' | 'internal-waters' | 'territorial-waters' | 'international-waters';
+export type TRiverEndType = 'sea' | 'offscreen' | 'lake' | 'inland-sink';
+export type TRiverKind = 'river' | 'creek' | 'branch' | 'fork';
+
+export type TRiver = {
+  id: number;
+  sourceCellId: number;
+  mouthCellId: number;
+  endType: TRiverEndType;
+  parentRiverId: number | null;
+  tributaryRiverIds: number[];
+  basinId: number;
+  kind: TRiverKind;
+  name: string;
+  length: number;
+  mouthWidth: number;
+  peakFlow: number;
+  cells: number[];
+  polyline: Array<[number, number]>;
+  pointOffsets: number[];
+  polygon: Array<[number, number]>;
+};
 
 // Geopolitics: Nation / Ethnic / Province flags on cells
 export interface TNation {
@@ -81,8 +104,8 @@ export interface TNation {
   name: string;
   populationMultiplier: number;
   economyMultiplier: number;
-  terrainPopulationModifiers: TTerrainModifierNum;
-  terrainEconomyModifiers: TTerrainModifierNum;
+  terrainPopulationModifiers: TNumRecordTerrain;
+  terrainEconomyModifiers: TNumRecordTerrain;
   capitalCellId: number | null;
   capital_coords: TPoint | null;
   economicHubCellIds: number[];
@@ -106,9 +129,15 @@ export interface TCell {
   isWater: boolean;
   terrain: TTerrain;
   flow: number;
+  effectiveFlow: number;
+  riverWidth: number;
   downstreamId: number | null;
   erosion: number;
   isRiver: boolean;
+  riverId: number | null;
+  riverOrder: number;
+  isRiverSource: boolean;
+  isRiverMouth: boolean;
   isLake: boolean;
   biome: string;
   suitability: number;
@@ -135,9 +164,10 @@ export interface TMesh {
   vertices: TVertex[];
   nations: TNation[];
   ethnicGroups: TEthnic[];
+  rivers: TRiver[];
 }
 
-export type TMeshWithDelaunay = TMesh & {
+export type TDelaunayMesh = TMesh & {
   delaunay: Delaunay<TPoint>;
 };
 
@@ -189,11 +219,11 @@ export interface TGenerationConfig {
 }
 
 export interface TGenerationStages {
-  mesh: TMeshWithDelaunay;
-  topography: TMeshWithDelaunay;
-  hydrology: TMeshWithDelaunay;
-  population: TMeshWithDelaunay;
-  geopolitics: TMeshWithDelaunay;
+  mesh: TDelaunayMesh;
+  topography: TDelaunayMesh;
+  hydrology: TDelaunayMesh;
+  population: TDelaunayMesh;
+  geopolitics: TDelaunayMesh;
 }
 
 // Hydrology Profiling
@@ -241,3 +271,9 @@ export interface TExportSnapshot {
   displaySettings: TDisplaySettings;
   mesh: TMesh;
 }
+
+export type TCellOwnerParams = {
+  cells: TCell[];
+  owner: Int32Array;
+  provinceOwner: Int32Array;
+};

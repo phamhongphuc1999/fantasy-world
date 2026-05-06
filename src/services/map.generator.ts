@@ -1,4 +1,4 @@
-import { TGenerationConfig, TGenerationStages, TMeshWithDelaunay } from 'src/types/map.types';
+import { TGenerationConfig, TGenerationStages, TDelaunayMesh } from 'src/types/map.types';
 import { buildGeopolitics } from './buildGeopolitics';
 import { buildHydrology } from './buildHydrology';
 import { buildMesh } from './buildMesh';
@@ -21,7 +21,7 @@ export class MapGenerator {
     });
   }
 
-  private buildTopography(mesh: TMeshWithDelaunay) {
+  private buildTopography(mesh: TDelaunayMesh) {
     return buildTopography({
       mesh,
       seed: this.config.seed,
@@ -30,22 +30,23 @@ export class MapGenerator {
     });
   }
 
-  private buildHydrology(mesh: TMeshWithDelaunay) {
+  private buildHydrology(mesh: TDelaunayMesh) {
     return buildHydrology({
       mesh,
       seaLevel: this.config.seaLevel,
+      seed: this.config.seed,
       terrainRatios: this.config.terrainRatios,
     });
   }
 
-  private buildPopulation(mesh: TMeshWithDelaunay) {
+  private buildPopulation(mesh: TDelaunayMesh) {
     return buildPopulation({
       mesh,
       seed: this.config.seed,
     });
   }
 
-  private buildGeopolitics(mesh: TMeshWithDelaunay) {
+  private buildGeopolitics(mesh: TDelaunayMesh) {
     return buildGeopolitics({ mesh, seed: this.config.seed, nationCount: this.config.nationCount });
   }
 
