@@ -1,11 +1,8 @@
-import { TMeshWithDelaunay } from 'src/types/map.types';
+import { TCellOwnerParams } from 'src/types/map.types';
 import { isLand } from '../buildGeopolitics/geopoliticsShared';
 
-export function validateProvinceAssignments(
-  cells: TMeshWithDelaunay['cells'],
-  owner: Int32Array,
-  provinceOwner: Int32Array
-) {
+export function validateProvinceAssignments(params: TCellOwnerParams) {
+  const { cells, owner, provinceOwner } = params;
   let invalidCount = 0;
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     const cell = cells[cellId];

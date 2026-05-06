@@ -1,5 +1,5 @@
 import { DEFAULT_CONFIG, MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
-import { TGenerationConfig, TMeshWithDelaunay } from 'src/types/map.types';
+import { TGenerationConfig, TDelaunayMesh } from 'src/types/map.types';
 import { describe, expect, it } from 'vitest';
 import { runMapGenerationStages } from './runMapGeneration';
 
@@ -38,7 +38,7 @@ function fnv1a64Hex(parts: readonly string[]) {
   return hash.toString(16).padStart(16, '0');
 }
 
-function toStageSignature(mesh: TMeshWithDelaunay): TStageSignature {
+function toStageSignature(mesh: TDelaunayMesh): TStageSignature {
   let landCells = 0;
   let riverCells = 0;
   let lakeCells = 0;

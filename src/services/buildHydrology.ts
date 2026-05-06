@@ -6,7 +6,6 @@ import {
   getSuitability,
   getTerrain,
 } from 'src/services/hydrology/climateTerrain';
-import { sortIndicesByElevation } from 'src/services/hydrology/hydrologyUtils';
 import {
   classifyEnclosedWaterBodies,
   expandLakes,
@@ -24,11 +23,11 @@ import {
   rebalanceTerrain,
   toTerrainBalance,
 } from 'src/services/hydrology/terrain';
-import { THydrology, TMeshWithDelaunay, TTerrain, TTerrainRatioMap } from 'src/types/map.types';
+import { TDelaunayMesh, THydrology, TTerrain, TTerrainRatioMap } from 'src/types/map.types';
 import { clamp, getAvgNeighbor } from '.';
 
 interface TBuildHydrologyOptions {
-  mesh: TMeshWithDelaunay;
+  mesh: TDelaunayMesh;
   seaLevel: number;
   terrainRatios?: TTerrainRatioMap;
 }
@@ -39,6 +38,12 @@ function nowMs() {
     return globalThis.performance.now();
   }
   return Date.now();
+}
+
+function sortIndicesByElevation(elevations: Float32Array) {
+  const indices = Array.from({ length: elevations.length }, (_, index) => index);
+  indices.sort((left, right) => elevations[right] - elevations[left]);
+  return indices;
 }
 
 function createEmptyHydrologyProfile(): THydrology {
@@ -58,7 +63,7 @@ function createEmptyHydrologyProfile(): THydrology {
 function runHydrologyInternal(
   { mesh, seaLevel, terrainRatios }: TBuildHydrologyOptions,
   onProfile?: (profile: THydrology) => void
-): TMeshWithDelaunay {
+): TDelaunayMesh {
   const profile = createEmptyHydrologyProfile();
   const totalStart = nowMs();
 
@@ -318,6 +323,6 @@ export function buildHydrology({
   mesh,
   seaLevel,
   terrainRatios,
-}: TBuildHydrologyOptions): TMeshWithDelaunay {
+}: TBuildHydrologyOptions): TDelaunayMesh {
   return runHydrologyInternal({ mesh, seaLevel, terrainRatios });
 }

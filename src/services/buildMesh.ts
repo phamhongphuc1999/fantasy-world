@@ -1,7 +1,7 @@
 import { Delaunay } from 'd3-delaunay';
 import { clamp, toPointKey } from 'src/services';
 import { createSeededRandom } from 'src/services/seededRandom';
-import { TCell, TEdge, TMeshWithDelaunay, TVertex, TPoint } from 'src/types/map.types';
+import { TCell, TEdge, TDelaunayMesh, TVertex, TPoint } from 'src/types/map.types';
 
 interface TBuildMeshOptions {
   width: number;
@@ -54,12 +54,7 @@ function createEdgeKey(vertexAId: number, vertexBId: number) {
   return vertexAId < vertexBId ? `${vertexAId}:${vertexBId}` : `${vertexBId}:${vertexAId}`;
 }
 
-export function buildMesh({
-  width,
-  height,
-  seed,
-  cellCount,
-}: TBuildMeshOptions): TMeshWithDelaunay {
+export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions): TDelaunayMesh {
   const points = generateJitteredGridPoints(width, height, cellCount, seed);
   const delaunay = Delaunay.from(points);
   const voronoi = delaunay.voronoi([0, 0, width, height]);

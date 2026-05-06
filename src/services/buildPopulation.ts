@@ -1,18 +1,15 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { TFifoQueue } from 'src/services/core/queue';
 import { createSeededRandom } from 'src/services/seededRandom';
-import { TMeshWithDelaunay } from 'src/types/map.types';
+import { TCell, TDelaunayMesh } from 'src/types/map.types';
 import { clamp } from '.';
 
 interface TBuildPopulationOptions {
-  mesh: TMeshWithDelaunay;
+  mesh: TDelaunayMesh;
   seed: string;
 }
 
-function populationMultiplier(
-  cell: TMeshWithDelaunay['cells'][number],
-  cells: TMeshWithDelaunay['cells']
-) {
+function populationMultiplier(cell: TCell, cells: TCell[]) {
   const isNearWater = cell.neighbors.some((neighborId) => {
     const n = cells[neighborId];
     return n?.terrain === 'lake' || n?.terrain === 'shallow-water' || n?.terrain === 'inland-sea';
@@ -55,7 +52,7 @@ function populationMultiplier(
   }
 }
 
-function economyTerrainMultiplier(cell: TMeshWithDelaunay['cells'][number]) {
+function economyTerrainMultiplier(cell: TCell) {
   switch (cell.terrain) {
     case 'valley':
       return 1.22;
@@ -92,7 +89,7 @@ function economyTerrainMultiplier(cell: TMeshWithDelaunay['cells'][number]) {
   }
 }
 
-function buildWaterAccessibility(cells: TMeshWithDelaunay['cells']) {
+function buildWaterAccessibility(cells: TCell[]) {
   const distances = new Int32Array(cells.length);
   distances.fill(-1);
   const queue = new TFifoQueue<number>();
@@ -128,7 +125,7 @@ function buildWaterAccessibility(cells: TMeshWithDelaunay['cells']) {
   return accessibility;
 }
 
-export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TMeshWithDelaunay {
+export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelaunayMesh {
   const cells = mesh.cells;
   const random = createSeededRandom(`${seed}:population`);
   const score = new Float64Array(cells.length);

@@ -285,7 +285,7 @@ function collectTerrainClusters(cells: TCell[], terrain: TTerrain) {
   );
 }
 
-export function limitMountainClusterSplit(
+export function limitMountainSplit(
   cells: TCell[],
   owner: Int32Array,
   borderType: TBorderType,

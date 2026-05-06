@@ -50,11 +50,11 @@ export type TSoilTerrain =
 
 export type TTerrain = TSoilTerrain | 'lake' | 'deep-water' | 'shallow-water' | 'inland-sea';
 
-type TTerrainModifierNum = Record<TTerrain, number>;
+export type TNumRecordTerrain = Record<TTerrain, number>;
 
 export type TBorderType = 'country' | 'province';
 export type TBorderConfig = {
-  cost: TTerrainModifierNum;
+  cost: TNumRecordTerrain;
   penalty: { riverCross: number; lakeCross: number; ridgeCross: number; shorelineEdgeBias: number };
   fragmentation: {
     maxMountainOwnersPerCluster: number;
@@ -81,8 +81,8 @@ export interface TNation {
   name: string;
   populationMultiplier: number;
   economyMultiplier: number;
-  terrainPopulationModifiers: TTerrainModifierNum;
-  terrainEconomyModifiers: TTerrainModifierNum;
+  terrainPopulationModifiers: TNumRecordTerrain;
+  terrainEconomyModifiers: TNumRecordTerrain;
   capitalCellId: number | null;
   capital_coords: TPoint | null;
   economicHubCellIds: number[];
@@ -137,7 +137,7 @@ export interface TMesh {
   ethnicGroups: TEthnic[];
 }
 
-export type TMeshWithDelaunay = TMesh & {
+export type TDelaunayMesh = TMesh & {
   delaunay: Delaunay<TPoint>;
 };
 
@@ -189,11 +189,11 @@ export interface TGenerationConfig {
 }
 
 export interface TGenerationStages {
-  mesh: TMeshWithDelaunay;
-  topography: TMeshWithDelaunay;
-  hydrology: TMeshWithDelaunay;
-  population: TMeshWithDelaunay;
-  geopolitics: TMeshWithDelaunay;
+  mesh: TDelaunayMesh;
+  topography: TDelaunayMesh;
+  hydrology: TDelaunayMesh;
+  population: TDelaunayMesh;
+  geopolitics: TDelaunayMesh;
 }
 
 // Hydrology Profiling
@@ -241,3 +241,9 @@ export interface TExportSnapshot {
   displaySettings: TDisplaySettings;
   mesh: TMesh;
 }
+
+export type TCellOwnerParams = {
+  cells: TCell[];
+  owner: Int32Array;
+  provinceOwner: Int32Array;
+};

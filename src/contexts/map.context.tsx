@@ -14,10 +14,10 @@ import {
 import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
 import { MapGenerator } from 'src/services/map.generator';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TExportSnapshot, TMeshWithDelaunay } from 'src/types/map.types';
+import { TDelaunayMesh, TExportSnapshot } from 'src/types/map.types';
 
 interface TMapContextType {
-  mesh: TMeshWithDelaunay;
+  mesh: TDelaunayMesh;
   isGenerating: boolean;
   importFromSnapshot: (snapshot: TExportSnapshot) => { ok: true } | { ok: false; error: string };
   handlePointerMove: (x: number, y: number) => void;
@@ -60,7 +60,7 @@ export default function MapProvider({ children }: TProps) {
     setHoverIndex,
   } = useMapExplorerStore();
 
-  const [mesh, setMesh] = useState<TMeshWithDelaunay>(mapContextDefault.mesh);
+  const [mesh, setMesh] = useState(mapContextDefault.mesh);
   const [isGenerating, setIsGenerating] = useState(true);
 
   const importFromSnapshot = useCallback(
@@ -77,7 +77,7 @@ export default function MapProvider({ children }: TProps) {
         return { ok: false as const, error: 'Invalid mesh payload' };
       }
 
-      const nextMesh: TMeshWithDelaunay = {
+      const nextMesh: TDelaunayMesh = {
         ...snapshot.mesh,
         delaunay: Delaunay.from(snapshot.mesh.cells.map((cell) => cell.site)),
       };

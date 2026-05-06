@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react';
 import { toPercent } from 'src/services';
-import { TMeshWithDelaunay } from 'src/types/map.types';
+import { TDelaunayMesh } from 'src/types/map.types';
 
-export default function useEthnicStatistic(ethnicGroupId: number | null, mesh: TMeshWithDelaunay) {
+export default function useEthnicStatistic(ethnicGroupId: number | null, mesh: TDelaunayMesh) {
   const data = useMemo(() => {
     if (ethnicGroupId === null) return null;
     const ethnicGroup = mesh.ethnicGroups.find((group) => group.id === ethnicGroupId);

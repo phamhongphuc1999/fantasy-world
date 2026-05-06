@@ -3,7 +3,7 @@ import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
 import { sortStableDescByScore } from 'src/services/core/sort';
 import { hashSeed } from 'src/services/seededRandom';
 import { provinceEffectiveSizeFactor } from 'src/services/terrainRules';
-import { TCell } from 'src/types/map.types';
+import { TCell, TCellOwnerParams } from 'src/types/map.types';
 import { getProvinceSeedScore } from './costPolicies';
 import { getBoundaryStepCost, isLand } from './geopoliticsShared';
 
@@ -672,11 +672,8 @@ export function buildNationProvinces(cells: TCell[], owner: Int32Array, seed: st
   return provinceOwner;
 }
 
-export function enforceMinimumProvinceArea(
-  cells: TCell[],
-  owner: Int32Array,
-  provinceOwner: Int32Array
-) {
+export function minProvinceArea(params: TCellOwnerParams) {
+  const { cells, owner, provinceOwner } = params;
   const nationIds = Array.from(new Set(owner)).filter((nationId) => nationId >= 0);
   // Compute terrain-adjusted management weight once for performance.
   const effectiveCellWeightById = new Float32Array(cells.length);
@@ -981,11 +978,8 @@ export function enforceMinimumProvinceArea(
   }
 }
 
-export function enforceHardProvincePopulationFloor(
-  cells: TCell[],
-  owner: Int32Array,
-  provinceOwner: Int32Array
-) {
+export function limitProvincePopulation(params: TCellOwnerParams) {
+  const { cells, owner, provinceOwner } = params;
   const nationIds = Array.from(new Set(owner)).filter((nationId) => nationId >= 0);
 
   for (const nationId of nationIds) {
@@ -1056,11 +1050,8 @@ export function enforceHardProvincePopulationFloor(
   }
 }
 
-export function enforceProvinceContiguity(
-  cells: TCell[],
-  owner: Int32Array,
-  provinceOwner: Int32Array
-) {
+export function enforceProvinceConnect(params: TCellOwnerParams) {
+  const { cells, owner, provinceOwner } = params;
   const provinceIds = Array.from(new Set(provinceOwner)).filter((provinceId) => provinceId >= 0);
   const stack: number[] = [];
   for (const provinceId of provinceIds) {

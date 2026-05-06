@@ -1,6 +1,6 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { getNationColor } from 'src/services';
-import { TDisplaySettings, TMeshWithDelaunay } from 'src/types/map.types';
+import { TDisplaySettings, TDelaunayMesh } from 'src/types/map.types';
 
 function toPolygonPath(points: [number, number][]) {
   if (points.length === 0) return '';
@@ -12,7 +12,7 @@ function toPolygonPath(points: [number, number][]) {
   return `M ${firstX.toFixed(2)} ${firstY.toFixed(2)} ${segments} Z`;
 }
 
-export function buildMapSvg(mesh: TMeshWithDelaunay, displaySettings: TDisplaySettings) {
+export function buildMapSvg(mesh: TDelaunayMesh, displaySettings: TDisplaySettings) {
   const background = `<rect width="${mesh.width}" height="${mesh.height}" fill="#09131f" />`;
   const landLayer = mesh.cells
     .map((cell) => {

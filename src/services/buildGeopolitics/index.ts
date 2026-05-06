@@ -1,4 +1,11 @@
-import { TMeshWithDelaunay } from 'src/types/map.types';
+import {
+  TCell,
+  TCellOwnerParams,
+  TDelaunayMesh,
+  TEthnic,
+  TNumRecordTerrain,
+  TTerrain,
+} from 'src/types/map.types';
 import { validateProvinceAssignments } from '../debug/invariants';
 import { createSeededRandom } from '../seededRandom';
 import { pickEconomicAndCapital } from './capitals';
@@ -7,7 +14,7 @@ import {
   assignMaritimeZones,
   getNationCount,
   isLand,
-  limitMountainClusterSplit,
+  limitMountainSplit,
 } from './geopoliticsShared';
 import {
   alignNaturalTerrainClusters,
@@ -19,22 +26,18 @@ import {
 } from './nations';
 import {
   buildNationProvinces,
-  enforceHardProvincePopulationFloor,
-  enforceMinimumProvinceArea,
-  enforceProvinceContiguity,
+  enforceProvinceConnect,
+  limitProvincePopulation,
+  minProvinceArea,
 } from './provinces';
 
 type TBuildGeopoliticsOptions = {
-  mesh: TMeshWithDelaunay;
+  mesh: TDelaunayMesh;
   seed: string;
   nationCount: number;
 };
 
-type TTerrainRangeMap = Record<
-  TMeshWithDelaunay['cells'][number]['terrain'],
-  [min: number, max: number]
->;
-type TTerrainModifierMap = Record<TMeshWithDelaunay['cells'][number]['terrain'], number>;
+type TTerrainRangeMap = Record<TTerrain, [min: number, max: number]>;
 
 const T_NATION_POPULATION_MULTIPLIER_RANGE: [number, number] = [0.1, 5.0];
 const T_NATION_ECONOMY_MULTIPLIER_RANGE: [number, number] = [0.1, 20];
@@ -86,8 +89,8 @@ type TNationAssignment = {
 type TNationProfile = {
   populationMultiplier: number;
   economyMultiplier: number;
-  terrainPopulationModifiers: TTerrainModifierMap;
-  terrainEconomyModifiers: TTerrainModifierMap;
+  terrainPopulationModifiers: TNumRecordTerrain;
+  terrainEconomyModifiers: TNumRecordTerrain;
 };
 
 function randomBetween(random: () => number, min: number, max: number) {
@@ -105,13 +108,13 @@ function buildNationProfiles(owner: Int32Array, seed: string) {
         terrain,
         randomBetween(random, min, max),
       ])
-    ) as TTerrainModifierMap;
+    ) as TNumRecordTerrain;
     const terrainEconomyModifiers = Object.fromEntries(
       Object.entries(T_TERRAIN_ECONOMY_MODIFIER_RANGES).map(([terrain, [min, max]]) => [
         terrain,
         randomBetween(random, min, max),
       ])
-    ) as TTerrainModifierMap;
+    ) as TNumRecordTerrain;
 
     nationProfiles.set(nationId, {
       populationMultiplier: randomBetween(
@@ -132,8 +135,8 @@ function buildNationProfiles(owner: Int32Array, seed: string) {
   return nationProfiles;
 }
 
-function applyNationProfilesToCells(
-  cells: TMeshWithDelaunay['cells'],
+function mapNationsToCells(
+  cells: TCell[],
   owner: Int32Array,
   nationProfiles: Map<number, TNationProfile>
 ) {
@@ -154,11 +157,7 @@ function applyNationProfilesToCells(
   });
 }
 
-function enforceMinimumNationPopulation(
-  cells: TMeshWithDelaunay['cells'],
-  owner: Int32Array,
-  seed: string
-) {
+function limitNationPopulation(cells: TCell[], owner: Int32Array, seed: string) {
   const nationIds = Array.from(new Set(owner)).filter((nationId) => nationId >= 0);
   const nextCells = [...cells];
 
@@ -168,7 +167,7 @@ function enforceMinimumNationPopulation(
     let nationPopulation = 0;
     for (let cellId = 0; cellId < owner.length; cellId += 1) {
       if (owner[cellId] !== nationId) continue;
-      if (!isLand(nextCells[cellId] as TMeshWithDelaunay['cells'][number])) continue;
+      if (!isLand(nextCells[cellId])) continue;
       nationCellIds.push(cellId);
       nationPopulation += nextCells[cellId]?.population || 0;
     }
@@ -184,33 +183,16 @@ function enforceMinimumNationPopulation(
       nextCells[cellId] = { ...cell, population: scaledPopulation };
     }
   }
-
   return nextCells;
 }
 
-function runNationStabilityPass(
-  cells: TMeshWithDelaunay['cells'],
-  owner: Int32Array,
-  preserveNationCount: number
-) {
+function runNationStabilityPass(cells: TCell[], owner: Int32Array, preserveNationCount: number) {
   alignNaturalTerrainClusters(cells, owner);
-  limitMountainClusterSplit(cells, owner, 'country');
+  limitMountainSplit(cells, owner, 'country');
   enforceMinimumNationArea(cells, owner, preserveNationCount);
 }
 
-function runNationClaimReconciliationPass(
-  cells: TMeshWithDelaunay['cells'],
-  owner: Int32Array,
-  preserveNationCount: number
-) {
-  reconcileNationClaims(cells, owner, preserveNationCount);
-}
-
-function assignNations(
-  mesh: TMeshWithDelaunay,
-  seed: string,
-  nationCount: number
-): TNationAssignment {
+function assignNations(mesh: TDelaunayMesh, seed: string, nationCount: number): TNationAssignment {
   const landCellCount = mesh.cells.filter(isLand).length;
   const targetNationCount = getNationCount(nationCount, landCellCount);
   const preserveNationCount = targetNationCount;
@@ -219,7 +201,7 @@ function assignNations(
 }
 
 function postProcessNations(
-  cells: TMeshWithDelaunay['cells'],
+  cells: TCell[],
   owner: Int32Array,
   preserveNationCount: number,
   seed: string
@@ -227,40 +209,37 @@ function postProcessNations(
   runNationStabilityPass(cells, owner, preserveNationCount);
   enforceMainlandContiguity(cells, owner);
   runNationStabilityPass(cells, owner, preserveNationCount);
-  runNationClaimReconciliationPass(cells, owner, preserveNationCount);
+  reconcileNationClaims(cells, owner, preserveNationCount);
   diversifySmallNationSizes(cells, owner, seed);
-  runNationClaimReconciliationPass(cells, owner, preserveNationCount);
+  reconcileNationClaims(cells, owner, preserveNationCount);
 }
 
-function assignProvinces(cells: TMeshWithDelaunay['cells'], owner: Int32Array, seed: string) {
+function assignProvinces(cells: TCell[], owner: Int32Array, seed: string) {
   return { provinceOwner: buildNationProvinces(cells, owner, seed) };
 }
 
-function postProcessProvinces(
-  cells: TMeshWithDelaunay['cells'],
-  owner: Int32Array,
-  provinceOwner: Int32Array
-) {
-  limitMountainClusterSplit(cells, provinceOwner, 'province', owner);
+function postProcessProvinces(params: TCellOwnerParams) {
+  const { cells, owner, provinceOwner } = params;
+  limitMountainSplit(cells, provinceOwner, 'province', owner);
   for (let pass = 0; pass < 2; pass += 1) {
-    enforceProvinceContiguity(cells, owner, provinceOwner);
-    enforceMinimumProvinceArea(cells, owner, provinceOwner);
+    enforceProvinceConnect({ cells, owner, provinceOwner });
+    minProvinceArea({ cells, owner, provinceOwner });
   }
-  enforceHardProvincePopulationFloor(cells, owner, provinceOwner);
+  limitProvincePopulation({ cells, owner, provinceOwner });
 }
 
-function assignEthnic(cells: TMeshWithDelaunay['cells'], owner: Int32Array, seed: string) {
+function assignEthnic(cells: TCell[], owner: Int32Array, seed: string) {
   const { ethnicOwner, ethnicGroups } = buildEthnicRegions(cells, owner, seed);
   return { ethnicOwner, ethnicGroups };
 }
 
 function finalizeOwnershipProjection(
-  mesh: TMeshWithDelaunay,
+  mesh: TDelaunayMesh,
   nationProfiles: Map<number, TNationProfile>,
   owner: Int32Array,
   provinceOwner: Int32Array,
   ethnicOwner: Int32Array,
-  ethnicGroups: TMeshWithDelaunay['ethnicGroups'],
+  ethnicGroups: TEthnic[],
   seed: string
 ) {
   const { waterOwner, zoneType } = assignMaritimeZones(mesh.cells);
@@ -307,21 +286,18 @@ function finalizeOwnershipProjection(
   return { ...mesh, cells, nations, ethnicGroups };
 }
 
-export function buildGeopolitics({
-  mesh,
-  seed,
-  nationCount,
-}: TBuildGeopoliticsOptions): TMeshWithDelaunay {
+export function buildGeopolitics(params: TBuildGeopoliticsOptions): TDelaunayMesh {
+  const { mesh, seed, nationCount } = params;
   const { owner, preserveNationCount } = assignNations(mesh, seed, nationCount);
   postProcessNations(mesh.cells, owner, preserveNationCount, seed);
   const nationProfiles = buildNationProfiles(owner, seed);
-  const scaledCells = applyNationProfilesToCells(mesh.cells, owner, nationProfiles);
-  const normalizedCells = enforceMinimumNationPopulation(scaledCells, owner, seed);
+  const scaledCells = mapNationsToCells(mesh.cells, owner, nationProfiles);
+  const normalizedCells = limitNationPopulation(scaledCells, owner, seed);
   const scaledMesh = { ...mesh, cells: normalizedCells };
   const { provinceOwner } = assignProvinces(scaledMesh.cells, owner, seed);
-  postProcessProvinces(scaledMesh.cells, owner, provinceOwner);
+  postProcessProvinces({ cells: scaledMesh.cells, owner, provinceOwner });
   if (process.env.NODE_ENV !== 'production') {
-    validateProvinceAssignments(scaledMesh.cells, owner, provinceOwner);
+    validateProvinceAssignments({ cells: scaledMesh.cells, owner, provinceOwner });
   }
   const { ethnicOwner, ethnicGroups } = assignEthnic(scaledMesh.cells, owner, seed);
   return finalizeOwnershipProjection(
