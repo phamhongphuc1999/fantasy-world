@@ -74,6 +74,27 @@ export interface TTopographyCell {
 
 // Hydrology & Climate
 export type TZoneType = 'land' | 'internal-waters' | 'territorial-waters' | 'international-waters';
+export type TRiverEndType = 'sea' | 'offscreen' | 'lake' | 'inland-sink';
+export type TRiverKind = 'river' | 'creek' | 'branch' | 'fork';
+
+export type TRiver = {
+  id: number;
+  sourceCellId: number;
+  mouthCellId: number;
+  endType: TRiverEndType;
+  parentRiverId: number | null;
+  tributaryRiverIds: number[];
+  basinId: number;
+  kind: TRiverKind;
+  name: string;
+  length: number;
+  mouthWidth: number;
+  peakFlow: number;
+  cells: number[];
+  polyline: Array<[number, number]>;
+  pointOffsets: number[];
+  polygon: Array<[number, number]>;
+};
 
 // Geopolitics: Nation / Ethnic / Province flags on cells
 export interface TNation {
@@ -106,9 +127,15 @@ export interface TCell {
   isWater: boolean;
   terrain: TTerrain;
   flow: number;
+  effectiveFlow: number;
+  riverWidth: number;
   downstreamId: number | null;
   erosion: number;
   isRiver: boolean;
+  riverId: number | null;
+  riverOrder: number;
+  isRiverSource: boolean;
+  isRiverMouth: boolean;
   isLake: boolean;
   biome: string;
   suitability: number;
@@ -135,6 +162,7 @@ export interface TMesh {
   vertices: TVertex[];
   nations: TNation[];
   ethnicGroups: TEthnic[];
+  rivers: TRiver[];
 }
 
 export type TDelaunayMesh = TMesh & {

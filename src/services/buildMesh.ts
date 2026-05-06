@@ -120,9 +120,15 @@ export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions)
       isWater: false,
       terrain: 'plains',
       flow: 0,
+      effectiveFlow: 0,
+      riverWidth: 0,
       downstreamId: null,
       erosion: 0,
       isRiver: false,
+      riverId: null,
+      riverOrder: 0,
+      isRiverSource: false,
+      isRiverMouth: false,
       isLake: false,
       biome: 'Unassigned',
       suitability: 0,
@@ -141,5 +147,15 @@ export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions)
     };
   });
 
-  return { width, height, cells, edges, vertices, nations: [], ethnicGroups: [], delaunay };
+  return {
+    width,
+    height,
+    cells,
+    edges,
+    vertices,
+    nations: [],
+    ethnicGroups: [],
+    rivers: [],
+    delaunay,
+  };
 }

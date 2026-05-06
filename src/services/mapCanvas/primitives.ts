@@ -63,8 +63,9 @@ export function drawSiteMarker(
 }
 
 export function drawCurvedRiverSegment(context: CanvasRenderingContext2D, from: TCell, to: TCell) {
-  const dx = to.site[0] - from.site[0];
-  const dy = to.site[1] - from.site[1];
+  const end = getRiverSegmentEndPoint(from, to);
+  const dx = end[0] - from.site[0];
+  const dy = end[1] - from.site[1];
   const length = Math.hypot(dx, dy);
   if (length < 0.0001) return;
 
@@ -74,10 +75,48 @@ export function drawCurvedRiverSegment(context: CanvasRenderingContext2D, from: 
   const sign = (idHash & 1) === 0 ? 1 : -1;
   const bend = Math.min(14, Math.max(3, length * 0.22)) * sign;
 
-  const cx = (from.site[0] + to.site[0]) * 0.5 + nx * bend;
-  const cy = (from.site[1] + to.site[1]) * 0.5 + ny * bend;
+  const cx = (from.site[0] + end[0]) * 0.5 + nx * bend;
+  const cy = (from.site[1] + end[1]) * 0.5 + ny * bend;
 
   context.beginPath();
   context.moveTo(from.site[0], from.site[1]);
-  context.quadraticCurveTo(cx, cy, to.site[0], to.site[1]);
+  context.quadraticCurveTo(cx, cy, end[0], end[1]);
+}
+
+export function getRiverSegmentEndPoint(from: TCell, to: TCell): [number, number] {
+  if (!to.isWater) return [to.site[0], to.site[1]];
+
+  const startX = from.site[0];
+  const startY = from.site[1];
+  const endX = to.site[0];
+  const endY = to.site[1];
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const eps = 1e-6;
+
+  let bestT = Number.POSITIVE_INFINITY;
+  let bestPoint: [number, number] | null = null;
+
+  const polygon = from.polygon;
+  for (let index = 0; index < polygon.length; index += 1) {
+    const a = polygon[index] as [number, number];
+    const b = polygon[(index + 1) % polygon.length] as [number, number];
+    const ex = b[0] - a[0];
+    const ey = b[1] - a[1];
+    const denom = dx * ey - dy * ex;
+    if (Math.abs(denom) < eps) continue;
+
+    const qpx = a[0] - startX;
+    const qpy = a[1] - startY;
+    const t = (qpx * ey - qpy * ex) / denom;
+    const u = (qpx * dy - qpy * dx) / denom;
+    if (t <= eps || t > 1 + eps) continue;
+    if (u < -eps || u > 1 + eps) continue;
+    if (t < bestT) {
+      bestT = t;
+      bestPoint = [startX + dx * t, startY + dy * t];
+    }
+  }
+
+  return bestPoint ?? [to.site[0], to.site[1]];
 }

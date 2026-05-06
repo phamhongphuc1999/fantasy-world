@@ -23,5 +23,6 @@ export {
   drawCurvedRiverSegment,
   drawSiteMarker,
   getCanvasPoint,
+  getRiverSegmentEndPoint,
   setupCanvas,
 } from './mapCanvas/primitives';

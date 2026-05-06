@@ -204,8 +204,8 @@ export default function useMapCanvasRendering({
         const downstreamCell = cells[cell.downstreamId];
         if (!downstreamCell) continue;
         drawCurvedRiverSegment(context, cell, downstreamCell);
-        context.strokeStyle = '#38bdf8';
-        context.lineWidth = Math.min(4.4, 1.25 + Math.log2(cell.flow + 1) * 0.45);
+        context.strokeStyle = '#00f2ff';
+        context.lineWidth = Math.min(4.8, Math.max(0.75, cell.riverWidth || 0.9));
         context.lineCap = 'round';
         context.globalAlpha = 0.96;
         context.shadowColor = '#7dd3fc';

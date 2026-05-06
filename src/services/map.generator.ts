@@ -34,6 +34,7 @@ export class MapGenerator {
     return buildHydrology({
       mesh,
       seaLevel: this.config.seaLevel,
+      seed: this.config.seed,
       terrainRatios: this.config.terrainRatios,
     });
   }

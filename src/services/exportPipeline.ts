@@ -1,5 +1,6 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { getNationColor } from 'src/services';
+import { getRiverSegmentEndPoint } from 'src/services/mapCanvas.service';
 import { TDisplaySettings, TDelaunayMesh } from 'src/types/map.types';
 
 function toPolygonPath(points: [number, number][]) {
@@ -35,8 +36,9 @@ export function buildMapSvg(mesh: TDelaunayMesh, displaySettings: TDisplaySettin
         )
         .map((cell) => {
           const to = mesh.cells[cell.downstreamId as number];
-          const width = Math.min(4.4, 1.25 + Math.log2(cell.flow + 1) * 0.45);
-          return `<line x1="${cell.site[0].toFixed(2)}" y1="${cell.site[1].toFixed(2)}" x2="${to.site[0].toFixed(2)}" y2="${to.site[1].toFixed(2)}" stroke="#38bdf8" stroke-width="${width.toFixed(2)}" stroke-linecap="round" />`;
+          const end = getRiverSegmentEndPoint(cell, to);
+          const width = Math.min(4.8, Math.max(0.75, cell.riverWidth || 0.9));
+          return `<line x1="${cell.site[0].toFixed(2)}" y1="${cell.site[1].toFixed(2)}" x2="${end[0].toFixed(2)}" y2="${end[1].toFixed(2)}" stroke="#00f2ff" stroke-width="${width.toFixed(2)}" stroke-linecap="round" />`;
         })
         .join('')
     : '';

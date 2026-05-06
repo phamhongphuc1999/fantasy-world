@@ -33,6 +33,7 @@ const mapContextDefault: TMapContextType = {
     vertices: [],
     nations: [],
     ethnicGroups: [],
+    rivers: [],
     delaunay: Delaunay.from([[0, 0]]),
   },
   isGenerating: true,
@@ -79,6 +80,7 @@ export default function MapProvider({ children }: TProps) {
 
       const nextMesh: TDelaunayMesh = {
         ...snapshot.mesh,
+        rivers: snapshot.mesh.rivers || [],
         delaunay: Delaunay.from(snapshot.mesh.cells.map((cell) => cell.site)),
       };
 

@@ -27,7 +27,7 @@ export const TERRAIN_PRESET_OPTIONS: TTerrainPresetOption[] = [
 export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   'deep-water': {
     label: 'Ocean',
-    color: '#0b2f6b',
+    color: '#0a192f', // Navy rất đậm, tạo độ sâu tuyệt đối
     icon: '🌊',
     isWater: true,
     isHydrologyWater: true,
@@ -43,7 +43,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   'shallow-water': {
     label: 'Sea',
-    color: '#1e5fa8',
+    color: '#1a3a6d', // Xanh biển đậm vừa phải
     icon: '🌊',
     isWater: true,
     isHydrologyWater: true,
@@ -59,7 +59,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   'inland-sea': {
     label: 'Inland Sea',
-    color: '#2f7fbe',
+    color: '#255497', // Xanh rõ rệt, không bị đục
     icon: '🌊',
     isWater: true,
     isHydrologyWater: true,
@@ -75,7 +75,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   lake: {
     label: 'Lake',
-    color: '#63b3ed',
+    color: '#1e81b0', // Màu hồ sâu, tương phản với đất liền
     icon: '🏞️',
     isWater: true,
     isHydrologyWater: true,
@@ -91,7 +91,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   coast: {
     label: 'Coast',
-    color: '#d9c89b',
+    color: '#f2d492', // Màu cát vàng rõ rệt
     icon: '🏖️',
     isHydrologyWater: true,
     isMarineWater: false,
@@ -106,7 +106,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   plains: {
     label: 'Plains',
-    color: '#63c64d',
+    color: '#5eba7d', // Xanh lá tươi, sắc nét
     icon: '🌾',
     isHydrologyWater: false,
     isMarineWater: false,
@@ -121,7 +121,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   valley: {
     label: 'Valley',
-    color: '#a6df5a',
+    color: '#8bc34a', // Xanh lá mạ sáng
     icon: '🌿',
     isHydrologyWater: false,
     isMarineWater: false,
@@ -137,7 +137,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   forest: {
     label: 'Forest',
-    color: '#1f6b2f',
+    color: '#2d6a4f', // Xanh rừng rậm đậm đặc
     icon: '🌲',
     isHydrologyWater: false,
     isMarineWater: false,
@@ -153,7 +153,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   swamp: {
     label: 'Swamp',
-    color: '#2f6e5f',
+    color: '#4a7c59', // Xanh đục của đầm lầy nhưng vẫn rõ nét
     icon: '🐊',
     isHydrologyWater: false,
     isMarineWater: false,
@@ -169,7 +169,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   hills: {
     label: 'Hill',
-    color: '#9a7b45',
+    color: '#a47148', // Nâu đất đỏ
     icon: '⛰️',
     isHydrologyWater: false,
     isMarineWater: false,
@@ -185,7 +185,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   plateau: {
     label: 'Plateau',
-    color: '#b39b69',
+    color: '#c2936a', // Nâu vàng nhạt hơn hills
     icon: '🪨',
     isHydrologyWater: false,
     isMarineWater: false,
@@ -201,7 +201,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   mountains: {
     label: 'Mountain',
-    color: '#5f5148',
+    color: '#5d4037', // Nâu đen của đá núi
     icon: '🏔️',
     isHydrologyWater: false,
     isMarineWater: false,
@@ -217,7 +217,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   volcanic: {
     label: 'Volcanic',
-    color: '#3b2f2a',
+    color: '#3e2723', // Đen đỏ của dung nham nguội
     icon: '🌋',
     isHydrologyWater: false,
     isMarineWater: false,
@@ -233,7 +233,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   desert: {
     label: 'Desert',
-    color: '#d8bc6a',
+    color: '#ffb300', // Vàng cam rực rỡ
     icon: '🏜️',
     isHydrologyWater: false,
     isMarineWater: false,
@@ -249,7 +249,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   badlands: {
     label: 'Badlands',
-    color: '#a86f42',
+    color: '#d84315', // Cam đất cháy
     icon: '🪨',
     isHydrologyWater: false,
     isMarineWater: false,
@@ -265,7 +265,7 @@ export const TERRAIN_CONFIG: Record<TTerrain, TTerrainConfig> = {
   },
   tundra: {
     label: 'Tundra',
-    color: '#dfe7ef',
+    color: '#eceff1', // Trắng xám xanh, rất nổi trên nền lục địa
     icon: '❄️',
     isHydrologyWater: false,
     isMarineWater: false,
