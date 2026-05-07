@@ -2,7 +2,6 @@
 
 import { RefObject, useEffect } from 'react';
 import { TERRAIN_CONFIG } from 'src/configs/constance';
-import { getRiverStrokeWidth } from 'src/services/common';
 import {
   drawCountryFill,
   drawEthnicBorders,
@@ -10,25 +9,26 @@ import {
   drawGrayBorders,
   drawProvinceBorders,
   isLandCell,
-} from 'src/services/mapCanvas/borders';
+} from 'src/services/rendering/canvas/borders';
 import {
   getEconomyColor,
   getPopulationColor,
   getPrecipitationColor,
   getRainShadowColor,
   getTemperatureColor,
-} from 'src/services/mapCanvas/heatmap';
+} from 'src/services/rendering/canvas/heatmap';
 import {
-  drawLogisticsRouteOverlay,
+  drawLogisticsRoute,
   drawRegionNames,
   drawUrbanHierarchy,
-} from 'src/services/mapCanvas/overlays';
+} from 'src/services/rendering/canvas/overlays';
 import {
   drawCellShape,
   drawRiverCurve,
   drawSiteMarker,
   setupCanvas,
-} from 'src/services/mapCanvas/primitives';
+} from 'src/services/rendering/canvas/primitives';
+import { getRiverStrokeWidth } from 'src/services/rendering/rivers';
 import { TCell, TDisplaySettings, TEthnic, TNation } from 'src/types/map.types';
 
 const T_SITE_MARKER_LIMIT = 4000;
@@ -250,8 +250,7 @@ export default function useMapCanvas(params: TProps) {
       }
     }
 
-    if (logisticsEnabled)
-      drawLogisticsRouteOverlay(context, cells, routeCellIds, startCellId, goalCellId);
+    if (logisticsEnabled) drawLogisticsRoute(context, cells, routeCellIds, startCellId, goalCellId);
   }, [
     canvasRef,
     cells,

@@ -1,8 +1,13 @@
 import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
-import { measureMs } from 'src/services/debug/bench';
-import { MapGenerator } from 'src/services/map.generator';
+import { MapGenerator } from 'src/services/pipeline/MapGenerator';
 
 type TStage = 'mesh' | 'topography' | 'hydrology' | 'population' | 'geopolitics';
+
+function measureMs<T>(fn: () => T): { ms: number; value: T } {
+  const start = performance.now();
+  const value = fn();
+  return { ms: performance.now() - start, value };
+}
 
 function runStageTimed(
   generator: MapGenerator,

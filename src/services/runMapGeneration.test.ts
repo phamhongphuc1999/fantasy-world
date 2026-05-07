@@ -1,7 +1,7 @@
 import { DEFAULT_CONFIG, MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
-import { TGenerationConfig, TDelaunayMesh } from 'src/types/map.types';
+import { TDelaunayMesh, TGenerationConfig, TGenerationStages } from 'src/types/map.types';
 import { describe, expect, it } from 'vitest';
-import { runMapGenerationStages } from './runMapGeneration';
+import { MapGenerator } from './pipeline/MapGenerator';
 
 type TStageSignature = {
   cells: number;
@@ -23,6 +23,11 @@ type TPipelineSignature = {
   population: TStageSignature;
   geopolitics: TStageSignature;
 };
+
+function runMapGenerationStages(config: TGenerationConfig): TGenerationStages {
+  const generator = new MapGenerator(config);
+  return generator.generateStages();
+}
 
 function fnv1a64Hex(parts: readonly string[]) {
   let hash = 0xcbf29ce484222325n;

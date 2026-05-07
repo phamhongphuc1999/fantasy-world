@@ -12,7 +12,7 @@ import {
   useState,
 } from 'react';
 import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
-import { MapGenerator } from 'src/services/map.generator';
+import { MapGenerator } from 'src/services/pipeline/MapGenerator';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import { TDelaunayMesh, TExportSnapshot } from 'src/types/map.types';
 

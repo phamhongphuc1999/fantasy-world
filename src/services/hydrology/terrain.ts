@@ -1,9 +1,10 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
-import { clamp, getAvgNeighbor } from 'src/services';
 import { collectConnectedComponents } from 'src/services/core/graph';
-import { isHydrologyWaterTerrain } from 'src/services/terrainRules';
 import { TCell, TTerrain, TTerrainRatioMap } from 'src/types/map.types';
+import { clamp } from '../utils/math';
+import { getAvgNeighbor } from '../utils/topology';
+import { isHydrologyWaterTerrain } from '../terrain/rules';
 
 type TTerrainBalance = typeof HYDROLOGY_CONFIG.terrainBalance;
 function isLockedTerrain(cell: TCell, terrain: TTerrain) {

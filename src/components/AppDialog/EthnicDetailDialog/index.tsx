@@ -10,7 +10,8 @@ import {
   DialogTitle,
 } from 'src/components/ui/dialog';
 import useEthnicStatistic from 'src/hooks/useEthnicStatistic';
-import { formatPopulation, getNationColor } from 'src/services';
+import { formatPopulation } from 'src/services/utils/format';
+import { getNationColor } from 'src/services/rendering/colors';
 import { TDelaunayMesh } from 'src/types/map.types';
 
 type TProps = {

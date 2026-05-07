@@ -4,7 +4,11 @@ import { ChangeEventHandler } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import { Button } from 'src/components/ui/button';
 import { useMapContext } from 'src/contexts/map.context';
-import { buildMapSvg, exportCanvasToPng, exportTextFile } from 'src/services/exportPipeline';
+import {
+  buildMapSvg,
+  exportCanvasToPng,
+  exportTextFile,
+} from 'src/services/rendering/pipeline/exportPipeline';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import { TExportSnapshot } from 'src/types/map.types';
 

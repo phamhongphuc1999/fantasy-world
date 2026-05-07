@@ -1,8 +1,8 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { collectConnectedComponents, floodFromSeeds } from 'src/services/core/graph';
 import { TFifoQueue } from 'src/services/core/queue';
-import { isMarineWaterTerrain } from 'src/services/terrainRules';
 import { TCell } from 'src/types/map.types';
+import { isMarineWaterTerrain } from '../terrain/rules';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutlet;
 function expandLakes(cells: TCell[], flow: Float32Array, downstream: Int32Array) {

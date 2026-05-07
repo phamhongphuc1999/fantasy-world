@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { toPercent } from 'src/services';
+import { toPercent } from 'src/services/utils/stats';
 import { TDelaunayMesh } from 'src/types/map.types';
 
 export default function useNationStatistic(nationId: number | null, mesh: TDelaunayMesh) {

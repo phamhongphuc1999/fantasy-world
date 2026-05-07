@@ -1,7 +1,7 @@
 'use client';
 
 import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
-import { normalizeTerrainRatios } from 'src/services/terrainRatios';
+import { normalizeTerrainRatios } from 'src/services/terrain/ratios';
 import {
   TDisplaySettings,
   TTerrainPreset,

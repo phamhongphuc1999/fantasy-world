@@ -1,6 +1,6 @@
 import { HYDROLOGY_CONFIG, RIVER_GEN_CONFIG } from 'src/configs/mapConfig';
-import { createSeededRandom } from 'src/services/seededRandom';
 import { TCell, TPoint, TRiver, TRiverEndType, TRiverKind } from 'src/types/map.types';
+import { createSeededRandom } from '../core/seededRandom';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutlet;
 

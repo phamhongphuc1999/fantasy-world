@@ -1,7 +1,11 @@
 'use client';
 
 import { RefObject, useEffect } from 'react';
-import { drawCellShape, drawSiteMarker, setupCanvas } from 'src/services/mapCanvas/primitives';
+import {
+  drawCellShape,
+  drawSiteMarker,
+  setupCanvas,
+} from 'src/services/rendering/canvas/primitives';
 import { TCell } from 'src/types/map.types';
 
 type TProps = {
