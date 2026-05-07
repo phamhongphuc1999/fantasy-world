@@ -1,6 +1,6 @@
 import { HYDROLOGY_CONFIG, RIVER_GEN_CONFIG } from 'src/configs/mapConfig';
 import { createSeededRandom } from 'src/services/seededRandom';
-import { TCell, TRiver, TRiverEndType, TRiverKind } from 'src/types/map.types';
+import { TCell, TPoint, TRiver, TRiverEndType, TRiverKind } from 'src/types/map.types';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutlet;
 
@@ -185,7 +185,7 @@ function createRiverName(random: () => number, id: number, kind: TRiverKind) {
   return `${prefix}-${id + 1} ${suffix}`;
 }
 
-function buildPathToNearestWater(cells: TCell[], startCellId: number, riverByCell: Int32Array) {
+function buildPathToWater(cells: TCell[], startCellId: number, riverByCell: Int32Array) {
   const visited = new Uint8Array(cells.length);
   const previous = new Int32Array(cells.length);
   previous.fill(-1);
@@ -325,7 +325,7 @@ function buildRiverGraph(
       !(tailDownstream >= 0 && cells[tailDownstream].isWater) &&
       tailDownstream !== T_COAST_OUTLET
     ) {
-      const extension = buildPathToNearestWater(cells, tailCellId, riverByCell);
+      const extension = buildPathToWater(cells, tailCellId, riverByCell);
       if (extension) {
         let cursor = tailCellId;
         for (const cellId of extension.landPath) {
@@ -349,7 +349,7 @@ function buildRiverGraph(
     else if (tailDownstream >= 0 && cells[tailDownstream].isWater) endType = 'sea';
 
     let length = 0;
-    const polyline: Array<[number, number]> = [];
+    const polyline: Array<TPoint> = [];
     const pointOffsets: number[] = [];
     let peakFlow = 0;
 
@@ -365,7 +365,7 @@ function buildRiverGraph(
       }
 
       if (index > 0) {
-        const previous = polyline[polyline.length - 2] as [number, number];
+        const previous = polyline[polyline.length - 2] as TPoint;
         const segmentLength = Math.hypot(cell.site[0] - previous[0], cell.site[1] - previous[1]);
         if (segmentLength >= RIVER_GEN_CONFIG.meander.minSegmentLength) {
           const t = index / Math.max(1, chain.length - 1);
@@ -430,12 +430,12 @@ function buildRiverGraph(
       );
     }
 
-    const leftBank: Array<[number, number]> = [];
-    const rightBank: Array<[number, number]> = [];
+    const leftBank: Array<TPoint> = [];
+    const rightBank: Array<TPoint> = [];
     for (let pointIndex = 0; pointIndex < polyline.length; pointIndex += 1) {
-      const current = polyline[pointIndex] as [number, number];
-      const previous = polyline[Math.max(0, pointIndex - 1)] as [number, number];
-      const next = polyline[Math.min(polyline.length - 1, pointIndex + 1)] as [number, number];
+      const current = polyline[pointIndex] as TPoint;
+      const previous = polyline[Math.max(0, pointIndex - 1)] as TPoint;
+      const next = polyline[Math.min(polyline.length - 1, pointIndex + 1)] as TPoint;
       const dirX = next[0] - previous[0];
       const dirY = next[1] - previous[1];
       const norm = Math.max(0.0001, Math.hypot(dirX, dirY));
@@ -458,7 +458,7 @@ function buildRiverGraph(
       mouthCellId: tailCellId,
       endType,
       parentRiverId: riverParent.get(riverId) ?? null,
-      tributaryRiverIds: Array.from(tributaries.get(riverId) ?? []),
+      tributaryIds: Array.from(tributaries.get(riverId) ?? []),
       basinId: riverId,
       kind,
       name: createRiverName(random, riverId, kind),

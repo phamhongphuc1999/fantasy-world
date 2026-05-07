@@ -4,7 +4,7 @@ import { TBorderType, TCell, TTerrain } from 'src/types/map.types';
 
 export default class Cost {
   static logistics(terrain: TTerrain) {
-    return TERRAIN_CONFIG[terrain].logisticsMoveCost;
+    return TERRAIN_CONFIG[terrain].logisticsCost;
   }
 
   static ethnic(cell: TCell, config: { strength: number }) {

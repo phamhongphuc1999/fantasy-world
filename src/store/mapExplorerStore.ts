@@ -52,7 +52,7 @@ const DEFAULT_STATE: TMapExplorerState = {
   hoverClientPoint: null,
 };
 
-function migrateLegacyTerrainRatios(raw?: Partial<Record<string, number>>) {
+function migrateTerrainRatios(raw?: Partial<Record<string, number>>) {
   if (!raw) return DEFAULT_CONFIG.terrainRatios;
   const plainValue = raw.plains ?? raw.plain;
   return normalizeTerrainRatios({
@@ -140,7 +140,7 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
       migrate: (persistedState) => {
         const state = persistedState as Partial<TMapExplorerState> | undefined;
         if (!state) return DEFAULT_STATE;
-        const terrainRatios = migrateLegacyTerrainRatios(
+        const terrainRatios = migrateTerrainRatios(
           state.terrainRatios as unknown as Partial<Record<string, number>> | undefined
         );
         const persistedDisplaySettings = state.displaySettings as TDisplaySettings | undefined;
@@ -148,10 +148,7 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
           ...DEFAULT_STATE,
           ...state,
           terrainRatios,
-          displaySettings: {
-            ...DEFAULT_CONFIG.displaySettings,
-            ...persistedDisplaySettings,
-          },
+          displaySettings: { ...DEFAULT_CONFIG.displaySettings, ...persistedDisplaySettings },
         };
       },
     }

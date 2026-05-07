@@ -32,7 +32,7 @@ const mapContextDefault: TMapContextType = {
     edges: [],
     vertices: [],
     nations: [],
-    ethnicGroups: [],
+    ethnics: [],
     rivers: [],
     delaunay: Delaunay.from([[0, 0]]),
   },

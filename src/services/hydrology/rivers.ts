@@ -9,7 +9,7 @@ function validateRivers(
   downstream: Int32Array,
   isRiver: Uint8Array
 ) {
-  const { lakeSizeByCell, plainsRegionSizeByCell, hasLargePlains, hasVeryLargePlains } =
+  const { lakeSizeByCell, plainRegionSizeByCell, hasLargePlains, hasVeryLargePlains } =
     buildHydrologyRegionMaps(cells);
   const validRiver = new Uint8Array(cells.length);
   const candidates: Array<{
@@ -17,7 +17,7 @@ function validateRivers(
     peakFlow: number;
     sourceId: number;
     plainCoverage: number;
-    veryLargePlainCoverage: number;
+    vLargePlainCoverage: number;
     endType: 'sea' | 'large-lake' | 'plain' | 'invalid';
     joinsRiverCellId: number | null;
     score: number;
@@ -114,22 +114,20 @@ function validateRivers(
       let veryLargePlainsCells = 0;
       for (const id of chain) {
         peakFlow = Math.max(peakFlow, flow[id]);
-        if (plainsRegionSizeByCell[id] >= HYDROLOGY_CONFIG.largePlainMin) {
+        if (plainRegionSizeByCell[id] >= HYDROLOGY_CONFIG.largePlainMin) {
           plainsCells += 1;
         }
-        if (plainsRegionSizeByCell[id] >= HYDROLOGY_CONFIG.vLargePlainMin) {
+        if (plainRegionSizeByCell[id] >= HYDROLOGY_CONFIG.vLargePlainMin) {
           veryLargePlainsCells += 1;
         }
       }
       const plainCoverage = plainsCells / chain.length;
-      const veryLargePlainCoverage = veryLargePlainsCells / chain.length;
+      const vLargePlainCoverage = veryLargePlainsCells / chain.length;
       const score =
         peakFlow +
         plainCoverage * HYDROLOGY_CONFIG.largeRiverPlainBonus +
-        veryLargePlainCoverage * HYDROLOGY_CONFIG.vLargePlainRiverBonus +
-        (endType === 'sea' && veryLargePlainCoverage > 0
-          ? HYDROLOGY_CONFIG.vLargePlainSeaBonus
-          : 0) +
+        vLargePlainCoverage * HYDROLOGY_CONFIG.vLargePlainRiverBonus +
+        (endType === 'sea' && vLargePlainCoverage > 0 ? HYDROLOGY_CONFIG.vLargePlainSeaBonus : 0) +
         chain.length * HYDROLOGY_CONFIG.riverLenPriorityW +
         (joinsRiverCellId !== null ? HYDROLOGY_CONFIG.tribJoinBonus : 0);
       candidates.push({
@@ -137,7 +135,7 @@ function validateRivers(
         peakFlow,
         sourceId: cellIndex,
         plainCoverage,
-        veryLargePlainCoverage,
+        vLargePlainCoverage,
         endType,
         joinsRiverCellId,
         score,
@@ -190,7 +188,7 @@ function validateRivers(
   if (hasVeryLargePlains) {
     targetSmall += 3;
   }
-  const minimumRiverCount = HYDROLOGY_CONFIG.riverMinCount;
+  const minRiverCount = HYDROLOGY_CONFIG.riverMinCount;
 
   const sortedCandidates = [...candidates].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
@@ -206,11 +204,11 @@ function validateRivers(
   const usedCells = new Set<number>();
 
   if (hasVeryLargePlains) {
-    const plainFocusedCandidates = sortedCandidates
-      .filter((candidate) => candidate.veryLargePlainCoverage > 0 && candidate.endType === 'sea')
+    const plainCandidates = sortedCandidates
+      .filter((candidate) => candidate.vLargePlainCoverage > 0 && candidate.endType === 'sea')
       .sort((a, b) => b.chain.length - a.chain.length)
       .slice(0, HYDROLOGY_CONFIG.vLargePlainMinRivers);
-    for (const candidate of plainFocusedCandidates) {
+    for (const candidate of plainCandidates) {
       if (selectedSource.has(candidate.sourceId)) continue;
       selectedChains.push(candidate.chain);
       selectedSource.add(candidate.sourceId);
@@ -281,12 +279,12 @@ function validateRivers(
     }
   }
 
-  if (selectedChains.length < minimumRiverCount) {
+  if (selectedChains.length < minRiverCount) {
     for (const candidate of remaining) {
       if (selectedSource.has(candidate.sourceId)) continue;
       selectedChains.push(candidate.chain);
       selectedSource.add(candidate.sourceId);
-      if (selectedChains.length >= minimumRiverCount) break;
+      if (selectedChains.length >= minRiverCount) break;
     }
   }
 

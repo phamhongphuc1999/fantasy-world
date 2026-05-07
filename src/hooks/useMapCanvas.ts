@@ -4,25 +4,31 @@ import { RefObject, useEffect } from 'react';
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { getRiverStrokeWidth } from 'src/services/common';
 import {
-  drawCellShape,
   drawCountryFill,
-  drawCurvedRiverSegment,
   drawEthnicBorders,
   drawEthnicFill,
   drawGrayBorders,
-  drawLogisticsRouteOverlay,
   drawProvinceBorders,
-  drawRegionNames,
-  drawSiteMarker,
-  drawUrbanHierarchy,
-  getEconomyHeatmapColor,
-  getPopulationHeatmapColor,
-  getPrecipitationHeatmapColor,
-  getRainShadowHeatmapColor,
-  getTemperatureHeatmapColor,
   isLandCell,
+} from 'src/services/mapCanvas/borders';
+import {
+  getEconomyColor,
+  getPopulationColor,
+  getPrecipitationColor,
+  getRainShadowColor,
+  getTemperatureColor,
+} from 'src/services/mapCanvas/heatmap';
+import {
+  drawLogisticsRouteOverlay,
+  drawRegionNames,
+  drawUrbanHierarchy,
+} from 'src/services/mapCanvas/overlays';
+import {
+  drawCellShape,
+  drawRiverCurve,
+  drawSiteMarker,
   setupCanvas,
-} from 'src/services/mapCanvas.service';
+} from 'src/services/mapCanvas/primitives';
 import { TCell, TDisplaySettings, TEthnic, TNation } from 'src/types/map.types';
 
 const T_SITE_MARKER_LIMIT = 4000;
@@ -33,7 +39,7 @@ type TProps = {
   width: number;
   height: number;
   nations: TNation[];
-  ethnicGroups: TEthnic[];
+  ethnics: TEthnic[];
   displaySettings: TDisplaySettings;
   logisticsEnabled: boolean;
   routeCellIds: number[];
@@ -41,19 +47,20 @@ type TProps = {
   goalCellId: number | null;
 };
 
-export default function useMapCanvasRendering({
-  canvasRef,
-  cells,
-  width,
-  height,
-  nations,
-  ethnicGroups,
-  displaySettings,
-  logisticsEnabled,
-  routeCellIds,
-  startCellId,
-  goalCellId,
-}: TProps) {
+export default function useMapCanvas(params: TProps) {
+  const {
+    canvasRef,
+    cells,
+    width,
+    height,
+    nations,
+    ethnics,
+    displaySettings,
+    logisticsEnabled,
+    routeCellIds,
+    startCellId,
+    goalCellId,
+  } = params;
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -73,11 +80,11 @@ export default function useMapCanvasRendering({
 
     const showUniformLand =
       !displaySettings.terrain &&
-      !displaySettings.populationHeatmap &&
-      !displaySettings.temperatureHeatmap &&
-      !displaySettings.precipitationHeatmap &&
-      !displaySettings.rainShadowHeatmap &&
-      !displaySettings.economyHeatmap &&
+      !displaySettings.population &&
+      !displaySettings.temperature &&
+      !displaySettings.precipitation &&
+      !displaySettings.rainShadow &&
+      !displaySettings.economy &&
       !displaySettings.countryFill &&
       !displaySettings.ethnicFill;
 
@@ -88,7 +95,7 @@ export default function useMapCanvasRendering({
     let minEconomy = Number.POSITIVE_INFINITY;
     let maxEconomy = Number.NEGATIVE_INFINITY;
 
-    if (displaySettings.populationHeatmap) {
+    if (displaySettings.population) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
         if (cell.population < minPopulation) minPopulation = cell.population;
@@ -96,7 +103,7 @@ export default function useMapCanvasRendering({
       }
     }
 
-    if (displaySettings.temperatureHeatmap) {
+    if (displaySettings.temperature) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
         if (cell.temperature < minTemperature) minTemperature = cell.temperature;
@@ -104,7 +111,7 @@ export default function useMapCanvasRendering({
       }
     }
 
-    if (displaySettings.economyHeatmap) {
+    if (displaySettings.economy) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
         if (cell.economy < minEconomy) minEconomy = cell.economy;
@@ -119,13 +126,13 @@ export default function useMapCanvasRendering({
       }
     }
 
-    if (displaySettings.populationHeatmap) {
+    if (displaySettings.population) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
         drawCellShape(
           context,
           cell,
-          getPopulationHeatmapColor(cell.population, minPopulation, maxPopulation),
+          getPopulationColor(cell.population, minPopulation, maxPopulation),
           0.96,
           'transparent',
           0
@@ -133,13 +140,13 @@ export default function useMapCanvasRendering({
       }
     }
 
-    if (displaySettings.precipitationHeatmap) {
+    if (displaySettings.precipitation) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
         drawCellShape(
           context,
           cell,
-          getPrecipitationHeatmapColor(cell.precipitation),
+          getPrecipitationColor(cell.precipitation),
           0.96,
           'transparent',
           0
@@ -147,13 +154,20 @@ export default function useMapCanvasRendering({
       }
     }
 
-    if (displaySettings.rainShadowHeatmap) {
+    if (displaySettings.rainShadow) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        drawCellShape(context, cell, getRainShadowColor(cell.rainShadow), 0.96, 'transparent', 0);
+      }
+    }
+
+    if (displaySettings.temperature) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
         drawCellShape(
           context,
           cell,
-          getRainShadowHeatmapColor(cell.rainShadow),
+          getTemperatureColor(cell.temperature, minTemperature, maxTemperature),
           0.96,
           'transparent',
           0
@@ -161,27 +175,13 @@ export default function useMapCanvasRendering({
       }
     }
 
-    if (displaySettings.temperatureHeatmap) {
+    if (displaySettings.economy) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
         drawCellShape(
           context,
           cell,
-          getTemperatureHeatmapColor(cell.temperature, minTemperature, maxTemperature),
-          0.96,
-          'transparent',
-          0
-        );
-      }
-    }
-
-    if (displaySettings.economyHeatmap) {
-      for (const cell of cells) {
-        if (!isLandCell(cell)) continue;
-        drawCellShape(
-          context,
-          cell,
-          getEconomyHeatmapColor(cell.economy, minEconomy, maxEconomy),
+          getEconomyColor(cell.economy, minEconomy, maxEconomy),
           0.96,
           'transparent',
           0
@@ -204,7 +204,7 @@ export default function useMapCanvasRendering({
         if (!cell.isRiver || cell.downstreamId === null) continue;
         const downstreamCell = cells[cell.downstreamId];
         if (!downstreamCell) continue;
-        drawCurvedRiverSegment(context, cell, downstreamCell);
+        drawRiverCurve(context, cell, downstreamCell);
         context.strokeStyle = '#00f2ff';
         context.lineWidth = getRiverStrokeWidth(cell);
         context.lineCap = 'round';
@@ -227,22 +227,22 @@ export default function useMapCanvasRendering({
       drawProvinceBorders(context, cells);
 
     if (displaySettings.ethnicLabels) {
-      drawRegionNames(context, cells, nations, ethnicGroups, 'ethnic');
+      drawRegionNames(context, cells, nations, ethnics, 'ethnic');
     } else if (displaySettings.labels) {
       if (displaySettings.ethnicFill || displaySettings.ethnicBorders) {
-        drawRegionNames(context, cells, nations, ethnicGroups, 'ethnic');
+        drawRegionNames(context, cells, nations, ethnics, 'ethnic');
       } else if (displaySettings.countryBorders) {
-        drawRegionNames(context, cells, nations, ethnicGroups, 'nation');
+        drawRegionNames(context, cells, nations, ethnics, 'nation');
       }
     }
 
     if (
       displaySettings.terrain &&
-      !displaySettings.populationHeatmap &&
-      !displaySettings.temperatureHeatmap &&
-      !displaySettings.precipitationHeatmap &&
-      !displaySettings.rainShadowHeatmap &&
-      !displaySettings.economyHeatmap &&
+      !displaySettings.population &&
+      !displaySettings.temperature &&
+      !displaySettings.precipitation &&
+      !displaySettings.rainShadow &&
+      !displaySettings.economy &&
       cells.length <= T_SITE_MARKER_LIMIT
     ) {
       for (const cell of cells) {
@@ -250,14 +250,13 @@ export default function useMapCanvasRendering({
       }
     }
 
-    if (logisticsEnabled) {
+    if (logisticsEnabled)
       drawLogisticsRouteOverlay(context, cells, routeCellIds, startCellId, goalCellId);
-    }
   }, [
     canvasRef,
     cells,
     displaySettings,
-    ethnicGroups,
+    ethnics,
     goalCellId,
     height,
     logisticsEnabled,

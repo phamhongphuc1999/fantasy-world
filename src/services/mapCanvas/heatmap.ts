@@ -1,6 +1,6 @@
 import { TRgbColor, clamp01, interpolateColor, toRgbString } from './shared';
 
-export function getPopulationHeatmapColor(
+export function getPopulationColor(
   population: number,
   minPopulation: number,
   maxPopulation: number
@@ -13,7 +13,7 @@ export function getPopulationHeatmapColor(
   return interpolateColor(light, dark, normalized);
 }
 
-export function getTemperatureHeatmapColor(
+export function getTemperatureColor(
   temperature: number,
   minTemperature: number,
   maxTemperature: number
@@ -33,27 +33,24 @@ export function getTemperatureHeatmapColor(
   return interpolateColor(mild, hot, blend);
 }
 
-export function getPrecipitationHeatmapColor(precipitation: number) {
+export function getPrecipitationColor(precipitation: number) {
   const dry: TRgbColor = { r: 245, g: 158, b: 11 };
   const wet: TRgbColor = { r: 14, g: 116, b: 144 };
   const normalized = clamp01(precipitation);
   return interpolateColor(dry, wet, normalized);
 }
 
-export function getRainShadowHeatmapColor(rainShadow: number) {
+export function getRainShadowColor(rainShadow: number) {
   const low: TRgbColor = { r: 191, g: 219, b: 254 };
   const high: TRgbColor = { r: 146, g: 64, b: 14 };
   const normalized = clamp01(rainShadow);
   return interpolateColor(low, high, normalized);
 }
 
-export function getEconomyHeatmapColor(economy: number, minEconomy: number, maxEconomy: number) {
+export function getEconomyColor(economy: number, minEconomy: number, maxEconomy: number) {
   const low: TRgbColor = { r: 254, g: 240, b: 138 };
   const high: TRgbColor = { r: 120, g: 53, b: 15 };
-
-  if (maxEconomy <= minEconomy) {
-    return toRgbString(low);
-  }
+  if (maxEconomy <= minEconomy) return toRgbString(low);
 
   const normalized = clamp01((economy - minEconomy) / (maxEconomy - minEconomy));
   return interpolateColor(low, high, normalized);

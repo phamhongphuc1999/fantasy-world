@@ -100,11 +100,11 @@ export function drawRegionNames(
   context: CanvasRenderingContext2D,
   cells: TCell[],
   nations: TNation[],
-  ethnicGroups: TEthnic[],
+  ethnics: TEthnic[],
   mode: TLabelMode
 ) {
-  const regions = mode === 'nation' ? nations : ethnicGroups;
-  const idKey = mode === 'nation' ? 'nationId' : 'ethnicGroupId';
+  const regions = mode === 'nation' ? nations : ethnics;
+  const idKey = mode === 'nation' ? 'nationId' : 'ethnicId';
   const positions = new Map<number, { x: number; y: number; count: number }>();
 
   for (const cell of cells) {

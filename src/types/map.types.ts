@@ -1,6 +1,5 @@
 import type { Delaunay } from 'd3-delaunay';
 
-// Mesh & Geometry
 export type TPoint = [number, number];
 
 export type TTerrainConfig = {
@@ -12,7 +11,7 @@ export type TTerrainConfig = {
   isMarineWater: boolean;
   isRenderWater: boolean;
   sizeFactor: number;
-  logisticsMoveCost: number;
+  logisticsCost: number;
   logisticsRisk: number;
   baseSuitability: number | null;
   clusterMin?: number;
@@ -35,7 +34,6 @@ export interface TEdge {
   isBoundary: boolean;
 }
 
-// Topography & Terrain
 export type TSoilTerrain =
   | 'coast'
   | 'plains'
@@ -74,7 +72,6 @@ export interface TTopographyCell {
   terrain: TTerrain;
 }
 
-// Hydrology & Climate
 export type TZoneType = 'land' | 'internal-waters' | 'territorial-waters' | 'international-waters';
 export type TRiverEndType = 'sea' | 'offscreen' | 'lake' | 'inland-sink';
 export type TRiverKind = 'river' | 'creek' | 'branch' | 'fork';
@@ -85,7 +82,7 @@ export type TRiver = {
   mouthCellId: number;
   endType: TRiverEndType;
   parentRiverId: number | null;
-  tributaryRiverIds: number[];
+  tributaryIds: number[];
   basinId: number;
   kind: TRiverKind;
   name: string;
@@ -93,23 +90,22 @@ export type TRiver = {
   mouthWidth: number;
   peakFlow: number;
   cells: number[];
-  polyline: Array<[number, number]>;
+  polyline: Array<TPoint>;
   pointOffsets: number[];
-  polygon: Array<[number, number]>;
+  polygon: Array<TPoint>;
 };
 
-// Geopolitics: Nation / Ethnic / Province flags on cells
 export interface TNation {
   id: number;
   name: string;
   populationMultiplier: number;
   economyMultiplier: number;
-  terrainPopulationModifiers: TNumRecordTerrain;
-  terrainEconomyModifiers: TNumRecordTerrain;
+  terrainPopMods: TNumRecordTerrain;
+  terrainEcoMods: TNumRecordTerrain;
   capitalCellId: number | null;
-  capital_coords: TPoint | null;
-  economicHubCellIds: number[];
-  economic_hubs_coords: TPoint[];
+  capitalCoords: TPoint | null;
+  economicHubIds: number[];
+  economicHubPoints: TPoint[];
 }
 
 export interface TEthnic {
@@ -146,16 +142,15 @@ export interface TCell {
   rainShadow: number;
   population: number;
   economy: number;
-  waterAccessibility: number;
+  waterAccessScore: number;
   nationId: number | null;
   provinceId: number | null;
-  ethnicGroupId: number | null;
+  ethnicId: number | null;
   zoneType: TZoneType;
   isCapital: boolean;
   isEconomicHub: boolean;
 }
 
-// Final Map / Mesh
 export interface TMesh {
   width: number;
   height: number;
@@ -163,7 +158,7 @@ export interface TMesh {
   edges: TEdge[];
   vertices: TVertex[];
   nations: TNation[];
-  ethnicGroups: TEthnic[];
+  ethnics: TEthnic[];
   rivers: TRiver[];
 }
 
@@ -171,14 +166,13 @@ export type TDelaunayMesh = TMesh & {
   delaunay: Delaunay<TPoint>;
 };
 
-// Map Configuration & UI state
 export interface TDisplaySettings {
   terrain: boolean;
-  populationHeatmap: boolean;
-  temperatureHeatmap: boolean;
-  precipitationHeatmap: boolean;
-  rainShadowHeatmap: boolean;
-  economyHeatmap: boolean;
+  population: boolean;
+  temperature: boolean;
+  precipitation: boolean;
+  rainShadow: boolean;
+  economy: boolean;
   rivers: boolean;
   countryBorders: boolean;
   countryFill: boolean;
@@ -206,7 +200,6 @@ export interface TTerrainPresetOption {
   value: TTerrainPreset;
 }
 
-// Generation Pipeline
 export interface TGenerationConfig {
   width: number;
   height: number;
@@ -226,20 +219,18 @@ export interface TGenerationStages {
   geopolitics: TDelaunayMesh;
 }
 
-// Hydrology Profiling
 export interface THydrology {
-  initAndDownstreamMs: number;
+  initDownstreamMs: number;
   flowAccumulationMs: number;
-  erosionAndAdjustMs: number;
+  erosionAdjustmentMs: number;
   climateAndTerrainMs: number;
-  lakesAndEnclosedWaterMs: number;
+  lakesMs: number;
   riversMs: number;
   terrainPostProcessMs: number;
   finalizeBiomeMs: number;
   totalMs: number;
 }
 
-// Cell Inspection
 export interface TCellDescription {
   terrainType: string;
   elevation: string;
@@ -253,7 +244,7 @@ export interface TCellDescription {
   rainShadow: string;
   nationId: string;
   provinceId: string;
-  ethnicGroupId: string;
+  ethnicId: string;
   zoneType: string;
 }
 

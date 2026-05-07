@@ -1,5 +1,5 @@
 import { type MouseEvent } from 'react';
-import { TCell } from 'src/types/map.types';
+import { TCell, TPoint } from 'src/types/map.types';
 import { drawPolygon } from './shared';
 
 export function getCanvasPoint(
@@ -62,7 +62,7 @@ export function drawSiteMarker(
   context.globalAlpha = 1;
 }
 
-export function drawCurvedRiverSegment(context: CanvasRenderingContext2D, from: TCell, to: TCell) {
+export function drawRiverCurve(context: CanvasRenderingContext2D, from: TCell, to: TCell) {
   const end = getRiverSegmentEndPoint(from, to);
   const dx = end[0] - from.site[0];
   const dy = end[1] - from.site[1];
@@ -83,7 +83,7 @@ export function drawCurvedRiverSegment(context: CanvasRenderingContext2D, from: 
   context.quadraticCurveTo(cx, cy, end[0], end[1]);
 }
 
-export function getRiverSegmentEndPoint(from: TCell, to: TCell): [number, number] {
+export function getRiverSegmentEndPoint(from: TCell, to: TCell): TPoint {
   if (!to.isWater) return [to.site[0], to.site[1]];
 
   const startX = from.site[0];
@@ -95,12 +95,12 @@ export function getRiverSegmentEndPoint(from: TCell, to: TCell): [number, number
   const eps = 1e-6;
 
   let bestT = Number.POSITIVE_INFINITY;
-  let bestPoint: [number, number] | null = null;
+  let bestPoint: TPoint | null = null;
 
   const polygon = from.polygon;
   for (let index = 0; index < polygon.length; index += 1) {
-    const a = polygon[index] as [number, number];
-    const b = polygon[(index + 1) % polygon.length] as [number, number];
+    const a = polygon[index] as TPoint;
+    const b = polygon[(index + 1) % polygon.length] as TPoint;
     const ex = b[0] - a[0];
     const ey = b[1] - a[1];
     const denom = dx * ey - dy * ex;

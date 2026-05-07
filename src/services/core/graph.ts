@@ -69,15 +69,15 @@ export function floodFromSeeds(
   return visited;
 }
 
-type TBuildMultiSourceDistanceMapOptions = {
+type TBuildDistanceMapOptions = {
   isSeed: (cellId: number) => boolean;
   canTraverse?: (currentId: number, neighborId: number) => boolean;
   canVisit?: (neighborId: number) => boolean;
 };
 
-export function buildMultiSourceDistanceMap(
+export function buildDistanceMap(
   cells: Pick<TCell, 'neighbors'>[],
-  options: TBuildMultiSourceDistanceMapOptions
+  options: TBuildDistanceMapOptions
 ) {
   const distances = new Int32Array(cells.length);
   distances.fill(-1);
@@ -101,6 +101,5 @@ export function buildMultiSourceDistanceMap(
       queue.enqueue(neighborId);
     }
   }
-
   return distances;
 }

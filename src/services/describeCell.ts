@@ -22,7 +22,7 @@ export function describeCell(cell: TCell): TCellDescription {
     rainShadow: `${rainShadowPercent}%`,
     nationId: cell.nationId !== null ? String(cell.nationId) : 'None',
     provinceId: cell.provinceId !== null ? String(cell.provinceId) : 'None',
-    ethnicGroupId: cell.ethnicGroupId !== null ? String(cell.ethnicGroupId) : 'None',
+    ethnicId: cell.ethnicId !== null ? String(cell.ethnicId) : 'None',
     zoneType: cell.zoneType,
   };
 }

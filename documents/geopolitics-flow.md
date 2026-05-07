@@ -1,42 +1,119 @@
-# Geopolitics Flow (Current Implementation)
+# Geopolitics Reimplementation Spec (Exact Behavior)
 
-## Pipeline Overview
+## Main File
 
-The main flow is implemented in `src/services/map/buildGeopolitics/index.ts`:
+`src/services/buildGeopolitics/index.ts`
 
-1. `assignNations(...)`
-2. `postProcessNations(...)`
-3. Build nation profiles and scale population/economy per nation
-4. `assignProvinces(...)`
-5. `postProcessProvinces(...)`
-6. `assignEthnic(...)`
-7. Project final results back to cells (`nationId`, `provinceId`, `ethnicity`)
+## Exact Pipeline Order
 
-## Current Design Goals
+`buildGeopolitics(params)` must run exactly:
 
-- Keep generation deterministic by seed.
-- Separate responsibilities by layer: Nation -> Province -> Ethnic.
-- Allow post-processing to fix geometric/administrative artifacts after initial assignment.
+1. `assignNations(mesh, seed, nationCount)`
+2. `postProcessNations(mesh.cells, owner, preserveNationCount, seed)`
+3. `buildNationProfiles(owner, seed)`
+4. `mapNationsToCells(mesh.cells, owner, nationProfiles)`
+5. `limitNationPopulation(scaledCells, owner, seed)`
+6. `assignProvinces(scaledMesh.cells, owner, seed)`
+7. `postProcessProvinces({ cells: scaledMesh.cells, owner, provinceOwner })`
+8. `validateProvinceAssignments(...)` only when `NODE_ENV !== 'production'`
+9. `buildEthnicRegions(scaledMesh.cells, owner, seed)`
+10. `finalizeOwnershipProjection(...)`
 
-## Province Post-Processing Sequence (Current)
+Changing order changes results.
 
-In `postProcessProvinces(...)`, the current order is:
+## Nation Profile and Scaling Logic
 
-1. `limitMountainSplit(...)`
-2. `enforceProvinceConnect(...)`
-3. `minProvinceArea(...)`
-4. `enforceProvinceConnect(...)`
-5. `minProvinceArea(...)`
-6. `limitProvincePopulation(...)`
+`buildNationProfiles(owner, seed)`:
 
-Meaning:
+- Enumerate nation ids from `owner` where `nationId >= 0`.
+- For each nation id:
+  - RNG seed: `${seed}:nation-profile:${nationId}`
+  - Build terrain modifiers from configured ranges (`mapConfig.ts`) with `randomBetween(min, max)`.
+  - Build two multipliers:
+    - `populationMultiplier` in `T_NATION_POPULATION_MULTIPLIER_RANGE`
+    - `economyMultiplier` in `T_NATION_ECONOMY_MULTIPLIER_RANGE`
 
-- Prevent excessive fragmentation of mountain regions.
-- Enforce province contiguity.
-- Enforce minimum area constraints.
-- Enforce hard minimum population floor at the end of the province pipeline.
+`mapNationsToCells(...)`:
 
-## Output Schema Invariance
+- `if !isLand(cell)`: return cell unchanged.
+- `nationId = owner[cell.id]`; `if nationId < 0`: unchanged.
+- `if no profile`: unchanged.
+- `terrainPopulationModifier = profile.terrainPopMods[cell.terrain] ?? 1`
+- `terrainEconomyModifier = profile.terrainEcoMods[cell.terrain] ?? 1`
+- `population = round(cell.population * populationMultiplier * terrainPopulationModifier)`
+- `economy = round(cell.economy * economyMultiplier * terrainEconomyModifier)`
+- Clamp both to `>= 0`.
 
-- Do not change the output data schema.
-- Only adjust internal nation/province/ethnic distribution according to current constraints.
+## Nation Floor Logic
+
+`limitNationPopulation(cells, owner, seed)`:
+
+- For each nation id (`>= 0`), collect land cells and sum population.
+- Skip if no land cells.
+- Skip if population already `>= T_MIN_NATION_POPULATION`.
+- Else:
+  - RNG seed: `${seed}:nation-pop-floor:${nationId}`
+  - `randomizedFloor = round(T_MIN_NATION_POPULATION * (1.02 + random()*0.86))`
+  - `targetPopulation = max(T_MIN_NATION_POPULATION, randomizedFloor)`
+  - `scale = targetPopulation / max(1, nationPopulation)`
+  - For each nation cell: `scaledPopulation = max(1, round(cell.population * scale))`
+
+## Post-Nation Passes
+
+`postProcessNations(...)`:
+
+1. `runNationStabilityPass(cells, owner, nationCount)`
+2. `enforceMainlandContiguity(cells, owner)`
+3. `runNationStabilityPass(cells, owner, nationCount)`
+4. `finalizeNationBorders(cells, owner, nationCount)`
+5. `diversifySmallNationSizes(cells, owner, seed)`
+6. `finalizeNationBorders(cells, owner, nationCount)`
+
+`runNationStabilityPass(...)` internals:
+
+1. `alignNaturalTerrainClusters(cells, owner)`
+2. `limitMountainSplit(cells, owner, 'country')`
+3. `enforceMinNationArea(cells, owner, preserveNationCount)`
+
+## Province Stage
+
+`assignProvinces(...)` returns `provinceOwner = buildNationProvinces(cells, owner, seed)`.
+
+`postProcessProvinces(...)` exact order:
+
+1. `limitMountainSplit(cells, provinceOwner, 'province', owner)`
+2. Repeat exactly 2 times:
+   - `enforceProvinceConnect({ cells, owner, provinceOwner })`
+   - `minProvinceArea({ cells, owner, provinceOwner })`
+3. `limitProvincePopulation({ cells, owner, provinceOwner })`
+
+## Ethnic Stage
+
+- `buildEthnicRegions(scaledMesh.cells, owner, seed)` returns `ethnicOwner`.
+- This stage runs after province post-processing.
+
+## Final Projection Logic
+
+`finalizeOwnershipProjection(...)`:
+
+1. Compute maritime owners and zone types with `assignMaritimeZones(mesh.cells)`.
+2. Build nation metadata with `pickEconomicAndCapital(...)`.
+3. Build `hubCellIds` and `capitalCellIds` sets.
+4. For each cell:
+   - `landNationId = owner[cell.id] >= 0 ? owner[cell.id] : null`
+   - `waterNationId = waterOwner[cell.id] >= 0 ? waterOwner[cell.id] : null`
+   - `nationId = zoneType[cell.id] === 'land' ? landNationId : waterNationId`
+   - `provinceId = zoneType[cell.id] === 'land' ? (provinceOwner[cell.id] >= 0 ? provinceOwner[cell.id] : null) : null`
+   - `ethnicId = zoneType[cell.id] === 'land' ? (ethnicOwner[cell.id] >= 0 ? ethnicOwner[cell.id] : null) : null`
+   - `zoneType = zoneType[cell.id]`
+   - `isEconomicHub = hubCellIds.has(cell.id)`
+   - `isCapital = capitalCellIds.has(cell.id)`
+
+## Reimplementation Constraints
+
+To reproduce identical output:
+
+- Keep map/stage order exactly as above.
+- Keep null/negative-id handling exactly (`<0 => null`).
+- Keep seed strings exactly.
+- Keep production/dev branch around `validateProvinceAssignments`.

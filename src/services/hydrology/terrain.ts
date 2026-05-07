@@ -84,7 +84,7 @@ function getTerrainFitness(
   return -10;
 }
 
-function getNeighborTerrainCounts(cell: TCell, cells: TCell[]) {
+function countNeighborTerrains(cell: TCell, cells: TCell[]) {
   const counts = new Map<TTerrain, number>();
 
   for (const neighborId of cell.neighbors) {
@@ -96,7 +96,7 @@ function getNeighborTerrainCounts(cell: TCell, cells: TCell[]) {
   return counts;
 }
 
-function findSmallTerrainRegions(cells: TCell[], minRegionSize: number) {
+function findSmallRegions(cells: TCell[], minRegionSize: number) {
   const regions = collectConnectedComponents(
     cells,
     (cell) => !isHydrologyWaterTerrain(cell.terrain),
@@ -111,7 +111,7 @@ function clusterLandTerrains(cells: TCell[], seaLevel: number) {
     HYDROLOGY_CONFIG.region.minBase,
     Math.floor(Math.sqrt(cells.length) * HYDROLOGY_CONFIG.region.minScale)
   );
-  const smallRegions = findSmallTerrainRegions(cells, minRegionSize);
+  const smallRegions = findSmallRegions(cells, minRegionSize);
 
   for (const region of smallRegions) {
     const regionSet = new Set(region);
@@ -155,7 +155,7 @@ function clusterLandTerrains(cells: TCell[], seaLevel: number) {
       const cell = cells[cellIndex];
       if (isLockedTerrain(cell, cell.terrain)) continue;
 
-      const counts = getNeighborTerrainCounts(cell, cells);
+      const counts = countNeighborTerrains(cell, cells);
       if (counts.size === 0) continue;
 
       let dominantTerrain = cell.terrain;
@@ -463,7 +463,7 @@ function rebalanceTerrain(cells: TCell[], terrainBalance: TTerrainBalance) {
   // Final alignment pass:
   // Keep terrain shares close to requested ratios and avoid counter-intuitive drift
   // (e.g. increasing mountains but forests growing due to intermediate conversions).
-  function convertDeficitFromDonors(
+  function fillDeficitFromDonors(
     targetTerrain: TTerrain,
     desiredMinShare: number,
     donors: TTerrain[],
@@ -499,38 +499,38 @@ function rebalanceTerrain(cells: TCell[], terrainBalance: TTerrainBalance) {
     (cell) => 1 - cell.rainShadow + cell.precipitation
   );
 
-  convertDeficitFromDonors(
+  fillDeficitFromDonors(
     'mountains',
     target.mountainsMinShare,
     ['hills', 'plateau', 'plains'],
     (cell) => cell.elevation + Math.max(0, 0.65 - cell.precipitation) + cell.rainShadow * 0.3
   );
-  convertDeficitFromDonors(
+  fillDeficitFromDonors(
     'hills',
     target.hillsMinShare,
     ['plains', 'forest'],
     (cell) => cell.elevation + Math.max(0, cell.flow - 2) * 0.02
   );
-  convertDeficitFromDonors(
+  fillDeficitFromDonors(
     'plateau',
     target.plateauMinShare,
     ['hills', 'plains'],
     (cell) => cell.elevation + Math.max(0, cell.precipitation - 0.22)
   );
-  convertDeficitFromDonors(
+  fillDeficitFromDonors(
     'forest',
     target.forestMinShare,
     ['plains', 'hills'],
     (cell) => cell.precipitation - Math.abs(cell.temperature - 0.52) - cell.rainShadow * 0.35
   );
-  convertDeficitFromDonors(
+  fillDeficitFromDonors(
     'swamp',
     target.swampMinShare,
     ['plains', 'valley', 'forest'],
     (cell) =>
       cell.precipitation + Math.max(0, 0.62 - cell.elevation) + Math.max(0, cell.flow - 2.5) * 0.02
   );
-  convertDeficitFromDonors(
+  fillDeficitFromDonors(
     'desert',
     target.desertMinShare,
     ['plains', 'hills', 'plateau', 'forest'],
@@ -540,7 +540,7 @@ function rebalanceTerrain(cells: TCell[], terrainBalance: TTerrainBalance) {
       Math.max(0, 0.5 - cell.precipitation) * 1.4 +
       Math.max(0, cell.elevation - 0.35) * 0.35
   );
-  convertDeficitFromDonors(
+  fillDeficitFromDonors(
     'plains',
     target.plainsMinShare,
     ['hills', 'forest', 'plateau', 'valley', 'swamp'],
@@ -557,7 +557,7 @@ function antiAliasTerrains(cells: TCell[]) {
       if (isHydrologyWaterTerrain(cell.terrain)) continue;
       if (cell.isRiver && cell.terrain === 'valley') continue;
 
-      const counts = getNeighborTerrainCounts(cell, cells);
+      const counts = countNeighborTerrains(cell, cells);
       if (counts.size === 0) continue;
 
       const sameCount = counts.get(cell.terrain) || 0;

@@ -1,5 +1,5 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
-import { buildMultiSourceDistanceMap } from 'src/services/core/graph';
+import { buildDistanceMap } from 'src/services/core/graph';
 import { createSeededRandom } from 'src/services/seededRandom';
 import { isWaterOrRiverCell } from 'src/services/terrainRules';
 import { TCell, TDelaunayMesh } from 'src/types/map.types';
@@ -10,7 +10,7 @@ interface TBuildPopulationOptions {
   seed: string;
 }
 
-function populationMultiplier(cell: TCell, cells: TCell[]) {
+function calcPopMultiplier(cell: TCell, cells: TCell[]) {
   const isNearWater = cell.neighbors.some((neighborId) => {
     const n = cells[neighborId];
     return (
@@ -60,8 +60,8 @@ function populationMultiplier(cell: TCell, cells: TCell[]) {
   }
 }
 
-function buildWaterAccessibility(cells: TCell[]) {
-  const distances = buildMultiSourceDistanceMap(cells, {
+function calcWaterAccess(cells: TCell[]) {
+  const distances = buildDistanceMap(cells, {
     isSeed: (cellId) => {
       const terrain = cells[cellId].terrain;
       return terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea';
@@ -84,7 +84,7 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelau
   const cells = mesh.cells;
   const random = createSeededRandom(`${seed}:population`);
   const score = new Float64Array(cells.length);
-  const waterAccessibility = buildWaterAccessibility(cells);
+  const waterAccessScore = calcWaterAccess(cells);
   let landCellCount = 0;
 
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
@@ -196,13 +196,13 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelau
         ...cell,
         population: 0,
         economy: 0,
-        waterAccessibility: waterAccessibility[cell.id],
+        waterAccessScore: waterAccessScore[cell.id],
       };
     const density = clamp(score[cell.id] / normalizedMax, 0, 1);
     const shaped = Math.pow(density, 1.08);
     const basePopulation = Math.round(shaped * 2500);
     const population = Math.round(
-      basePopulation * populationMultiplier(cell, cells) * waterAccessibility[cell.id]
+      basePopulation * calcPopMultiplier(cell, cells) * waterAccessScore[cell.id]
     );
 
     const terrainFactor = TERRAIN_CONFIG[cell.terrain].economyFactor;
@@ -217,19 +217,19 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelau
       : 0;
     const waterFactor =
       0.72 +
-      waterAccessibility[cell.id] * 1.34 +
+      waterAccessScore[cell.id] * 1.34 +
       riverWaterBonus +
       lakeWaterBonus +
       coastWaterBonus +
       nearWaterNeighborBonus;
     const popNorm = clamp(population / 120000, 0, 1);
-    const waterNorm = clamp(waterAccessibility[cell.id], 0, 1);
+    const waterNorm = clamp(waterAccessScore[cell.id], 0, 1);
     const synergyMultiplier = 1 + popNorm * waterNorm * 1.35;
     const economy = Math.round(
       Math.pow(Math.max(0, population), 1.12) * terrainFactor * waterFactor * synergyMultiplier
     );
 
-    return { ...cell, population, economy, waterAccessibility: waterAccessibility[cell.id] };
+    return { ...cell, population, economy, waterAccessScore: waterAccessScore[cell.id] };
   });
   return { ...mesh, cells: nextCells };
 }

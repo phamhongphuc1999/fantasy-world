@@ -1,6 +1,6 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
-import { findNearestCellId } from 'src/services';
-import { sortStableDesc } from 'src/services/common';
+import { findNearestCell } from 'src/services';
+import { sortDescStable } from 'src/services/common';
 import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
 import { collectConnectedComponents } from 'src/services/core/graph';
 import { TFifoQueue } from 'src/services/core/queue';
@@ -31,7 +31,7 @@ function collectLandComponents(cells: TCell[]) {
 
 function pickEthnicCoreSeeds(cells: TCell[], cellIds: number[], count: number, seed: string) {
   const random = createSeededRandom(`${seed}:ethnic:cores`);
-  const candidates = sortStableDesc(
+  const candidates = sortDescStable(
     cellIds
       .map((cellId) => cells[cellId])
       .map((cell) => {
@@ -67,8 +67,8 @@ function buildEthnicField(
   seedCells: number[],
   seed: string,
   config: TEthnicConfig,
-  ethnicOffset: number,
-  allowedCellSet: Set<number>,
+  offset: number,
+  allowedCells: Set<number>,
   ethnicOwner: Int32Array
 ) {
   const cost = new Float64Array(cells.length);
@@ -79,7 +79,7 @@ function buildEthnicField(
 
   for (let localEthnicId = 0; localEthnicId < seedCells.length; localEthnicId += 1) {
     const cellId = seedCells[localEthnicId];
-    const ethnicId = ethnicOffset + localEthnicId;
+    const ethnicId = offset + localEthnicId;
     ethnicOwner[cellId] = ethnicId;
     cost[cellId] = 0;
     seedStates.push({ cellId, ethnicId, cost: 0, distance: 0 });
@@ -92,7 +92,7 @@ function buildEthnicField(
     expand: (current, push) => {
       for (const neighborId of cells[current.cellId].neighbors) {
         const neighbor = cells[neighborId];
-        if (!allowedCellSet.has(neighborId) || !isLand(neighbor)) continue;
+        if (!allowedCells.has(neighborId) || !isLand(neighbor)) continue;
 
         let step = Cost.ethnic(neighbor, { strength: config.terrainInfluenceStrength });
         const borderPenalty =
@@ -127,13 +127,13 @@ function buildEthnicField(
   });
 }
 
-function enforceCountryEthnicDominance(
+function enforceNationEthnicDominance(
   cells: TCell[],
   nationOwner: Int32Array,
   ethnicOwner: Int32Array,
   config: TEthnicConfig
 ) {
-  function isTransnationalBridgeCell(cellId: number, ethnicId: number) {
+  function isCrossNationBridgeCell(cellId: number, ethnicId: number) {
     const nationId = nationOwner[cellId];
     if (nationId < 0) return false;
     for (const neighborId of cells[cellId].neighbors) {
@@ -188,7 +188,7 @@ function enforceCountryEthnicDominance(
       let need = dominantNeed - currentDominant;
       for (const cellId of outsiders) {
         if (need <= 0) break;
-        if (isTransnationalBridgeCell(cellId, ethnicOwner[cellId])) continue;
+        if (isCrossNationBridgeCell(cellId, ethnicOwner[cellId])) continue;
         ethnicOwner[cellId] = dominantId;
         need -= 1;
       }
@@ -212,7 +212,7 @@ function enforceCountryEthnicDominance(
         let need = secondaryNeed - currentSecondary;
         for (const cellId of secondaryCandidates) {
           if (need <= 0) break;
-          if (isTransnationalBridgeCell(cellId, ethnicOwner[cellId])) continue;
+          if (isCrossNationBridgeCell(cellId, ethnicOwner[cellId])) continue;
           ethnicOwner[cellId] = secondaryId;
           need -= 1;
         }
@@ -224,13 +224,13 @@ function enforceCountryEthnicDominance(
 function addEthnicFragmentation(
   cells: TCell[],
   ethnicOwner: Int32Array,
-  ethnicGroups: TEthnic[],
+  ethnics: TEthnic[],
   seed: string,
   config: TEthnicConfig
 ) {
   const random = createSeededRandom(`${seed}:ethnic:fragments`);
   const fragmentSteps = Math.max(1, Math.floor(config.fragmentationLevel * 6));
-  for (const group of ethnicGroups) {
+  for (const group of ethnics) {
     const groupCells = cells
       .filter((cell) => ethnicOwner[cell.id] === group.id && isLand(cell))
       .map((cell) => cell.id);
@@ -286,7 +286,7 @@ function smoothEthnicRegions(cells: TCell[], ethnicOwner: Int32Array, config: TE
   }
 }
 
-function enforceCrossBorderEthnicContinuity(
+function smoothCrossBorderEthnics(
   cells: TCell[],
   nationOwner: Int32Array,
   ethnicOwner: Int32Array,
@@ -338,7 +338,7 @@ function enforceCrossBorderEthnicContinuity(
   }
 }
 
-function expandEthnicDeepCrossBorder(
+function expandCrossBorderEthnics(
   cells: TCell[],
   nationOwner: Int32Array,
   ethnicOwner: Int32Array,
@@ -409,13 +409,13 @@ function expandEthnicDeepCrossBorder(
   }
 }
 
-function ensureEthnicMultiNationPresence(
+function spreadEthnicsAcrossNations(
   cells: TCell[],
   nationOwner: Int32Array,
   ethnicOwner: Int32Array,
-  ethnicGroups: TEthnic[]
+  ethnics: TEthnic[]
 ) {
-  for (const group of ethnicGroups) {
+  for (const group of ethnics) {
     const nationIds = new Set<number>();
     for (const cell of cells) {
       if (!isLand(cell)) continue;
@@ -464,7 +464,7 @@ function ensureEthnicMultiNationPresence(
   }
 }
 
-function assignUnclaimedLandCells(cells: TCell[], ethnicOwner: Int32Array) {
+function fillUnclaimedLand(cells: TCell[], ethnicOwner: Int32Array) {
   const claimedLandIds = cells
     .filter((cell) => isLand(cell) && ethnicOwner[cell.id] >= 0)
     .map((cell) => cell.id);
@@ -472,16 +472,12 @@ function assignUnclaimedLandCells(cells: TCell[], ethnicOwner: Int32Array) {
 
   for (const cell of cells) {
     if (!isLand(cell) || ethnicOwner[cell.id] >= 0) continue;
-    const nearestCellId = findNearestCellId(cells, cell.site, claimedLandIds);
+    const nearestCellId = findNearestCell(cells, cell.site, claimedLandIds);
     if (nearestCellId >= 0) ethnicOwner[cell.id] = ethnicOwner[nearestCellId];
   }
 }
 
-function enforceMinimumEthnicPopulation(
-  cells: TCell[],
-  ethnicOwner: Int32Array,
-  ethnicGroups: TEthnic[]
-) {
+function enforceEthnicMinPop(cells: TCell[], ethnicOwner: Int32Array, ethnics: TEthnic[]) {
   function getPopulationByEthnic() {
     const population = new Map<number, number>();
     for (const cell of cells) {
@@ -541,7 +537,7 @@ function enforceMinimumEthnicPopulation(
           )
           .map((cell) => cell.id);
         if (candidateCellIds.length > 0) {
-          const nearestCellId = findNearestCellId(
+          const nearestCellId = findNearestCell(
             cells,
             cells[ethnicCells[0] as number].site,
             candidateCellIds
@@ -611,15 +607,15 @@ function enforceMinimumEthnicPopulation(
     }
   }
 
-  const nextGroups = ethnicGroups.filter((group) => finalEthnicIds.has(group.id));
-  ethnicGroups.splice(0, ethnicGroups.length, ...nextGroups);
+  const nextGroups = ethnics.filter((group) => finalEthnicIds.has(group.id));
+  ethnics.splice(0, ethnics.length, ...nextGroups);
 }
 
 export function buildEthnicRegions(cells: TCell[], nationOwner: Int32Array, seed: string) {
   const config = GEOPOLITICAL_CONFIG.ethnic;
   const ethnicOwner = new Int32Array(cells.length);
   ethnicOwner.fill(-1);
-  const ethnicGroups: TEthnic[] = [];
+  const ethnics: TEthnic[] = [];
 
   const components = collectLandComponents(cells);
   let ethnicOffset = 0;
@@ -656,7 +652,7 @@ export function buildEthnicRegions(cells: TCell[], nationOwner: Int32Array, seed
 
     for (let localId = 0; localId < seedCells.length; localId += 1) {
       const globalId = ethnicOffset + localId;
-      ethnicGroups.push({
+      ethnics.push({
         id: globalId,
         name: createRegionalName(seed, 'ethnic', globalId),
         coreCellId: seedCells[localId] as number,
@@ -666,16 +662,16 @@ export function buildEthnicRegions(cells: TCell[], nationOwner: Int32Array, seed
     ethnicOffset += seedCells.length;
   }
 
-  enforceCountryEthnicDominance(cells, nationOwner, ethnicOwner, config);
-  expandEthnicDeepCrossBorder(cells, nationOwner, ethnicOwner, seed, config);
-  enforceCrossBorderEthnicContinuity(cells, nationOwner, ethnicOwner, config);
-  addEthnicFragmentation(cells, ethnicOwner, ethnicGroups, seed, config);
-  expandEthnicDeepCrossBorder(cells, nationOwner, ethnicOwner, seed, config);
-  enforceCrossBorderEthnicContinuity(cells, nationOwner, ethnicOwner, config);
-  ensureEthnicMultiNationPresence(cells, nationOwner, ethnicOwner, ethnicGroups);
+  enforceNationEthnicDominance(cells, nationOwner, ethnicOwner, config);
+  expandCrossBorderEthnics(cells, nationOwner, ethnicOwner, seed, config);
+  smoothCrossBorderEthnics(cells, nationOwner, ethnicOwner, config);
+  addEthnicFragmentation(cells, ethnicOwner, ethnics, seed, config);
+  expandCrossBorderEthnics(cells, nationOwner, ethnicOwner, seed, config);
+  smoothCrossBorderEthnics(cells, nationOwner, ethnicOwner, config);
+  spreadEthnicsAcrossNations(cells, nationOwner, ethnicOwner, ethnics);
   smoothEthnicRegions(cells, ethnicOwner, config);
-  assignUnclaimedLandCells(cells, ethnicOwner);
-  enforceMinimumEthnicPopulation(cells, ethnicOwner, ethnicGroups);
+  fillUnclaimedLand(cells, ethnicOwner);
+  enforceEthnicMinPop(cells, ethnicOwner, ethnics);
 
-  return { ethnicOwner, ethnicGroups };
+  return { ethnicOwner, ethnics };
 }

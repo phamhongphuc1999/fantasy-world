@@ -7,7 +7,7 @@ import {
   getTerrain,
 } from 'src/services/hydrology/climateTerrain';
 import {
-  classifyEnclosedWaterBodies,
+  classifyInlandWater,
   expandLakes,
   filterAndLimitLakes,
 } from 'src/services/hydrology/lakes';
@@ -45,11 +45,11 @@ function sortIndicesByElevation(elevations: Float32Array) {
 
 function createEmptyHydrologyProfile(): THydrology {
   return {
-    initAndDownstreamMs: 0,
+    initDownstreamMs: 0,
     flowAccumulationMs: 0,
-    erosionAndAdjustMs: 0,
+    erosionAdjustmentMs: 0,
     climateAndTerrainMs: 0,
-    lakesAndEnclosedWaterMs: 0,
+    lakesMs: 0,
     riversMs: 0,
     terrainPostProcessMs: 0,
     finalizeBiomeMs: 0,
@@ -82,7 +82,7 @@ function runHydrologyInternal(
   const isLake = new Uint8Array(cellCount);
   const isRiver = new Uint8Array(cellCount);
 
-  measure('initAndDownstreamMs', () => {
+  measure('initDownstreamMs', () => {
     downstream.fill(-1);
 
     for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
@@ -130,7 +130,7 @@ function runHydrologyInternal(
     }
   });
 
-  measure('erosionAndAdjustMs', () => {
+  measure('erosionAdjustmentMs', () => {
     for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
       const cell = mesh.cells[cellIndex];
       const downstreamId = downstream[cellIndex];
@@ -188,13 +188,13 @@ function runHydrologyInternal(
       rainShadow: 0,
       population: 0,
       economy: 0,
-      waterAccessibility: 0,
+      waterAccessScore: 0,
       terrain: 'plains' as TTerrain,
       biome: '',
       suitability: 0,
       nationId: null,
       provinceId: null,
-      ethnicGroupId: null,
+      ethnicId: null,
       zoneType: 'international-waters' as const,
       isCapital: false,
       isEconomicHub: false,
@@ -261,10 +261,10 @@ function runHydrologyInternal(
     }
   });
 
-  measure('lakesAndEnclosedWaterMs', () => {
+  measure('lakesMs', () => {
     expandLakes(cells, flow, downstream);
     filterAndLimitLakes(cells, flow);
-    classifyEnclosedWaterBodies(cells, mesh.width, mesh.height, seaLevel, downstream);
+    classifyInlandWater(cells, mesh.width, mesh.height, seaLevel, downstream);
   });
 
   measure('riversMs', () => {

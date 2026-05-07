@@ -4,9 +4,9 @@ import { useRef, useState } from 'react';
 import EthnicDetailDialog from 'src/components/AppDialog/EthnicDetailDialog';
 import NationDetailDialog from 'src/components/AppDialog/NationDetailDialog';
 import { useMapContext } from 'src/contexts/map.context';
-import useMapCanvasRendering from 'src/hooks/useMapCanvasRendering';
-import useMapOverlayRendering from 'src/hooks/useMapOverlayRendering';
-import { getCanvasPoint } from 'src/services/mapCanvas.service';
+import useMapCanvas from 'src/hooks/useMapCanvas';
+import useMapOverlay from 'src/hooks/useMapOverlay';
+import { getCanvasPoint } from 'src/services/mapCanvas/primitives';
 import { useLogisticsGameStore } from 'src/store/logisticsGameStore';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
@@ -14,7 +14,7 @@ export default function MapCanvasPanel() {
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [selectedNationId, setSelectedNationId] = useState<number | null>(null);
-  const [selectedEthnicGroupId, setSelectedEthnicGroupId] = useState<number | null>(null);
+  const [selectedEthnicId, setSelectedEthnicId] = useState<number | null>(null);
   const [nationDialogOpen, setNationDialogOpen] = useState(false);
   const [ethnicDialogOpen, setEthnicDialogOpen] = useState(false);
   const { displaySettings, hoverIndex, setHoverClientPoint, setHoverIndex } = useMapExplorerStore();
@@ -27,15 +27,15 @@ export default function MapCanvasPanel() {
     recalculateRoute,
   } = useLogisticsGameStore();
   const { mesh, isGenerating, handlePointerMove } = useMapContext();
-  const { cells, width, height, nations, ethnicGroups } = mesh;
+  const { cells, width, height, nations, ethnics } = mesh;
 
-  useMapCanvasRendering({
+  useMapCanvas({
     canvasRef: baseCanvasRef,
     cells,
     width,
     height,
     nations,
-    ethnicGroups,
+    ethnics,
     displaySettings,
     logisticsEnabled,
     routeCellIds,
@@ -43,7 +43,7 @@ export default function MapCanvasPanel() {
     goalCellId,
   });
 
-  useMapOverlayRendering({ canvasRef: overlayCanvasRef, cells, width, height, hoverIndex });
+  useMapOverlay({ canvasRef: overlayCanvasRef, cells, width, height, hoverIndex });
 
   return (
     <div className="flex h-full w-full items-center justify-center overflow-hidden">
@@ -87,10 +87,10 @@ export default function MapCanvasPanel() {
               !displaySettings.countryFill &&
               !displaySettings.countryBorders;
             if (shouldOpenEthnicDetail) {
-              const ethnicGroupId = cells[clickedId]?.ethnicGroupId ?? null;
-              if (ethnicGroupId === null) return;
+              const ethnicId = cells[clickedId]?.ethnicId ?? null;
+              if (ethnicId === null) return;
               setNationDialogOpen(false);
-              setSelectedEthnicGroupId(ethnicGroupId);
+              setSelectedEthnicId(ethnicId);
               setEthnicDialogOpen(true);
               return;
             }
@@ -119,7 +119,7 @@ export default function MapCanvasPanel() {
       <EthnicDetailDialog
         open={ethnicDialogOpen}
         onOpenChange={setEthnicDialogOpen}
-        ethnicGroupId={selectedEthnicGroupId}
+        ethnicId={selectedEthnicId}
         mesh={mesh}
       />
     </div>

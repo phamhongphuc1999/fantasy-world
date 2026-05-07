@@ -1,4 +1,4 @@
-import { getNationColor, toUndirectedEdgeKey } from 'src/services';
+import { getNationColor, toEdgeKey } from 'src/services';
 import { isRenderWaterTerrain } from 'src/services/terrainRules';
 import { TCell, TPoint } from 'src/types/map.types';
 import { drawPolygon, edgeNoiseValue } from './shared';
@@ -34,9 +34,7 @@ export function drawEthnicFill(
   cells: TCell[],
   showTerrain: boolean
 ) {
-  fillLandCells(context, cells, showTerrain ? 0.3 : 0.86, (cell) =>
-    getNationColor(cell.ethnicGroupId)
-  );
+  fillLandCells(context, cells, showTerrain ? 0.3 : 0.86, (cell) => getNationColor(cell.ethnicId));
 }
 
 function drawNaturalBorderSegment(
@@ -72,19 +70,19 @@ function drawNaturalBorderSegment(
   context.bezierCurveTo(cp1[0], cp1[1], cp2[0], cp2[1], end[0], end[1]);
 }
 
-function shouldDrawCountryLandBorder(cellA: TCell, cellB: TCell) {
+function shouldDrawNationBorder(cellA: TCell, cellB: TCell) {
   if (!isLandCell(cellA) || !isLandCell(cellB)) return false;
   if (cellA.nationId === null || cellB.nationId === null) return false;
   return cellA.nationId !== cellB.nationId;
 }
 
-function shouldDrawEthnicLandBorder(cellA: TCell, cellB: TCell) {
+function shouldDrawEthnicBorder(cellA: TCell, cellB: TCell) {
   if (!isLandCell(cellA) || !isLandCell(cellB)) return false;
-  if (cellA.ethnicGroupId === null || cellB.ethnicGroupId === null) return false;
-  return cellA.ethnicGroupId !== cellB.ethnicGroupId;
+  if (cellA.ethnicId === null || cellB.ethnicId === null) return false;
+  return cellA.ethnicId !== cellB.ethnicId;
 }
 
-function forEachSharedBorderEdge(
+function forEachBorderEdge(
   cells: TCell[],
   shouldDraw: (leftCell: TCell, rightCell: TCell) => boolean,
   onDraw: (contextEdge: { start: TPoint; end: TPoint; edgeKey: string }) => void
@@ -97,7 +95,7 @@ function forEachSharedBorderEdge(
     for (let index = 0; index < cell.polygon.length; index += 1) {
       const start = cell.polygon[index];
       const end = cell.polygon[(index + 1) % cell.polygon.length];
-      const edgeKey = toUndirectedEdgeKey(start, end, { precision: 3 });
+      const edgeKey = toEdgeKey(start, end, { precision: 3 });
       const existing = edgeOwner.get(edgeKey);
 
       if (!existing) {
@@ -128,19 +126,19 @@ function strokeNaturalBorder(
 }
 
 export function drawGrayBorders(context: CanvasRenderingContext2D, cells: TCell[]) {
-  forEachSharedBorderEdge(cells, shouldDrawCountryLandBorder, ({ start, end, edgeKey }) => {
+  forEachBorderEdge(cells, shouldDrawNationBorder, ({ start, end, edgeKey }) => {
     strokeNaturalBorder(context, start, end, edgeKey);
   });
 }
 
 export function drawEthnicBorders(context: CanvasRenderingContext2D, cells: TCell[]) {
-  forEachSharedBorderEdge(cells, shouldDrawEthnicLandBorder, ({ start, end, edgeKey }) => {
+  forEachBorderEdge(cells, shouldDrawEthnicBorder, ({ start, end, edgeKey }) => {
     strokeNaturalBorder(context, start, end, edgeKey);
   });
 }
 
 export function drawProvinceBorders(context: CanvasRenderingContext2D, cells: TCell[]) {
-  forEachSharedBorderEdge(
+  forEachBorderEdge(
     cells,
     (leftCell, rightCell) => {
       if (!isLandCell(leftCell) || !isLandCell(rightCell)) return false;

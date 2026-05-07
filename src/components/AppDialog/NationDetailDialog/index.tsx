@@ -108,8 +108,8 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
             )}
           </BlurCard>
           <BlurCard title="Economic Hub">
-            {nation.economicHubCellIds.length > 0
-              ? nation.economicHubCellIds.map((cellId) => `#${cellId}`).join(', ')
+            {nation.economicHubIds.length > 0
+              ? nation.economicHubIds.map((cellId) => `#${cellId}`).join(', ')
               : 'No economic hubs'}
           </BlurCard>
         </div>

@@ -10,7 +10,7 @@ interface TBuildMeshOptions {
   cellCount: number;
 }
 
-function generateJitteredGridPoints(
+function genJitteredPoints(
   width: number,
   height: number,
   cellCount: number,
@@ -36,7 +36,7 @@ function generateJitteredGridPoints(
   return points;
 }
 
-function normalizePolygon(polygon: Iterable<TPoint> | null | undefined): TPoint[] {
+function sanitizePolygon(polygon: Iterable<TPoint> | null | undefined): TPoint[] {
   if (!polygon) return [];
 
   const points = Array.from(polygon, ([x, y]) => [x, y] as TPoint);
@@ -55,7 +55,7 @@ function createEdgeKey(vertexAId: number, vertexBId: number) {
 }
 
 export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions): TDelaunayMesh {
-  const points = generateJitteredGridPoints(width, height, cellCount, seed);
+  const points = genJitteredPoints(width, height, cellCount, seed);
   const delaunay = Delaunay.from(points);
   const voronoi = delaunay.voronoi([0, 0, width, height]);
   const vertexIdByKey = new Map<string, number>();
@@ -64,7 +64,7 @@ export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions)
   const edges: TEdge[] = [];
 
   const cells: TCell[] = points.map((point, index) => {
-    const polygon = normalizePolygon(voronoi.cellPolygon(index));
+    const polygon = sanitizePolygon(voronoi.cellPolygon(index));
     const vertexIds = polygon.map((polygonPoint) => {
       const pointKey = toPointKey(polygonPoint, { precision: 4 });
       const existingVertexId = vertexIdByKey.get(pointKey);
@@ -137,25 +137,15 @@ export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions)
       rainShadow: 0,
       population: 0,
       economy: 0,
-      waterAccessibility: 0,
+      waterAccessScore: 0,
       nationId: null,
       provinceId: null,
-      ethnicGroupId: null,
+      ethnicId: null,
       zoneType: 'international-waters',
       isCapital: false,
       isEconomicHub: false,
     };
   });
 
-  return {
-    width,
-    height,
-    cells,
-    edges,
-    vertices,
-    nations: [],
-    ethnicGroups: [],
-    rivers: [],
-    delaunay,
-  };
+  return { width, height, cells, edges, vertices, nations: [], ethnics: [], rivers: [], delaunay };
 }

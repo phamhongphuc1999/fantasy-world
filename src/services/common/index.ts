@@ -69,7 +69,7 @@ export function toPointKey(point: TPoint, options?: TPointKeyOptions) {
   return `${point[0].toFixed(precision)}${separator}${point[1].toFixed(precision)}`;
 }
 
-export function toUndirectedEdgeKey(
+export function toEdgeKey(
   startPoint: TPoint,
   endPoint: TPoint,
   options?: TUndirectedEdgeKeyOptions
@@ -84,7 +84,7 @@ export function toUndirectedEdgeKey(
     : `${endKey}${edgeSeparator}${startKey}`;
 }
 
-export function findNearestCellId(
+export function findNearestCell(
   cells: Pick<TCell, 'site'>[],
   sourcePoint: TPoint,
   candidateCellIds: number[],
@@ -127,7 +127,7 @@ export function getRiverStrokeWidth(cell: TCell) {
   return Math.min(4.8, Math.max(0.75, cell.riverWidth || 0.9));
 }
 
-export function sortStableDesc<T extends { score: number; cellId: number }>(items: T[]) {
+export function sortDescStable<T extends { score: number; cellId: number }>(items: T[]) {
   items.sort((left, right) => {
     if (right.score !== left.score) return right.score - left.score;
     return left.cellId - right.cellId;

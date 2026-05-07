@@ -2,7 +2,6 @@ import {
   TCell,
   TCellOwnerParams,
   TDelaunayMesh,
-  TEthnic,
   TNumRecordTerrain,
   TTerrain,
 } from 'src/types/map.types';
@@ -89,8 +88,8 @@ type TNationAssignment = {
 type TNationProfile = {
   populationMultiplier: number;
   economyMultiplier: number;
-  terrainPopulationModifiers: TNumRecordTerrain;
-  terrainEconomyModifiers: TNumRecordTerrain;
+  terrainPopMods: TNumRecordTerrain;
+  terrainEcoMods: TNumRecordTerrain;
 };
 
 function randomBetween(random: () => number, min: number, max: number) {
@@ -103,13 +102,13 @@ function buildNationProfiles(owner: Int32Array, seed: string) {
 
   for (const nationId of nationIds) {
     const random = createSeededRandom(`${seed}:nation-profile:${nationId}`);
-    const terrainPopulationModifiers = Object.fromEntries(
+    const terrainPopMods = Object.fromEntries(
       Object.entries(T_TERRAIN_POPULATION_MODIFIER_RANGES).map(([terrain, [min, max]]) => [
         terrain,
         randomBetween(random, min, max),
       ])
     ) as TNumRecordTerrain;
-    const terrainEconomyModifiers = Object.fromEntries(
+    const terrainEcoMods = Object.fromEntries(
       Object.entries(T_TERRAIN_ECONOMY_MODIFIER_RANGES).map(([terrain, [min, max]]) => [
         terrain,
         randomBetween(random, min, max),
@@ -127,8 +126,8 @@ function buildNationProfiles(owner: Int32Array, seed: string) {
         T_NATION_ECONOMY_MULTIPLIER_RANGE[0],
         T_NATION_ECONOMY_MULTIPLIER_RANGE[1]
       ),
-      terrainPopulationModifiers,
-      terrainEconomyModifiers,
+      terrainPopMods,
+      terrainEcoMods,
     });
   }
 
@@ -147,8 +146,8 @@ function mapNationsToCells(
     const profile = nationProfiles.get(nationId);
     if (!profile) return cell;
 
-    const terrainPopulationModifier = profile.terrainPopulationModifiers[cell.terrain] ?? 1;
-    const terrainEconomyModifier = profile.terrainEconomyModifiers[cell.terrain] ?? 1;
+    const terrainPopulationModifier = profile.terrainPopMods[cell.terrain] ?? 1;
+    const terrainEconomyModifier = profile.terrainEcoMods[cell.terrain] ?? 1;
     const population = Math.round(
       cell.population * profile.populationMultiplier * terrainPopulationModifier
     );
@@ -223,18 +222,12 @@ function postProcessProvinces(params: TCellOwnerParams) {
   limitProvincePopulation({ cells, owner, provinceOwner });
 }
 
-function assignEthnic(cells: TCell[], owner: Int32Array, seed: string) {
-  const { ethnicOwner, ethnicGroups } = buildEthnicRegions(cells, owner, seed);
-  return { ethnicOwner, ethnicGroups };
-}
-
 function finalizeOwnershipProjection(
   mesh: TDelaunayMesh,
   nationProfiles: Map<number, TNationProfile>,
   owner: Int32Array,
   provinceOwner: Int32Array,
   ethnicOwner: Int32Array,
-  ethnicGroups: TEthnic[],
   seed: string
 ) {
   const { waterOwner, zoneType } = assignMaritimeZones(mesh.cells);
@@ -250,7 +243,7 @@ function finalizeOwnershipProjection(
   const hubCellIds = new Set<number>();
   const capitalCellIds = new Set<number>();
   for (const nation of nations) {
-    for (const hubCellId of nation.economicHubCellIds) hubCellIds.add(hubCellId);
+    for (const hubCellId of nation.economicHubIds) hubCellIds.add(hubCellId);
     if (nation.capitalCellId !== null) capitalCellIds.add(nation.capitalCellId);
   }
 
@@ -267,7 +260,7 @@ function finalizeOwnershipProjection(
             ? provinceOwner[cell.id]
             : null
           : null,
-      ethnicGroupId:
+      ethnicId:
         zoneType[cell.id] === 'land'
           ? ethnicOwner[cell.id] >= 0
             ? ethnicOwner[cell.id]
@@ -278,7 +271,7 @@ function finalizeOwnershipProjection(
       isCapital: capitalCellIds.has(cell.id),
     };
   });
-  return { ...mesh, cells, nations, ethnicGroups };
+  return { ...mesh, cells, nations };
 }
 
 export function buildGeopolitics(params: TBuildGeopoliticsOptions): TDelaunayMesh {
@@ -294,14 +287,13 @@ export function buildGeopolitics(params: TBuildGeopoliticsOptions): TDelaunayMes
   if (process.env.NODE_ENV !== 'production') {
     validateProvinceAssignments({ cells: scaledMesh.cells, owner, provinceOwner });
   }
-  const { ethnicOwner, ethnicGroups } = assignEthnic(scaledMesh.cells, owner, seed);
+  const { ethnicOwner } = buildEthnicRegions(scaledMesh.cells, owner, seed);
   return finalizeOwnershipProjection(
     scaledMesh,
     nationProfiles,
     owner,
     provinceOwner,
     ethnicOwner,
-    ethnicGroups,
     seed
   );
 }

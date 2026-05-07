@@ -1,67 +1,123 @@
-# Province Splitting Logic (Current Implementation)
+# Province Splitting Reimplementation Spec (Exact Behavior)
 
 ## Main File
 
-`src/services/map/buildGeopolitics/provinces.ts`
+`src/services/buildGeopolitics/provinces.ts`
 
-## Current Core Constants / Constraints
+## Constants That Affect Exact Output
 
 - `IDEAL_PROVINCE_POP = 500_000`
-- `MAX_PROVINCE_POP = 1_000_000`
+- `MAX_PROVINCE_POP = 1_500_000`
 - `MERGE_POP_CAP = 800_000`
-- `MIN_POP_PERCENT = 0.03` (hard floor at 3% of nation population)
-- `MAX_POP_PERCENT = 0.12` (soft upper ratio per nation)
+- `MIN_POP_PERCENT = 0.03`
+- `MAX_POP_PERCENT = 0.12`
+- `SMALL_NATION_POPULATION_THRESHOLD = 1_000`
+- `SMALL_NATION_MIN_PROVINCE_POPULATION = 200`
+- `DEFAULT_MIN_PROVINCE_POPULATION = 1_000`
+- `PROVINCE_TUNING` object (all subfields must stay identical)
 
-## High-Level Partition Logic
+## Exact High-Level Flow
 
-1. Compute target province count from both population and cell-based signals.
-2. Seed provinces within each nation, then expand through adjacency.
-3. Apply split/merge with population-first prioritization.
-4. Run post-processing for contiguity, minimum area, then enforce hard population floor.
+Per nation:
 
-## Terrain-Adjusted Effective Size
+1. Gather nation cells.
+2. Compute planning metrics via `getProvincePlanMetrics(...)`.
+3. Select seeds and run province expansion.
+4. Build aggregates and evaluate split/merge pressure.
+5. Rebalance within iteration limits.
 
-- Province size is not measured only by `cellCount`; it also uses `effectiveProvinceSize`.
-- Terrain factor reflects administrative difficulty:
-  - Plains/normal terrain: lower factor
-  - Forest/hills: medium factor
-  - Mountains/hard terrain: higher factor
-- Goal: harder terrain can remain valid with fewer cells while still representing administrative burden.
+Global post-process later in geopolitics stage:
 
-## Population Bounds
+1. `limitMountainSplit(...)`
+2. Two rounds of `enforceProvinceConnect(...)` + `minProvinceArea(...)`
+3. `limitProvincePopulation(...)`
 
-Dynamic per-nation bounds are applied:
+## Detailed Branching Rules
 
-- Minimum population uses both hard floor (3% of nation population) and target-driven constraints.
-- Maximum population is capped by `MAX_PROVINCE_POP` and nation-ratio ceiling.
-- Provinces above max are marked for further split.
+### Metric Computation
 
-## Density-Adjusted Constraints
+`getProvincePlanMetrics(...)` depends on:
 
-- `getCellCapByDensity(...)` adjusts province cell cap by density:
-  - High density -> lower cell cap (smaller provinces)
-  - Low density -> higher cell cap (larger provinces)
+- nation population
+- nation cell count
+- effective nation size
+- flags: `isNationSplit`, `isIgnore`
 
-## Terrain Homogeneity During Expansion
+Branches:
 
-- During expansion from a seed, moving into cells with terrain different from the seed terrain receives a penalty (currently a high multiplier, e.g. `*3`).
-- Result: provinces tend to follow natural terrain bands and reduce unnecessary mountain/plain mixing.
+- `if nationPopulation > 1_000_000`: baseline by `ceil(pop / IDEAL_PROVINCE_POP)`.
+- `if 500_000 < nationPopulation <= 1_000_000`: baseline is `3`.
+- `if 300_000 <= nationPopulation <= 500_000`: baseline is `2`.
+- else baseline is `1`.
 
-## Merge Logic and Exceptions
+Minimum province population:
 
-Merges are conditional and constrained:
+- `max(getNationMinProvincePop(nationPopulation), floor(targetPopulation * 0.7))`
 
-- Small provinces preferentially merge into same-terrain neighbors.
-- No merge if resulting population would exceed `MERGE_POP_CAP`.
-- Exceptions keep some small provinces when they are special cases (e.g., urban/economic/geographically isolated under current rules).
+Required minimum province count uses:
 
-## Hard Floor Enforcement (Critical)
+- population-driven count
+- cell-driven count
+- configured floors/caps
+- small-nation special cap
 
-- Final pass forces reduction of provinces below `3%` nation population when possible.
-- If no same-terrain candidate is viable, fallback picks the best neighboring merge target.
-- Guards exist to avoid infinite loops for very small nations.
+### Seed Selection
 
-## Safety / Fallback
+- Score uses suitability + province seed policy.
+- Distance rule:
+  - plains/valley use shorter seed spacing than rugged terrains.
+- `if candidate violates min seed distance`: reject.
 
-- Very small nations (population or cell count) may collapse to very few provinces (possibly 1) to avoid algorithmic failure.
-- Gameplay stability is prioritized over geometrically perfect boundaries.
+### Expansion
+
+Ownership update condition:
+
+- Candidate cell must belong to same nation.
+- Compute transition cost (terrain-aware, distance-aware).
+- `if nextCost < existingCost[cell]`: adopt new owner and enqueue.
+
+### Split Trigger
+
+A province is split candidate when one or more hold:
+
+- population above dynamic hard/soft max,
+- effective area above tuned factor,
+- density pressure indicates oversized region.
+
+Guard:
+
+- `if splitting would exceed feasible province bounds`: skip/defer split.
+
+### Merge Trigger
+
+A province is merge candidate when one or more hold:
+
+- below mandatory minimum population,
+- below minimum effective size,
+- connectivity/shape anomalies after previous operations.
+
+Merge target rules:
+
+1. Prefer same-terrain neighbors.
+2. Reject target if merged pop exceeds `MERGE_POP_CAP` unless exception path allows.
+3. Reject if merge breaks connectivity.
+4. If all rejected, fallback to best valid mixed-terrain neighbor by score.
+
+### Metropolis Exception
+
+`isMetropolis(...)` may keep tiny-cell but very high-pop province unsplit under constrained cases.
+
+### Loop Termination
+
+- Rebalance loops stop when:
+  - iteration cap reached, OR
+  - no ownership changes in pass.
+
+This is required to avoid infinite loops and keep deterministic stopping points.
+
+## Exactness Requirements
+
+- Keep all integer rounding (`Math.floor/ceil/round`) exactly as in source.
+- Keep pass counts and loop limits exactly.
+- Keep stable sorting behavior where used.
+- Keep typed containers (`Map`, typed arrays) and insertion/traversal order semantics.

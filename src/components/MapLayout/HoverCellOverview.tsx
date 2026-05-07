@@ -95,7 +95,7 @@ export default function HoverCellOverview() {
           <span className="text-slate-400">Province ID</span>
           <span>{description.provinceId}</span>
           <span className="text-slate-400">Ethnic Group ID</span>
-          <span>{description.ethnicGroupId}</span>
+          <span>{description.ethnicId}</span>
           <span className="text-slate-400">Zone Type</span>
           <span>{description.zoneType}</span>
         </div>

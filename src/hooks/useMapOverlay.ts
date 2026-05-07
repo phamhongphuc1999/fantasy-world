@@ -1,7 +1,7 @@
 'use client';
 
 import { RefObject, useEffect } from 'react';
-import { drawCellShape, drawSiteMarker, setupCanvas } from 'src/services/mapCanvas.service';
+import { drawCellShape, drawSiteMarker, setupCanvas } from 'src/services/mapCanvas/primitives';
 import { TCell } from 'src/types/map.types';
 
 type TProps = {
@@ -12,13 +12,7 @@ type TProps = {
   hoverIndex: number | null;
 };
 
-export default function useMapOverlayRendering({
-  canvasRef,
-  cells,
-  width,
-  height,
-  hoverIndex,
-}: TProps) {
+export default function useMapOverlay({ canvasRef, cells, width, height, hoverIndex }: TProps) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;

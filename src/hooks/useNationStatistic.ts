@@ -27,16 +27,13 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
         terrainCounts.set(cell.terrain, (terrainCounts.get(cell.terrain) || 0) + 1);
         totalPopulation += cell.population;
         totalEconomy += cell.economy;
-        if (cell.ethnicGroupId !== null) {
-          ethnicCounts.set(cell.ethnicGroupId, (ethnicCounts.get(cell.ethnicGroupId) || 0) + 1);
+        if (cell.ethnicId !== null) {
+          ethnicCounts.set(cell.ethnicId, (ethnicCounts.get(cell.ethnicId) || 0) + 1);
           ethnicPopulation.set(
-            cell.ethnicGroupId,
-            (ethnicPopulation.get(cell.ethnicGroupId) || 0) + cell.population
+            cell.ethnicId,
+            (ethnicPopulation.get(cell.ethnicId) || 0) + cell.population
           );
-          ethnicEconomy.set(
-            cell.ethnicGroupId,
-            (ethnicEconomy.get(cell.ethnicGroupId) || 0) + cell.economy
-          );
+          ethnicEconomy.set(cell.ethnicId, (ethnicEconomy.get(cell.ethnicId) || 0) + cell.economy);
         }
         if (cell.provinceId !== null) {
           provincePopulationMap.set(
@@ -63,7 +60,7 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
 
-      const ethnicNameById = new Map(mesh.ethnicGroups.map((group) => [group.id, group.name]));
+      const ethnicNameById = new Map(mesh.ethnics.map((group) => [group.id, group.name]));
       const ethnics = Array.from(ethnicCounts.entries())
         .map(([ethnicId, count]) => ({
           ethnicId,
@@ -88,7 +85,7 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
 
       return { nationCells, totalPopulation, totalEconomy, terrains, ethnics, provinces };
     }
-  }, [mesh.cells, mesh.ethnicGroups, nation]);
+  }, [mesh.cells, mesh.ethnics, nation]);
 
   return { nation, data };
 }

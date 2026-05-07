@@ -1,10 +1,10 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { getNationColor } from 'src/services';
 import { getRiverStrokeWidth } from 'src/services/common';
-import { getRiverSegmentEndPoint } from 'src/services/mapCanvas.service';
-import { TDelaunayMesh, TDisplaySettings } from 'src/types/map.types';
+import { TDelaunayMesh, TDisplaySettings, TPoint } from 'src/types/map.types';
+import { getRiverSegmentEndPoint } from './mapCanvas/primitives';
 
-function toPolygonPath(points: [number, number][]) {
+function toPolygonPath(points: TPoint[]) {
   if (points.length === 0) return '';
   const [firstX, firstY] = points[0];
   const segments = points
@@ -23,7 +23,7 @@ export function buildMapSvg(mesh: TDelaunayMesh, displaySettings: TDisplaySettin
         : displaySettings.countryFill
           ? getNationColor(cell.nationId)
           : displaySettings.ethnicFill
-            ? getNationColor(cell.ethnicGroupId)
+            ? getNationColor(cell.ethnicId)
             : TERRAIN_CONFIG[cell.terrain].color;
       const opacity = cell.isWater ? 0.95 : 0.96;
       return `<path d="${toPolygonPath(cell.polygon)}" fill="${color}" fill-opacity="${opacity}" />`;

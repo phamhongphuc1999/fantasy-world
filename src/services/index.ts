@@ -8,6 +8,6 @@ export {
   getAvgNeighbor,
   distanceToSegment,
   toPointKey,
-  toUndirectedEdgeKey,
-  findNearestCellId,
+  toEdgeKey,
+  findNearestCell,
 } from './common';

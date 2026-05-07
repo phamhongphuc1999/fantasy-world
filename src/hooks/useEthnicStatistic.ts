@@ -4,15 +4,13 @@ import { useMemo } from 'react';
 import { toPercent } from 'src/services';
 import { TDelaunayMesh } from 'src/types/map.types';
 
-export default function useEthnicStatistic(ethnicGroupId: number | null, mesh: TDelaunayMesh) {
+export default function useEthnicStatistic(ethnicId: number | null, mesh: TDelaunayMesh) {
   const data = useMemo(() => {
-    if (ethnicGroupId === null) return null;
-    const ethnicGroup = mesh.ethnicGroups.find((group) => group.id === ethnicGroupId);
-    if (!ethnicGroup) return null;
+    if (ethnicId === null) return null;
+    const ethnics = mesh.ethnics.find((group) => group.id === ethnicId);
+    if (!ethnics) return null;
 
-    const ethnicCells = mesh.cells.filter(
-      (cell) => !cell.isWater && cell.ethnicGroupId === ethnicGroupId
-    );
+    const ethnicCells = mesh.cells.filter((cell) => !cell.isWater && cell.ethnicId === ethnicId);
     const totalPopulation = ethnicCells.reduce((sum, cell) => sum + cell.population, 0);
 
     const nationNameById = new Map(mesh.nations.map((nation) => [nation.id, nation.name]));
@@ -45,8 +43,8 @@ export default function useEthnicStatistic(ethnicGroupId: number | null, mesh: T
       }))
       .sort((a, b) => b.count - a.count);
 
-    return { ethnicGroup, ethnicCells, totalPopulation, nations, terrains };
-  }, [ethnicGroupId, mesh.cells, mesh.ethnicGroups, mesh.nations]);
+    return { ethnics, ethnicCells, totalPopulation, nations, terrains };
+  }, [ethnicId, mesh.cells, mesh.ethnics, mesh.nations]);
 
   return { data };
 }

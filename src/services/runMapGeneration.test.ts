@@ -68,10 +68,10 @@ function toStageSignature(mesh: TDelaunayMesh): TStageSignature {
         Math.round(cell.precipitation * 1_000_000),
         Math.round(cell.rainShadow * 1_000_000),
         cell.population,
-        Math.round(cell.waterAccessibility * 1_000_000),
+        Math.round(cell.waterAccessScore * 1_000_000),
         cell.nationId ?? -1,
         cell.provinceId ?? -1,
-        cell.ethnicGroupId ?? -1,
+        cell.ethnicId ?? -1,
         cell.zoneType,
         cell.isCapital ? 1 : 0,
         cell.isEconomicHub ? 1 : 0,
@@ -88,7 +88,7 @@ function toStageSignature(mesh: TDelaunayMesh): TStageSignature {
     lakeCells,
     totalPopulation,
     nationCount: mesh.nations.length,
-    ethnicGroupCount: mesh.ethnicGroups.length,
+    ethnicGroupCount: mesh.ethnics.length,
     hash: fnv1a64Hex(hashParts),
   };
 }

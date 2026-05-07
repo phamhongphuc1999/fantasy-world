@@ -16,12 +16,12 @@ import { TDelaunayMesh } from 'src/types/map.types';
 type TProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  ethnicGroupId: number | null;
+  ethnicId: number | null;
   mesh: TDelaunayMesh;
 };
 
-export default function EthnicDetailDialog({ open, onOpenChange, ethnicGroupId, mesh }: TProps) {
-  const { data } = useEthnicStatistic(ethnicGroupId, mesh);
+export default function EthnicDetailDialog({ open, onOpenChange, ethnicId, mesh }: TProps) {
+  const { data } = useEthnicStatistic(ethnicId, mesh);
 
   if (!data) {
     return (
@@ -45,11 +45,11 @@ export default function EthnicDetailDialog({ open, onOpenChange, ethnicGroupId, 
         className="border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md sm:max-w-[45vw]"
       >
         <DialogHeader>
-          <DialogTitle className="font-bold" style={{ color: getNationColor(data.ethnicGroup.id) }}>
-            {data.ethnicGroup.name}
+          <DialogTitle className="font-bold" style={{ color: getNationColor(data.ethnics.id) }}>
+            {data.ethnics.name}
           </DialogTitle>
           <DialogDescription className="text-slate-300">
-            Ethnic #{data.ethnicGroup.id} · Land Cells: {data.ethnicCells.length}
+            Ethnic #{data.ethnics.id} · Land Cells: {data.ethnicCells.length}
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1 text-sm">

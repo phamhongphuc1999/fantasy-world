@@ -48,7 +48,7 @@ export default function ExportTab() {
         edges: mesh.edges,
         vertices: mesh.vertices,
         nations: mesh.nations,
-        ethnicGroups: mesh.ethnicGroups,
+        ethnics: mesh.ethnics,
         rivers: mesh.rivers,
       },
     };

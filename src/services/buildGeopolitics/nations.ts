@@ -1,6 +1,6 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
-import { clamp, findNearestCellId } from 'src/services';
-import { sortStableDesc } from 'src/services/common';
+import { clamp, findNearestCell } from 'src/services';
+import { sortDescStable } from 'src/services/common';
 import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
 import { createSeededRandom } from 'src/services/seededRandom';
 import { TBorderType, TCell } from 'src/types/map.types';
@@ -109,7 +109,7 @@ function estimateWaterCells(
   return Math.max(0, Math.round(minDistance / Math.max(1, avgNeighborDistance)));
 }
 
-function tryGrowNationToMinimum(
+function tryGrowNation(
   cells: TCell[],
   owner: Int32Array,
   nationId: number,
@@ -166,7 +166,7 @@ function tryGrowNationToMinimum(
   return currentSize >= minNationCells;
 }
 
-function buildNationSizeMapForLandCells(landCellIds: number[], owner: Int32Array) {
+function buildLandNationSizeMap(landCellIds: number[], owner: Int32Array) {
   const sizeByNation = new Map<number, number>();
   for (const cellId of landCellIds) {
     if (owner[cellId] < 0) continue;
@@ -182,22 +182,17 @@ function getSmallNationIds(sizeByNation: Map<number, number>, minNationCells: nu
     .map(([nationId]) => nationId);
 }
 
-function findNearestForeignNationId(
+function findNearestForeignNation(
   cells: TCell[],
   owner: Int32Array,
   landCellIds: number[],
   sourceCellId: number,
   sourceNationId: number
 ) {
-  const nearestCellId = findNearestCellId(
-    cells,
-    cells[sourceCellId].site,
-    landCellIds,
-    (cellId) => {
-      const candidateNationId = owner[cellId];
-      return candidateNationId >= 0 && candidateNationId !== sourceNationId;
-    }
-  );
+  const nearestCellId = findNearestCell(cells, cells[sourceCellId].site, landCellIds, (cellId) => {
+    const candidateNationId = owner[cellId];
+    return candidateNationId >= 0 && candidateNationId !== sourceNationId;
+  });
   return nearestCellId >= 0 ? owner[nearestCellId] : -1;
 }
 
@@ -301,7 +296,7 @@ function selectNationSeeds(
   connectivity: TConnectivityContext,
   minComponentSize = 1
 ) {
-  const allLandCandidates = sortStableDesc(
+  const allLandCandidates = sortDescStable(
     cells
       .map((_, cellId) => ({
         cellId,
@@ -432,7 +427,7 @@ function selectNationSeeds(
 type TNationFrontierState = { cellId: number; nationId: number; cost: number };
 const T_COUNTRY_REASSIGN_HASH = makeFrontierHash('postprocess', 'country-reassign');
 
-function pickBestNationForCellByTerrainAwareScore(
+function pickBestNationForCell(
   cells: TCell[],
   owner: Int32Array,
   cellId: number,
@@ -492,7 +487,7 @@ function getNationStepCost(
   return Math.max(0.2, stepCost);
 }
 
-function runInitialFloorExpansion(
+function runFloorExpansion(
   cells: TCell[],
   owner: Int32Array,
   cost: Float64Array,
@@ -596,8 +591,8 @@ export function buildLandNations(cells: TCell[], seed: string, nationCount: numb
   }
 
   const seedHash = makeFrontierHash(seed, 'geopolitics:frontier');
-  // Stage A: grow nations toward minimum floor size before regular global expansion.
-  runInitialFloorExpansion(cells, owner, cost, nationExpansionBias, seedHash);
+  // Stage A: grow nations toward min floor size before regular global expansion.
+  runFloorExpansion(cells, owner, cost, nationExpansionBias, seedHash);
   const initialStates = buildSeedStates(owner, cost);
 
   // Stage B: regular cost-based multi-source expansion with the current frontier model.
@@ -659,12 +654,7 @@ export function alignNaturalTerrainClusters(cells: TCell[], owner: Int32Array) {
       }
 
       if (sameTerrainNeighbors < 3) continue;
-      const bestNationId = pickBestNationForCellByTerrainAwareScore(
-        cells,
-        owner,
-        cellId,
-        nationCounts
-      );
+      const bestNationId = pickBestNationForCell(cells, owner, cellId, nationCounts);
       const bestCount = bestNationId >= 0 ? nationCounts.get(bestNationId) || 0 : 0;
       if (bestNationId >= 0 && bestNationId !== owner[cellId] && bestCount >= 3) {
         nextOwner[cellId] = bestNationId;
@@ -681,7 +671,7 @@ export function enforceMinNationArea(cells: TCell[], owner: Int32Array, minNatio
     Math.floor(landCellIds.length * GEOPOLITICAL_CONFIG.minNationLandRatio)
   );
 
-  const sizeByNation = buildNationSizeMapForLandCells(landCellIds, owner);
+  const sizeByNation = buildLandNationSizeMap(landCellIds, owner);
 
   let activeNationCount = sizeByNation.size;
   const maxRebalancePasses = Math.max(1, sizeByNation.size);
@@ -693,14 +683,8 @@ export function enforceMinNationArea(cells: TCell[], owner: Int32Array, minNatio
     if (smallNationIds.length === 0) break;
 
     for (const nationId of smallNationIds) {
-      const reachedMinimum = tryGrowNationToMinimum(
-        cells,
-        owner,
-        nationId,
-        sizeByNation,
-        minNationCells
-      );
-      if (reachedMinimum) {
+      const reachedMin = tryGrowNation(cells, owner, nationId, sizeByNation, minNationCells);
+      if (reachedMin) {
         changedInPass = true;
         continue;
       }
@@ -732,14 +716,9 @@ export function enforceMinNationArea(cells: TCell[], owner: Int32Array, minNatio
       for (const cellId of nationCells) {
         const neighborCounts = getNationNeighborCounts(cells, owner, cellId);
         neighborCounts.delete(nationId);
-        let bestNationId = pickBestNationForCellByTerrainAwareScore(
-          cells,
-          owner,
-          cellId,
-          neighborCounts
-        );
+        let bestNationId = pickBestNationForCell(cells, owner, cellId, neighborCounts);
         if (bestNationId < 0) {
-          bestNationId = findNearestForeignNationId(cells, owner, landCellIds, cellId, nationId);
+          bestNationId = findNearestForeignNation(cells, owner, landCellIds, cellId, nationId);
         }
         if (bestNationId >= 0) {
           owner[cellId] = bestNationId;
@@ -895,12 +874,7 @@ export function enforceMainlandContiguity(cells: TCell[], owner: Int32Array) {
       for (const cellId of components[componentIndex]) {
         const neighborCounts = getNationNeighborCounts(cells, owner, cellId);
         neighborCounts.delete(nationId);
-        const bestNationId = pickBestNationForCellByTerrainAwareScore(
-          cells,
-          owner,
-          cellId,
-          neighborCounts
-        );
+        const bestNationId = pickBestNationForCell(cells, owner, cellId, neighborCounts);
         if (bestNationId >= 0) owner[cellId] = bestNationId;
       }
     }
@@ -914,12 +888,7 @@ function fillUnclaimedLand(cells: TCell[], owner: Int32Array) {
     for (let cellId = 0; cellId < cells.length; cellId += 1) {
       if (!isLand(cells[cellId]) || owner[cellId] >= 0) continue;
       const neighborCounts = getNationNeighborCounts(cells, owner, cellId);
-      const bestNationId = pickBestNationForCellByTerrainAwareScore(
-        cells,
-        owner,
-        cellId,
-        neighborCounts
-      );
+      const bestNationId = pickBestNationForCell(cells, owner, cellId, neighborCounts);
       if (bestNationId >= 0) {
         owner[cellId] = bestNationId;
         changed = true;
@@ -937,7 +906,7 @@ function ensureAllLandClaimed(cells: TCell[], owner: Int32Array) {
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     if (!isLand(cells[cellId])) continue;
     if (owner[cellId] >= 0) continue;
-    const nearestCellId = findNearestCellId(cells, cells[cellId].site, claimedLandIds);
+    const nearestCellId = findNearestCell(cells, cells[cellId].site, claimedLandIds);
     if (nearestCellId >= 0) owner[cellId] = owner[nearestCellId];
   }
 }
@@ -958,7 +927,7 @@ function getSmallNationCount(cells: TCell[], owner: Int32Array) {
     GEOPOLITICAL_CONFIG.minNationLandCells,
     Math.floor(landCellIds.length * GEOPOLITICAL_CONFIG.minNationLandRatio)
   );
-  const sizeByNation = buildNationSizeMapForLandCells(landCellIds, owner);
+  const sizeByNation = buildLandNationSizeMap(landCellIds, owner);
   return getSmallNationIds(sizeByNation, minNationCells).length;
 }
 

@@ -1,7 +1,7 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { getMetricRange, normalize } from 'src/services/common';
-import { buildMultiSourceDistanceMap, collectConnectedComponents } from 'src/services/core/graph';
+import { buildDistanceMap, collectConnectedComponents } from 'src/services/core/graph';
 import { createSeededRandom } from 'src/services/seededRandom';
 import { isWaterOrRiverCell } from 'src/services/terrainRules';
 import { TCell, TNation } from 'src/types/map.types';
@@ -9,10 +9,7 @@ import { CAPITAL_VIEWPORT_MARGIN, createRegionalName, isLand } from './geopoliti
 
 type TNationProfile = Pick<
   TNation,
-  | 'populationMultiplier'
-  | 'economyMultiplier'
-  | 'terrainPopulationModifiers'
-  | 'terrainEconomyModifiers'
+  'populationMultiplier' | 'economyMultiplier' | 'terrainPopMods' | 'terrainEcoMods'
 >;
 
 const defaultTerrainConfig = {
@@ -39,7 +36,7 @@ function getDistanceMap(
   nationLand: Set<number>,
   sourcePredicate: (cellId: number) => boolean
 ) {
-  return buildMultiSourceDistanceMap(cells, {
+  return buildDistanceMap(cells, {
     isSeed: (cellId) => nationLand.has(cellId) && sourcePredicate(cellId),
     canVisit: (neighborId) => nationLand.has(neighborId),
   });
@@ -84,8 +81,8 @@ function distanceScore(
 
 function scoreCapital(
   cell: TCell,
-  populationNorm: number,
-  economyNorm: number,
+  population: number,
+  economy: number,
   borderDistanceMap: Int32Array,
   coastDistanceMap: Int32Array,
   mapWidth: number,
@@ -123,18 +120,13 @@ function scoreCapital(
   const centralityScore = borderCentrality + coastCentrality + edgeSafety;
   const safetyScore = TERRAIN_CONFIG[cell.terrain].safetyScore;
 
-  return populationNorm * 0.34 + economyNorm * 0.28 + centralityScore * 0.23 + safetyScore * 0.15;
+  return population * 0.34 + economy * 0.28 + centralityScore * 0.23 + safetyScore * 0.15;
 }
 
-function economicHubScore(
-  cell: TCell,
-  cells: TCell[],
-  populationNorm: number,
-  economyNorm: number
-) {
+function economicHubScore(cell: TCell, cells: TCell[], population: number, economy: number) {
   const geoScore = TERRAIN_CONFIG[cell.terrain].flatness;
   const waterScore = waterProximityScore(cell, cells);
-  return populationNorm * 0.35 + economyNorm * 0.4 + geoScore * 0.15 + waterScore * 0.1;
+  return population * 0.35 + economy * 0.4 + geoScore * 0.15 + waterScore * 0.1;
 }
 
 function isInBounds(cell: TCell, mapWidth: number, mapHeight: number) {
@@ -190,22 +182,18 @@ export function pickEconomicAndCapital(
 
     const capitalCandidates = candidateMainlandCells
       .map((cell) => {
-        const populationNorm = normalize(
+        const population = normalize(
           Math.max(0, cell.population),
           populationRange.min,
           populationRange.max
         );
-        const economyNorm = normalize(
-          Math.max(0, cell.economy),
-          economyRange.min,
-          economyRange.max
-        );
+        const economy = normalize(Math.max(0, cell.economy), economyRange.min, economyRange.max);
         return {
           cellId: cell.id,
           score: scoreCapital(
             cell,
-            populationNorm,
-            economyNorm,
+            population,
+            economy,
             borderDistanceMap,
             coastDistanceMap,
             mapWidth,
@@ -247,17 +235,13 @@ export function pickEconomicAndCapital(
 
     const hubScored = candidateMainlandCells
       .map((cell) => {
-        const populationNorm = normalize(
+        const population = normalize(
           Math.max(0, cell.population),
           populationRange.min,
           populationRange.max
         );
-        const economyNorm = normalize(
-          Math.max(0, cell.economy),
-          economyRange.min,
-          economyRange.max
-        );
-        let score = economicHubScore(cell, cells, populationNorm, economyNorm);
+        const economy = normalize(Math.max(0, cell.economy), economyRange.min, economyRange.max);
+        let score = economicHubScore(cell, cells, population, economy);
 
         if (capitalCellId !== null) {
           const capitalSite = cells[capitalCellId].site;
@@ -298,12 +282,12 @@ export function pickEconomicAndCapital(
       name: nationName,
       populationMultiplier: profile?.populationMultiplier ?? 1,
       economyMultiplier: profile?.economyMultiplier ?? 1,
-      terrainPopulationModifiers: profile?.terrainPopulationModifiers ?? defaultTerrainConfig,
-      terrainEconomyModifiers: profile?.terrainEconomyModifiers ?? defaultTerrainConfig,
+      terrainPopMods: profile?.terrainPopMods ?? defaultTerrainConfig,
+      terrainEcoMods: profile?.terrainEcoMods ?? defaultTerrainConfig,
       capitalCellId,
-      capital_coords: capitalCellId !== null ? cells[capitalCellId].site : null,
-      economicHubCellIds: hubCellIds,
-      economic_hubs_coords: hubCellIds.map((cellId) => cells[cellId].site),
+      capitalCoords: capitalCellId !== null ? cells[capitalCellId].site : null,
+      economicHubIds: hubCellIds,
+      economicHubPoints: hubCellIds.map((cellId) => cells[cellId].site),
     };
   });
 }

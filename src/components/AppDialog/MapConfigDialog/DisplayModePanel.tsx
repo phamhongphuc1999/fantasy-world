@@ -34,28 +34,28 @@ export default function DisplayModePanel() {
       />
       <LayerToggle
         label="Population"
-        checked={displaySettings.populationHeatmap}
-        onChange={(checked) => setDisplayLayer('populationHeatmap', checked)}
+        checked={displaySettings.population}
+        onChange={(checked) => setDisplayLayer('population', checked)}
       />
       <LayerToggle
         label="Temperature"
-        checked={displaySettings.temperatureHeatmap}
-        onChange={(checked) => setDisplayLayer('temperatureHeatmap', checked)}
+        checked={displaySettings.temperature}
+        onChange={(checked) => setDisplayLayer('temperature', checked)}
       />
       <LayerToggle
         label="Precipitation"
-        checked={displaySettings.precipitationHeatmap}
-        onChange={(checked) => setDisplayLayer('precipitationHeatmap', checked)}
+        checked={displaySettings.precipitation}
+        onChange={(checked) => setDisplayLayer('precipitation', checked)}
       />
       <LayerToggle
         label="Rain Shadow"
-        checked={displaySettings.rainShadowHeatmap}
-        onChange={(checked) => setDisplayLayer('rainShadowHeatmap', checked)}
+        checked={displaySettings.rainShadow}
+        onChange={(checked) => setDisplayLayer('rainShadow', checked)}
       />
       <LayerToggle
         label="Economy"
-        checked={displaySettings.economyHeatmap}
-        onChange={(checked) => setDisplayLayer('economyHeatmap', checked)}
+        checked={displaySettings.economy}
+        onChange={(checked) => setDisplayLayer('economy', checked)}
       />
       <LayerToggle
         label="Rivers"
