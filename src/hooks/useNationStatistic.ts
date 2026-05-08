@@ -60,11 +60,13 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
 
-      const ethnicNameById = new Map(mesh.ethnics.map((group) => [group.id, group.name]));
+      const ethnicNameById = new Map(
+        mesh.ethnics.map((group) => [String(group.id), group.name] as const)
+      );
       const ethnics = Array.from(ethnicCounts.entries())
         .map(([ethnicId, count]) => ({
           ethnicId,
-          name: ethnicNameById.get(ethnicId) || `Ethnic #${ethnicId}`,
+          name: ethnicNameById.get(String(ethnicId)) || `Ethnic #${ethnicId}`,
           count,
           percent: toPercent(count, nationCells.length),
           population: ethnicPopulation.get(ethnicId) || 0,

@@ -8,3 +8,20 @@ export interface TSiteMetadata {
   image: string;
   keywords: string;
 }
+
+export type TBaseChartData = {
+  width?: number;
+  height?: number;
+};
+
+export type TPieChartData = {
+  label: string;
+  value: number;
+  color: string;
+};
+
+export type TBarChartData = {
+  label: string;
+  value: number;
+  color: string;
+};

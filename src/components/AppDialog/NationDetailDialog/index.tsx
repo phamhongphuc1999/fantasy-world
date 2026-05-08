@@ -10,9 +10,11 @@ import {
   DialogTitle,
 } from 'src/components/ui/dialog';
 import useNationStatistic from 'src/hooks/useNationStatistic';
-import { formatPopulation } from 'src/services/utils/format';
 import { getNationColor } from 'src/services/rendering/colors';
+import { formatPopulation } from 'src/services/utils/format';
 import { TDelaunayMesh } from 'src/types/map.types';
+import Ethnics from './Ethnics';
+import Population from './Population';
 
 type TProps = {
   open: boolean;
@@ -68,46 +70,8 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
             ))}
           </BlurCard>
           <TerrainStatistic terrains={data.terrains} />
-          <BlurCard title="Population" containerProps={{ className: 'flex flex-col gap-1' }}>
-            {data.provinces.length > 0 ? (
-              data.provinces.map((province) => (
-                <div
-                  key={province.provinceId}
-                  className="rounded-lg border border-white/8 px-2 py-1.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span>
-                      Province #{province.provinceId} ({province.cellCount} cells)
-                    </span>
-                    <span>{formatPopulation(province.population)}</span>
-                  </div>
-                  <div className="mt-0.5 text-xs text-slate-300">
-                    Economy: {formatPopulation(province.economy)} (
-                    {(province.economy / Math.max(1, province.population)).toFixed(4)} per person)
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-slate-500">No provinces</p>
-            )}
-          </BlurCard>
-          <BlurCard title="Ethnic">
-            {data.ethnics.map((item) => (
-              <div key={item.ethnicId}>
-                <span className="font-bold" style={{ color: getNationColor(item.ethnicId) }}>
-                  {item.name}:{' '}
-                </span>
-                <span>
-                  {item.count} cells ({item.percent}%), <span className="font-bold">Pop</span>{' '}
-                  {item.population.toLocaleString()} ({item.populationPercent}%),
-                  <span className="font-bold"> Economy</span> {formatPopulation(item.economy)}
-                </span>
-              </div>
-            ))}
-            {data.ethnics.length === 0 && (
-              <div className="text-slate-400">No ethnic data in this nation.</div>
-            )}
-          </BlurCard>
+          <Population provinces={data.provinces} />
+          <Ethnics ethnics={data.ethnics} />
           <BlurCard title="Economic Hub">
             {nation.economicHubIds.length > 0
               ? nation.economicHubIds.map((cellId) => `#${cellId}`).join(', ')

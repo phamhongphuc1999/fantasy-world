@@ -1,6 +1,7 @@
 'use client';
 
 import BlurCard from 'src/components/BlurCard';
+import PieChart from 'src/components/charts/PieChart';
 import TerrainStatistic from 'src/components/TerrainStatistic';
 import {
   Dialog,
@@ -10,8 +11,9 @@ import {
   DialogTitle,
 } from 'src/components/ui/dialog';
 import useEthnicStatistic from 'src/hooks/useEthnicStatistic';
-import { formatPopulation } from 'src/services/utils/format';
 import { getNationColor } from 'src/services/rendering/colors';
+import { formatPopulation } from 'src/services/utils/format';
+import { TPieChartData } from 'src/types/global';
 import { TDelaunayMesh } from 'src/types/map.types';
 
 type TProps = {
@@ -39,6 +41,15 @@ export default function EthnicDetailDialog({ open, onOpenChange, ethnicId, mesh 
     );
   }
 
+  const nationPopulationPieData: Array<TPieChartData & { nationName: string }> = data.nations.map(
+    (item) => ({
+      label: item.nationName,
+      value: item.population,
+      color: getNationColor(item.nationId),
+      nationName: item.nationName,
+    })
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -61,17 +72,20 @@ export default function EthnicDetailDialog({ open, onOpenChange, ethnicId, mesh 
           </BlurCard>
           <BlurCard title="Population By Nation">
             {data.nations.length > 0 ? (
-              data.nations.map((item) => (
-                <div key={item.nationId} className="flex items-center justify-between gap-2">
-                  <span className="font-bold" style={{ color: getNationColor(item.nationId) }}>
-                    {item.nationName}
-                  </span>
-                  <span>
-                    {formatPopulation(item.population)} (
-                    {((item.population / data.totalPopulation) * 100).toFixed(2)}%)
-                  </span>
-                </div>
-              ))
+              <div className="flex justify-center">
+                <PieChart
+                  width={320}
+                  height={320}
+                  data={nationPopulationPieData}
+                  renderTooltip={(tooltip) => (
+                    <>
+                      <div className="font-semibold">{tooltip.datum.nationName}</div>
+                      <div>Population: {formatPopulation(tooltip.value)}</div>
+                      <div>{tooltip.percent}%</div>
+                    </>
+                  )}
+                />
+              </div>
             ) : (
               <p className="text-slate-500">No nation coverage</p>
             )}

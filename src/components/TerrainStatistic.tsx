@@ -1,6 +1,8 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
+import { TPieChartData } from 'src/types/global';
 import { TTerrain } from 'src/types/map.types';
 import BlurCard from './BlurCard';
+import PieChart from './charts/PieChart';
 
 interface TTerrainStatistic {
   terrain: string;
@@ -13,24 +15,36 @@ interface TProps {
 }
 
 export default function TerrainStatistic({ terrains }: TProps) {
+  const pieData: Array<TPieChartData & { type: TTerrain; cellCount: number }> = terrains.map(
+    (item) => {
+      const _key = item.terrain as TTerrain;
+
+      return {
+        type: item.terrain as TTerrain,
+        label: item.terrain.replace('-', ' '),
+        value: item.percent,
+        color: TERRAIN_CONFIG[_key].color,
+        cellCount: item.count,
+      };
+    }
+  );
+
   return (
     <BlurCard title="Terrain">
-      {terrains.map((item) => {
-        const _key = item.terrain as TTerrain;
-
-        return (
-          <div key={item.terrain} className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="font-bold" style={{ color: TERRAIN_CONFIG[_key].color }}>
-                {item.terrain.replace('-', ' ')} {TERRAIN_CONFIG[_key].icon}
-              </span>
+      <div className="mt-2 flex justify-center">
+        <PieChart
+          data={pieData}
+          renderTooltip={(tooltip) => (
+            <div className="w-25">
+              <div className="font-semibold">
+                {tooltip.label} {TERRAIN_CONFIG[tooltip.datum.type].icon}
+              </div>
+              <div>Cells: {tooltip.datum.cellCount}</div>
+              <div>Percent: {tooltip.percent}%</div>
             </div>
-            <span>
-              {item.count} cells ({item.percent}%)
-            </span>
-          </div>
-        );
-      })}
+          )}
+        />
+      </div>
     </BlurCard>
   );
 }

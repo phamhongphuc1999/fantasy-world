@@ -2,6 +2,7 @@ import {
   TCell,
   TCellOwnerParams,
   TDelaunayMesh,
+  TEthnic,
   TNumRecordTerrain,
   TTerrain,
 } from 'src/types/map.types';
@@ -222,6 +223,7 @@ function finalizeOwnershipProjection(
   owner: Int32Array,
   provinceOwner: Int32Array,
   ethnicOwner: Int32Array,
+  ethnics: TEthnic[],
   seed: string
 ) {
   const { waterOwner, zoneType } = assignMaritimeZones(mesh.cells);
@@ -265,7 +267,7 @@ function finalizeOwnershipProjection(
       isCapital: capitalCellIds.has(cell.id),
     };
   });
-  return { ...mesh, cells, nations };
+  return { ...mesh, cells, nations, ethnics };
 }
 
 export function buildGeopolitics(params: TBuildGeopoliticsOptions): TDelaunayMesh {
@@ -278,13 +280,14 @@ export function buildGeopolitics(params: TBuildGeopoliticsOptions): TDelaunayMes
   const scaledMesh = { ...mesh, cells: normalizedCells };
   const { provinceOwner } = assignProvinces(scaledMesh.cells, owner, seed);
   postProcessProvinces({ cells: scaledMesh.cells, owner, provinceOwner });
-  const { ethnicOwner } = buildEthnicRegions(scaledMesh.cells, owner, seed);
+  const { ethnicOwner, ethnics } = buildEthnicRegions(scaledMesh.cells, owner, seed);
   return finalizeOwnershipProjection(
     scaledMesh,
     nationProfiles,
     owner,
     provinceOwner,
     ethnicOwner,
+    ethnics,
     seed
   );
 }
