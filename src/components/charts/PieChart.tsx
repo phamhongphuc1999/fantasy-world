@@ -3,6 +3,7 @@
 import { Group } from '@visx/group';
 import { Pie } from '@visx/shape';
 import { type ReactNode, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { TBaseChartData, TPieChartData } from 'src/types/global';
 
 type TPieTooltipData<T extends TPieChartData> = {
@@ -57,8 +58,8 @@ export default function PieChart<T extends TPieChartData>(params: TProps<T>) {
                         if (!rect) return;
 
                         setTooltip({
-                          x: e.clientX - rect.left,
-                          y: e.clientY - rect.top,
+                          x: e.clientX,
+                          y: e.clientY,
                           data: {
                             datum: arc.data,
                             label: arc.data.label,
@@ -76,22 +77,24 @@ export default function PieChart<T extends TPieChartData>(params: TProps<T>) {
           </Pie>
         </Group>
       </svg>
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-50 rounded-xl bg-black px-3 py-2 text-sm text-white shadow-lg"
-          style={{ top: tooltip.y + 12, left: tooltip.x + 12 }}
-        >
-          {renderTooltip ? (
-            renderTooltip(tooltip.data)
-          ) : (
-            <>
-              <div className="font-semibold">{tooltip.data.label}</div>
-              <div>Value: {tooltip.data.value}</div>
-              <div>{tooltip.data.percent}%</div>
-            </>
-          )}
-        </div>
-      )}
+      {tooltip &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[100] rounded-xl bg-black px-3 py-2 text-sm text-white shadow-lg"
+            style={{ top: tooltip.y + 12, left: tooltip.x + 12 }}
+          >
+            {renderTooltip ? (
+              renderTooltip(tooltip.data)
+            ) : (
+              <>
+                <div className="font-semibold">{tooltip.data.label}</div>
+                <div>Value: {tooltip.data.value}</div>
+                <div>{tooltip.data.percent}%</div>
+              </>
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

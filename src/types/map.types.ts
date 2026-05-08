@@ -168,6 +168,7 @@ export type TDelaunayMesh = TMesh & {
 
 export interface TDisplaySettings {
   terrain: boolean;
+  terrainRelief: boolean;
   population: boolean;
   temperature: boolean;
   precipitation: boolean;
@@ -189,6 +190,8 @@ export type TTerrainRatioKey =
   | 'forest'
   | 'swamp'
   | 'desert'
+  | 'badlands'
+  | 'volcanic'
   | 'hills'
   | 'mountains'
   | 'plateau';

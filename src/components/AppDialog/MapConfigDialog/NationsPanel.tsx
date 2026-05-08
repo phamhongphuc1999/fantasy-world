@@ -28,21 +28,10 @@ export default function NationsPanel(_props: TProps) {
           (cell) => cell.nationId === nation.id && !cell.isWater
         );
 
-        const provincePopulationMap = new Map<number, number>();
-        const provinceCellCountMap = new Map<number, number>();
         let nationPopulation = 0;
 
         for (const cell of nationLandCells) {
           nationPopulation += cell.population;
-          if (cell.provinceId === null) continue;
-          provincePopulationMap.set(
-            cell.provinceId,
-            (provincePopulationMap.get(cell.provinceId) || 0) + cell.population
-          );
-          provinceCellCountMap.set(
-            cell.provinceId,
-            (provinceCellCountMap.get(cell.provinceId) || 0) + 1
-          );
         }
         return { id: nation.id, name: nation.name, totalPopulation: nationPopulation };
       })

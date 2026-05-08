@@ -20,16 +20,10 @@ export default function EthnicPanel(_props: TProps) {
     return mesh.ethnics
       .map((group) => {
         const cells = mesh.cells.filter((cell) => cell.ethnicId === group.id && !cell.isWater);
-        const nationPopulationMap = new Map<number, number>();
         let ethnicPopulation = 0;
 
         for (const cell of cells) {
           ethnicPopulation += cell.population;
-          if (cell.nationId === null) continue;
-          nationPopulationMap.set(
-            cell.nationId,
-            (nationPopulationMap.get(cell.nationId) || 0) + cell.population
-          );
         }
 
         return { id: group.id, name: group.name, totalPopulation: ethnicPopulation };

@@ -32,6 +32,12 @@ const defaultTerrainConfig = {
   tundra: 1,
 };
 
+const T_COMPONENT_SHARE_THRESHOLD = 0.3;
+const T_MIN_WEIGHT = 1e-6;
+const T_STRICT_VIEWPORT_MARGIN = CAPITAL_VIEWPORT_MARGIN + 8;
+const T_STRICT_BORDER_DISTANCE_MIN = 2;
+const T_SMALL_NATION_ARGMAX_THRESHOLD = 220;
+
 function getDistanceMap(
   cells: TCell[],
   nationLand: Set<number>,
@@ -62,28 +68,56 @@ function waterProximityScore(cell: TCell, cells: TCell[]) {
   for (const neighborId of cell.neighbors) {
     for (const secondNeighborId of cells[neighborId].neighbors) {
       const secondNeighbor = cells[secondNeighborId];
-      if (isWaterOrRiverCell(secondNeighbor)) {
-        visitedWater.add(secondNeighborId);
-      }
+      if (isWaterOrRiverCell(secondNeighbor)) visitedWater.add(secondNeighborId);
     }
   }
   return Math.min(0.85, visitedWater.size * 0.08);
 }
 
-function distanceScore(
-  distance: number,
-  thresholds: { nearMax: number; farMin: number; nearPenalty: number; farBonus: number }
-) {
-  if (distance === -1) return 0;
-  if (distance <= thresholds.nearMax) return -thresholds.nearPenalty;
-  if (distance >= thresholds.farMin) return thresholds.farBonus;
-  return 0;
+function getNationCandidateCellIds(components: number[][]) {
+  const totalLand = components.reduce((sum, component) => sum + component.length, 0);
+  if (totalLand === 0) return [];
+
+  const selected = components.filter(
+    (component) => component.length / totalLand >= T_COMPONENT_SHARE_THRESHOLD
+  );
+  if (selected.length > 0) return selected.flat();
+  return components[0] || [];
+}
+
+function exponentialEdgePenalty(distance: number, radius: number, penaltyBase: number) {
+  if (distance < 0) return 0;
+  if (distance > radius) return 0;
+  return penaltyBase * Math.exp((radius - distance) * 0.95);
+}
+
+function getHeartlandCentralityScore(borderDistance: number, coastDistance: number) {
+  if (borderDistance < 0 && coastDistance < 0) return -1;
+
+  const borderNorm = borderDistance < 0 ? 0 : Math.min(1, borderDistance / 6);
+  const coastNorm = coastDistance < 0 ? 0 : Math.min(1, coastDistance / 5);
+  const coreBalance = 1 - Math.min(1, Math.abs(borderNorm - coastNorm));
+  const deepCore = Math.min(borderNorm, coastNorm);
+
+  const borderPenalty = exponentialEdgePenalty(borderDistance, 2, 0.95);
+  const coastPenalty = exponentialEdgePenalty(coastDistance, 2, 0.75);
+
+  return deepCore * 0.7 + coreBalance * 0.3 - borderPenalty - coastPenalty;
+}
+
+function getNationConnectivityScore(cell: TCell, nationLand: Set<number>) {
+  let sameNationNeighbors = 0;
+  for (const neighborId of cell.neighbors) {
+    if (nationLand.has(neighborId)) sameNationNeighbors += 1;
+  }
+  return sameNationNeighbors;
 }
 
 function scoreCapital(
   cell: TCell,
   population: number,
   economy: number,
+  connectivity: number,
   borderDistanceMap: Int32Array,
   coastDistanceMap: Int32Array,
   mapWidth: number,
@@ -91,19 +125,7 @@ function scoreCapital(
 ) {
   const borderDistance = borderDistanceMap[cell.id];
   const coastDistance = coastDistanceMap[cell.id];
-
-  const borderCentrality = distanceScore(borderDistance, {
-    nearMax: 2,
-    farMin: 4,
-    nearPenalty: 0.35,
-    farBonus: 0.14,
-  });
-  const coastCentrality = distanceScore(coastDistance, {
-    nearMax: 1,
-    farMin: 3,
-    nearPenalty: 0.12,
-    farBonus: 0.1,
-  });
+  const centralityScore = getHeartlandCentralityScore(borderDistance, coastDistance);
 
   const edgeDistance = Math.min(
     cell.site[0],
@@ -117,11 +139,19 @@ function scoreCapital(
       : edgeDistance >= CAPITAL_VIEWPORT_MARGIN + 6
         ? 0.1
         : 0;
-
-  const centralityScore = borderCentrality + coastCentrality + edgeSafety;
   const safetyScore = TERRAIN_CONFIG[cell.terrain].safetyScore;
+  const terrainFlatness = TERRAIN_CONFIG[cell.terrain].flatness;
+  const terrainBias =
+    terrainFlatness * 0.65 + (cell.terrain === 'plains' || cell.terrain === 'valley' ? 0.35 : 0);
+  const adjustedSafety = safetyScore * 0.6 + terrainBias * 0.4 + edgeSafety * 0.15;
 
-  return population * 0.34 + economy * 0.28 + centralityScore * 0.23 + safetyScore * 0.15;
+  return (
+    population * 0.25 +
+    economy * 0.2 +
+    centralityScore * 0.35 +
+    adjustedSafety * 0.1 +
+    connectivity * 0.1
+  );
 }
 
 function economicHubScore(cell: TCell, cells: TCell[], population: number, economy: number) {
@@ -132,10 +162,10 @@ function economicHubScore(cell: TCell, cells: TCell[], population: number, econo
 
 function isInBounds(cell: TCell, mapWidth: number, mapHeight: number) {
   return (
-    cell.site[0] >= CAPITAL_VIEWPORT_MARGIN &&
-    cell.site[0] <= mapWidth - CAPITAL_VIEWPORT_MARGIN &&
-    cell.site[1] >= CAPITAL_VIEWPORT_MARGIN &&
-    cell.site[1] <= mapHeight - CAPITAL_VIEWPORT_MARGIN
+    cell.site[0] >= T_STRICT_VIEWPORT_MARGIN &&
+    cell.site[0] <= mapWidth - T_STRICT_VIEWPORT_MARGIN &&
+    cell.site[1] >= T_STRICT_VIEWPORT_MARGIN &&
+    cell.site[1] <= mapHeight - T_STRICT_VIEWPORT_MARGIN
   );
 }
 
@@ -150,12 +180,12 @@ export function pickEconomicAndCapital(
   const nationIds = Array.from(new Set(owner)).filter((nationId) => nationId >= 0);
   return nationIds.map((nationId) => {
     const components = getNationComponents(cells, owner, nationId);
-    const mainland = components[0] || [];
-    const mainlandSet = new Set(mainland);
-    const mainlandCells = mainland.map((cellId) => cells[cellId]);
-    const safeMainlandCells = mainlandCells.filter((cell) => isInBounds(cell, mapWidth, mapHeight));
-    const candidateMainlandCells = safeMainlandCells.length > 0 ? safeMainlandCells : mainlandCells;
-    const landSize = mainlandCells.length;
+    const candidateCellIds = getNationCandidateCellIds(components);
+    const nationLand = new Set(candidateCellIds);
+    const nationCells = candidateCellIds.map((cellId) => cells[cellId]);
+    const safeNationCells = nationCells.filter((cell) => isInBounds(cell, mapWidth, mapHeight));
+    const candidateNationCells = safeNationCells.length > 0 ? safeNationCells : nationCells;
+    const landSize = nationCells.length;
     const random = createSeededRandom(`${seed}:capital:${nationId}`);
 
     let hubCount = 1;
@@ -163,25 +193,41 @@ export function pickEconomicAndCapital(
     else if (landSize >= GEOPOLITICAL_CONFIG.hubCount.smallNationMinLand) hubCount = 2;
     hubCount = Math.min(hubCount, GEOPOLITICAL_CONFIG.hubCount.maxHubsPerNation);
 
-    const borderDistanceMap = getDistanceMap(cells, mainlandSet, (cellId) => {
+    const borderDistanceMap = getDistanceMap(cells, nationLand, (cellId) => {
       for (const neighborId of cells[cellId].neighbors) {
-        if (!mainlandSet.has(neighborId)) return true;
+        if (!nationLand.has(neighborId)) return true;
       }
       return false;
     });
-    const coastDistanceMap = getDistanceMap(cells, mainlandSet, (cellId) => {
+    const coastDistanceMap = getDistanceMap(cells, nationLand, (cellId) => {
       for (const neighborId of cells[cellId].neighbors) {
         if (!isLand(cells[neighborId])) return true;
       }
       return false;
     });
 
-    const populationValues = candidateMainlandCells.map((cell) => Math.max(0, cell.population));
-    const economyValues = candidateMainlandCells.map((cell) => Math.max(0, cell.economy));
+    const strictInteriorCells = candidateNationCells.filter((cell) => {
+      const borderDistance = borderDistanceMap[cell.id];
+      const coastDistance = coastDistanceMap[cell.id];
+      return (
+        borderDistance >= T_STRICT_BORDER_DISTANCE_MIN &&
+        coastDistance >= 1 &&
+        getNationConnectivityScore(cell, nationLand) >= 2
+      );
+    });
+    const scoredCandidateCells =
+      strictInteriorCells.length > 0 ? strictInteriorCells : candidateNationCells;
+
+    const populationValues = scoredCandidateCells.map((cell) => Math.max(0, cell.population));
+    const economyValues = scoredCandidateCells.map((cell) => Math.max(0, cell.economy));
+    const connectivityValues = scoredCandidateCells.map((cell) =>
+      getNationConnectivityScore(cell, nationLand)
+    );
     const populationRange = getMetricRange(populationValues);
     const economyRange = getMetricRange(economyValues);
+    const connectivityRange = getMetricRange(connectivityValues);
 
-    const capitalCandidates = candidateMainlandCells
+    const capitalCandidates = scoredCandidateCells
       .map((cell) => {
         const population = normalize(
           Math.max(0, cell.population),
@@ -189,12 +235,18 @@ export function pickEconomicAndCapital(
           populationRange.max
         );
         const economy = normalize(Math.max(0, cell.economy), economyRange.min, economyRange.max);
+        const connectivity = normalize(
+          getNationConnectivityScore(cell, nationLand),
+          connectivityRange.min,
+          connectivityRange.max
+        );
         return {
           cellId: cell.id,
           score: scoreCapital(
             cell,
             population,
             economy,
+            connectivity,
             borderDistanceMap,
             coastDistanceMap,
             mapWidth,
@@ -204,23 +256,26 @@ export function pickEconomicAndCapital(
       })
       .sort((a, b) => b.score - a.score);
 
-    const topCount = Math.max(1, Math.floor(capitalCandidates.length * 0.1));
+    const topCount = Math.max(1, Math.floor(capitalCandidates.length * 0.05));
     const topCandidates = capitalCandidates.slice(0, topCount);
     let capitalCellId: number | null = null;
 
-    if (topCandidates.length > 0) {
+    const useArgmaxOnly = landSize <= T_SMALL_NATION_ARGMAX_THRESHOLD;
+    if (useArgmaxOnly && capitalCandidates.length > 0) {
+      capitalCellId = capitalCandidates[0].cellId;
+    } else if (topCandidates.length > 0) {
       let totalWeight = 0;
       for (const candidate of topCandidates) {
         totalWeight += Math.max(
-          1e-6,
-          candidate.score - (topCandidates[topCandidates.length - 1]?.score ?? 0) + 1e-6
+          T_MIN_WEIGHT,
+          candidate.score - (topCandidates[topCandidates.length - 1]?.score ?? 0) + T_MIN_WEIGHT
         );
       }
       let needle = random() * totalWeight;
       for (const candidate of topCandidates) {
         needle -= Math.max(
-          1e-6,
-          candidate.score - (topCandidates[topCandidates.length - 1]?.score ?? 0) + 1e-6
+          T_MIN_WEIGHT,
+          candidate.score - (topCandidates[topCandidates.length - 1]?.score ?? 0) + T_MIN_WEIGHT
         );
         if (needle <= 0) {
           capitalCellId = candidate.cellId;
@@ -234,7 +289,7 @@ export function pickEconomicAndCapital(
       capitalCellId = capitalCandidates[0].cellId;
     }
 
-    const hubScored = candidateMainlandCells
+    const hubScored = scoredCandidateCells
       .map((cell) => {
         const population = normalize(
           Math.max(0, cell.population),
@@ -272,8 +327,8 @@ export function pickEconomicAndCapital(
 
     if (hubCellIds.length === 0 && hubScored.length > 0) hubCellIds.push(hubScored[0].cellId);
 
-    if (capitalCellId === null && candidateMainlandCells.length > 0) {
-      capitalCellId = candidateMainlandCells[0].id;
+    if (capitalCellId === null && candidateNationCells.length > 0) {
+      capitalCellId = candidateNationCells[0].id;
     }
     const nationName = createRegionalName(seed, 'nation', nationId);
     const profile = nationProfiles.get(nationId);

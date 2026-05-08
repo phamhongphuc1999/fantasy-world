@@ -194,6 +194,8 @@ function clusterLandTerrains(cells: TCell[], seaLevel: number) {
 
 function toTerrainBalance(terrainRatios: TTerrainRatioMap): TTerrainBalance {
   const margin = 0.015;
+  const badlandsCap = HYDROLOGY_CONFIG.terrainBalance.badlandsMaxShare;
+  const volcanicCap = HYDROLOGY_CONFIG.terrainBalance.volcanicMaxShare;
 
   function withBand(value: number) {
     return { min: Math.max(0, value - margin), max: Math.min(1, value + margin) };
@@ -203,6 +205,10 @@ function toTerrainBalance(terrainRatios: TTerrainRatioMap): TTerrainBalance {
   const forest = withBand(terrainRatios.forest);
   const swamp = withBand(terrainRatios.swamp);
   const desert = withBand(terrainRatios.desert);
+  const badlandsRequested = clamp(terrainRatios.badlands, 0, badlandsCap);
+  const volcanicRequested = clamp(terrainRatios.volcanic, 0, volcanicCap);
+  const badlands = withBand(badlandsRequested);
+  const volcanic = withBand(volcanicRequested);
   const hills = withBand(terrainRatios.hills);
   const mountains = withBand(terrainRatios.mountains);
   const plateau = withBand(terrainRatios.plateau);
@@ -217,6 +223,10 @@ function toTerrainBalance(terrainRatios: TTerrainRatioMap): TTerrainBalance {
     swampMaxShare: swamp.max,
     desertMinShare: desert.min,
     desertMaxShare: desert.max,
+    badlandsMinShare: badlands.min,
+    badlandsMaxShare: badlands.max,
+    volcanicMinShare: volcanic.min,
+    volcanicMaxShare: volcanic.max,
     hillsMinShare: hills.min,
     hillsMaxShare: hills.max,
     mountainsMinShare: mountains.min,
@@ -499,6 +509,16 @@ function rebalanceTerrain(cells: TCell[], terrainBalance: TTerrainBalance) {
     target.desertMaxShare,
     (cell) => 1 - cell.rainShadow + cell.precipitation
   );
+  trimExcessToPlains(
+    'badlands',
+    target.badlandsMaxShare,
+    (cell) => 1 - cell.rainShadow + cell.precipitation + Math.max(0, 0.55 - cell.elevation)
+  );
+  trimExcessToPlains(
+    'volcanic',
+    target.volcanicMaxShare,
+    (cell) => 1 - cell.elevation + cell.precipitation + Math.max(0, 0.5 - cell.temperature)
+  );
 
   fillDeficitFromDonors(
     'mountains',
@@ -540,6 +560,24 @@ function rebalanceTerrain(cells: TCell[], terrainBalance: TTerrainBalance) {
       cell.rainShadow * 1.25 +
       Math.max(0, 0.5 - cell.precipitation) * 1.4 +
       Math.max(0, cell.elevation - 0.35) * 0.35
+  );
+  fillDeficitFromDonors(
+    'badlands',
+    target.badlandsMinShare,
+    ['plains', 'hills', 'plateau', 'desert'],
+    (cell) =>
+      cell.rainShadow * 1.1 +
+      Math.max(0, 0.42 - cell.precipitation) * 1.2 +
+      Math.max(0, cell.elevation - 0.36) * 0.55
+  );
+  fillDeficitFromDonors(
+    'volcanic',
+    target.volcanicMinShare,
+    ['mountains', 'hills', 'plateau'],
+    (cell) =>
+      cell.elevation * 1.35 +
+      Math.max(0, 0.4 - cell.precipitation) * 0.7 +
+      Math.max(0, cell.temperature - 0.45) * 0.45
   );
   fillDeficitFromDonors(
     'plains',

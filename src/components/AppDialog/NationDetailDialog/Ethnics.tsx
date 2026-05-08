@@ -81,9 +81,13 @@ export default function Ethnics({ ethnics }: TProps) {
               data={cellPieData}
               renderTooltip={(tooltip) => (
                 <>
-                  <div className="font-semibold">{tooltip.datum.ethnicName}</div>
-                  <div>Cells: {tooltip.datum.cells}</div>
-                  <div>{tooltip.percent}%</div>
+                  <div className="font-bold">{tooltip.datum.ethnicName}</div>
+                  <div>
+                    <span className="font-bold">Cells</span>: {tooltip.datum.cells}
+                  </div>
+                  <div>
+                    <span className="font-bold">Percent</span>: {tooltip.percent}%
+                  </div>
                 </>
               )}
             />
@@ -95,9 +99,13 @@ export default function Ethnics({ ethnics }: TProps) {
               data={populationPieData}
               renderTooltip={(tooltip) => (
                 <>
-                  <div className="font-semibold">{tooltip.datum.ethnicName}</div>
-                  <div>Population: {formatPopulation(tooltip.value)}</div>
-                  <div>{tooltip.percent}%</div>
+                  <div className="font-bold">{tooltip.datum.ethnicName}</div>
+                  <div>
+                    <span className="font-bold">Population</span>: {formatPopulation(tooltip.value)}
+                  </div>
+                  <div>
+                    <span className="font-bold">Percent</span>: {tooltip.percent}%
+                  </div>
                 </>
               )}
             />
@@ -109,9 +117,13 @@ export default function Ethnics({ ethnics }: TProps) {
               data={economyPieData}
               renderTooltip={(tooltip) => (
                 <>
-                  <div className="font-semibold">{tooltip.datum.ethnicName}</div>
-                  <div>Economy: {formatPopulation(tooltip.value)}</div>
-                  <div>{tooltip.percent}%</div>
+                  <div className="font-bold">{tooltip.datum.ethnicName}</div>
+                  <div>
+                    <span className="font-bold">Economy</span>: {formatPopulation(tooltip.value)}
+                  </div>
+                  <div>
+                    <span className="font-bold">Percent</span>: {tooltip.percent}%
+                  </div>
                 </>
               )}
             />
@@ -123,8 +135,10 @@ export default function Ethnics({ ethnics }: TProps) {
               data={populationPerCellData}
               renderTooltip={(tooltip) => (
                 <>
-                  <div className="font-semibold">{tooltip.datum.ethnicName}</div>
-                  <div>Population/Cell: {tooltip.value.toFixed(2)}</div>
+                  <div className="font-bold">{tooltip.datum.ethnicName}</div>
+                  <div>
+                    <span className="font-bold">Population/Cell</span>: {tooltip.value.toFixed(2)}
+                  </div>
                 </>
               )}
             />
@@ -136,8 +150,10 @@ export default function Ethnics({ ethnics }: TProps) {
               data={economyPerPersonData}
               renderTooltip={(tooltip) => (
                 <>
-                  <div className="font-semibold">{tooltip.datum.ethnicName}</div>
-                  <div>Economy/Person: {tooltip.value.toFixed(4)}</div>
+                  <div className="font-bold">{tooltip.datum.ethnicName}</div>
+                  <div>
+                    <span className="font-bold">Economy/Person</span>: {tooltip.value.toFixed(4)}
+                  </div>
                 </>
               )}
             />

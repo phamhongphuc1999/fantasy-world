@@ -60,6 +60,8 @@ function migrateTerrainRatios(raw?: Partial<Record<string, number>>) {
     forest: raw.forest,
     swamp: raw.swamp,
     desert: raw.desert,
+    badlands: raw.badlands,
+    volcanic: raw.volcanic,
     hills: raw.hills,
     mountains: raw.mountains,
     plateau: raw.plateau,

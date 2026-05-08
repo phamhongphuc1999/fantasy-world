@@ -2,7 +2,12 @@ import { useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import { Button } from 'src/components/ui/button';
 import { Input } from 'src/components/ui/input';
-import { rebalanceTerrainRatio, TERRAIN_RATIO_FIELDS } from 'src/services/terrain/ratios';
+import {
+  getTerrainRatioMax,
+  normalizeTerrainRatios,
+  rebalanceTerrainRatio,
+  TERRAIN_RATIO_FIELDS,
+} from 'src/services/terrain/ratios';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import { TTerrainRatioKey } from 'src/types/map.types';
 
@@ -17,7 +22,7 @@ function TerrainRow({ ratio, terrain, setTerrain }: TProps) {
 
   function handleChange(nextPercent: number) {
     if (!Number.isFinite(nextPercent)) return;
-    const clamped = Math.min(92, Math.max(1, nextPercent));
+    const clamped = Math.min(getTerrainRatioMax(terrain) * 100, Math.max(0, nextPercent));
     setTerrain(terrain, clamped / 100);
   }
 
@@ -29,8 +34,8 @@ function TerrainRow({ ratio, terrain, setTerrain }: TProps) {
       </div>
       <Input
         type="number"
-        min={1}
-        max={92}
+        min={0}
+        max={Math.round(getTerrainRatioMax(terrain) * 100)}
         step={1}
         value={Math.round(ratio * 100)}
         onChange={(event) => handleChange(Number(event.target.value))}
@@ -41,7 +46,8 @@ function TerrainRow({ ratio, terrain, setTerrain }: TProps) {
 }
 
 export default function TerrainRatioPanel() {
-  const terrainRatios = useMapExplorerStore((state) => state.terrainRatios);
+  const terrainRatiosRaw = useMapExplorerStore((state) => state.terrainRatios);
+  const terrainRatios = normalizeTerrainRatios(terrainRatiosRaw);
   const [terrainRatiosDraft, setTerrainRatiosDraft] = useState(terrainRatios);
   const applyTerrainRatios = useMapExplorerStore((state) => state.applyTerrainRatios);
   const isDirty = TERRAIN_RATIO_FIELDS.some(
@@ -49,7 +55,7 @@ export default function TerrainRatioPanel() {
   );
 
   function setTerrain(terrain: TTerrainRatioKey, ratio: number) {
-    const next = rebalanceTerrainRatio(terrainRatiosDraft, terrain, ratio);
+    const next = rebalanceTerrainRatio(normalizeTerrainRatios(terrainRatiosDraft), terrain, ratio);
     setTerrainRatiosDraft(next);
   }
 
@@ -77,7 +83,7 @@ export default function TerrainRatioPanel() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => setTerrainRatiosDraft(terrainRatios)}
+          onClick={() => setTerrainRatiosDraft(normalizeTerrainRatios(terrainRatios))}
           disabled={!isDirty}
         >
           Cancel

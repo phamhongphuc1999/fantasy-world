@@ -1,5 +1,6 @@
 import js from '@eslint/js';
-import eslintPluginImport from 'eslint-plugin-import';
+import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
+import eslintPluginImport from 'eslint-plugin-import-x';
 import prettierPlugin from 'eslint-plugin-prettier';
 import eslintPluginReact from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
@@ -9,7 +10,15 @@ import tseslint from 'typescript-eslint';
 
 export default [
   {
-    ignores: ['dist', '.next', 'coverage', 'public/**', 'next-env.d.ts'],
+    ignores: [
+      '**/node_modules/**',
+      '.git/**',
+      'dist/**',
+      '.next/**',
+      'coverage/**',
+      'public/**',
+      'next-env.d.ts',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -19,23 +28,26 @@ export default [
   {
     files: ['**/*.{ts,tsx}'],
     plugins: {
-      import: eslintPluginImport,
+      'import-x': eslintPluginImport,
       prettier: prettierPlugin,
-      react: eslintPluginReact,
     },
     languageOptions: {
-      ecmaVersion: 2020,
+      ecmaVersion: 'latest',
       globals: globals.browser,
+      parserOptions: {
+        project: './tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     settings: {
       react: {
         version: 'detect',
       },
-      'import/resolver': {
-        typescript: {
+      'import-x/resolver-next': [
+        createTypeScriptImportResolver({
           project: './tsconfig.json',
-        },
-      },
+        }),
+      ],
     },
     rules: {
       'react-refresh/only-export-components': 'off',
@@ -48,11 +60,11 @@ export default [
         'warn',
         { vars: 'all', varsIgnorePattern: '^_', argsIgnorePattern: '^_', ignoreRestSiblings: true },
       ],
-      'import/first': 'error',
-      'import/newline-after-import': 'error',
-      'import/no-duplicates': 'error',
-      'import/no-named-as-default': 'error',
-      'import/no-unresolved': 'warn',
+      'import-x/first': 'error',
+      'import-x/newline-after-import': 'error',
+      'import-x/no-duplicates': 'error',
+      'import-x/no-named-as-default': 'error',
+      'import-x/no-unresolved': 'warn',
       'no-console': ['warn', { allow: ['debug', 'warn', 'error'] }],
       'no-debugger': 'warn',
 

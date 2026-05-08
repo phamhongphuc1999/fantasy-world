@@ -83,7 +83,7 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
           economy: provinceEconomyMap.get(provinceId) || 0,
           cellCount: provinceCellCountMap.get(provinceId) || 0,
         }))
-        .sort((a, b) => b.population - a.population);
+        .sort((a, b) => a.provinceId - b.provinceId);
 
       return { nationCells, totalPopulation, totalEconomy, terrains, ethnics, provinces };
     }

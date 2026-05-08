@@ -64,16 +64,19 @@ export const DEFAULT_CONFIG: {
   terrainPreset: 'balanced',
   nationCount: 8,
   terrainRatios: {
-    plains: 0.35,
-    forest: 0.2,
-    swamp: 0.12,
+    plains: 0.32,
+    forest: 0.18,
+    swamp: 0.11,
     desert: 0.07,
+    badlands: 0.05,
+    volcanic: 0.01,
     hills: 0.1,
     mountains: 0.08,
     plateau: 0.08,
   },
   displaySettings: {
     terrain: true,
+    terrainRelief: true,
     population: false,
     temperature: false,
     precipitation: false,
@@ -331,9 +334,11 @@ export const HYDROLOGY_CONFIG = {
     desertMinShare: 0.05,
     desertMaxShare: 0.1,
 
-    badlandsMaxShare: 0.07,
+    badlandsMinShare: 0.02,
+    badlandsMaxShare: 0.05,
 
-    volcanicMaxShare: 0.04,
+    volcanicMinShare: 0.004,
+    volcanicMaxShare: 0.01,
 
     hillsMinShare: 0.08,
     hillsMaxShare: 0.15,

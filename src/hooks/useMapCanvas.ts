@@ -28,6 +28,7 @@ import {
   drawSiteMarker,
   setupCanvas,
 } from 'src/services/rendering/canvas/primitives';
+import { applyShadedRelief } from 'src/services/rendering/canvas/relief';
 import { getRiverStrokeWidth } from 'src/services/rendering/rivers';
 import { TCell, TDisplaySettings, TEthnic, TNation } from 'src/types/map.types';
 
@@ -75,10 +76,22 @@ export default function useMapCanvas(params: TProps) {
 
     for (const cell of cells) {
       if (isLandCell(cell)) continue;
-      drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 0.95, 'transparent', 0);
+      drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 1, 'transparent', 0);
     }
 
     const showUniformLand =
+      !displaySettings.terrain &&
+      !displaySettings.terrainRelief &&
+      !displaySettings.population &&
+      !displaySettings.temperature &&
+      !displaySettings.precipitation &&
+      !displaySettings.rainShadow &&
+      !displaySettings.economy &&
+      !displaySettings.countryFill &&
+      !displaySettings.ethnicFill;
+
+    const showTerrainReliefBase =
+      displaySettings.terrainRelief &&
       !displaySettings.terrain &&
       !displaySettings.population &&
       !displaySettings.temperature &&
@@ -122,7 +135,14 @@ export default function useMapCanvas(params: TProps) {
     if (displaySettings.terrain) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 0.95, 'transparent', 0);
+        drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 1, 'transparent', 0);
+      }
+    }
+
+    if (showTerrainReliefBase) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 1, 'transparent', 0);
       }
     }
 
@@ -133,7 +153,7 @@ export default function useMapCanvas(params: TProps) {
           context,
           cell,
           getPopulationColor(cell.population, minPopulation, maxPopulation),
-          0.96,
+          1,
           'transparent',
           0
         );
@@ -147,7 +167,7 @@ export default function useMapCanvas(params: TProps) {
           context,
           cell,
           getPrecipitationColor(cell.precipitation),
-          0.96,
+          1,
           'transparent',
           0
         );
@@ -157,7 +177,7 @@ export default function useMapCanvas(params: TProps) {
     if (displaySettings.rainShadow) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, getRainShadowColor(cell.rainShadow), 0.96, 'transparent', 0);
+        drawCellShape(context, cell, getRainShadowColor(cell.rainShadow), 1, 'transparent', 0);
       }
     }
 
@@ -168,7 +188,7 @@ export default function useMapCanvas(params: TProps) {
           context,
           cell,
           getTemperatureColor(cell.temperature, minTemperature, maxTemperature),
-          0.96,
+          1,
           'transparent',
           0
         );
@@ -182,7 +202,7 @@ export default function useMapCanvas(params: TProps) {
           context,
           cell,
           getEconomyColor(cell.economy, minEconomy, maxEconomy),
-          0.96,
+          1,
           'transparent',
           0
         );
@@ -194,6 +214,18 @@ export default function useMapCanvas(params: TProps) {
         if (!isLandCell(cell)) continue;
         drawCellShape(context, cell, '#3f3f46', 1, 'transparent', 0);
       }
+    }
+
+    const showShadedRelief =
+      displaySettings.terrainRelief &&
+      (displaySettings.terrain || showTerrainReliefBase) &&
+      !displaySettings.population &&
+      !displaySettings.temperature &&
+      !displaySettings.precipitation &&
+      !displaySettings.rainShadow &&
+      !displaySettings.economy;
+    if (showShadedRelief) {
+      applyShadedRelief(context, cells, { intensity: 0.62, verticalExaggeration: 10.5 });
     }
 
     if (displaySettings.countryFill) drawCountryFill(context, cells);

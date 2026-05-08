@@ -79,9 +79,14 @@ export default function EthnicDetailDialog({ open, onOpenChange, ethnicId, mesh 
                   data={nationPopulationPieData}
                   renderTooltip={(tooltip) => (
                     <>
-                      <div className="font-semibold">{tooltip.datum.nationName}</div>
-                      <div>Population: {formatPopulation(tooltip.value)}</div>
-                      <div>{tooltip.percent}%</div>
+                      <div className="font-bold">{tooltip.datum.nationName}</div>
+                      <div>
+                        <span className="font-bold">Population</span>:{' '}
+                        {formatPopulation(tooltip.value)}
+                      </div>
+                      <div>
+                        <span className="font-bold">Percent</span>: {tooltip.percent}%
+                      </div>
                     </>
                   )}
                 />

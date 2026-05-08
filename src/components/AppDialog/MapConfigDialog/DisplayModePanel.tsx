@@ -33,6 +33,11 @@ export default function DisplayModePanel() {
         onChange={(checked) => setDisplayLayer('terrain', checked)}
       />
       <LayerToggle
+        label="Terrain 2.5D"
+        checked={displaySettings.terrainRelief}
+        onChange={(checked) => setDisplayLayer('terrainRelief', checked)}
+      />
+      <LayerToggle
         label="Population"
         checked={displaySettings.population}
         onChange={(checked) => setDisplayLayer('population', checked)}

@@ -1,6 +1,7 @@
 'use client';
 
 import { type ReactNode, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { TBarChartData, TBaseChartData } from 'src/types/global';
 
 type TBarTooltipData<T extends TBarChartData> = {
@@ -74,8 +75,8 @@ export default function BarChart<T extends TBarChartData>({
                   if (!rect) return;
 
                   setTooltip({
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top,
+                    x: e.clientX,
+                    y: e.clientY,
                     data: {
                       datum: item,
                       label: item.label,
@@ -98,21 +99,23 @@ export default function BarChart<T extends TBarChartData>({
           );
         })}
       </svg>
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-50 rounded-xl bg-black px-3 py-2 text-sm text-white shadow-lg"
-          style={{ top: tooltip.y + 12, left: tooltip.x + 12 }}
-        >
-          {renderTooltip ? (
-            renderTooltip(tooltip.data)
-          ) : (
-            <>
-              <div className="font-semibold">{tooltip.data.label}</div>
-              <div>{tooltip.data.value.toFixed(2)}</div>
-            </>
-          )}
-        </div>
-      )}
+      {tooltip &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[100] rounded-xl bg-black px-3 py-2 text-sm text-white shadow-lg"
+            style={{ top: tooltip.y + 12, left: tooltip.x + 12 }}
+          >
+            {renderTooltip ? (
+              renderTooltip(tooltip.data)
+            ) : (
+              <>
+                <div className="font-semibold">{tooltip.data.label}</div>
+                <div>{tooltip.data.value.toFixed(2)}</div>
+              </>
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

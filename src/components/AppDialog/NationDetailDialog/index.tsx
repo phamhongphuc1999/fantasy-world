@@ -52,10 +52,14 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         overlayClassName="supports-backdrop-filter:backdrop-blur-none"
-        className="border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md sm:max-w-[45vw]"
+        className="h-full w-full border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md"
       >
         <DialogHeader>
-          <DialogTitle className="font-bold" style={{ color: getNationColor(nation.id) }}>
+          <DialogTitle
+            tabIndex={-1}
+            className="font-bold outline-none"
+            style={{ color: getNationColor(nation.id) }}
+          >
             {nation.name}
           </DialogTitle>
           <DialogDescription className="text-slate-300">

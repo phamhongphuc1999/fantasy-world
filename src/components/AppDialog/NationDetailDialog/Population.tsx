@@ -67,9 +67,15 @@ export default function Population({ provinces }: TProps) {
               renderTooltip={(tooltip) => (
                 <>
                   <div className="font-semibold">{tooltip.label}</div>
-                  <div>Population: {formatPopulation(tooltip.value)}</div>
-                  <div>{tooltip.percent}%</div>
-                  <div>Cells: {tooltip.datum.cellCount}</div>
+                  <div>
+                    <span className="font-bold">Population</span>: {formatPopulation(tooltip.value)}
+                  </div>
+                  <div>
+                    <span className="font-bold">Percent</span>: {tooltip.percent}%
+                  </div>
+                  <div>
+                    <span className="font-bold">Cells</span>: {tooltip.datum.cellCount}
+                  </div>
                 </>
               )}
             />
@@ -81,10 +87,16 @@ export default function Population({ provinces }: TProps) {
               data={economyPieData}
               renderTooltip={(tooltip) => (
                 <>
-                  <div className="font-semibold">{tooltip.label}</div>
-                  <div>Economy: {formatPopulation(tooltip.value)}</div>
-                  <div>{tooltip.percent}%</div>
-                  <div>Cells: {tooltip.datum.cellCount}</div>
+                  <div className="font-bold">{tooltip.label}</div>
+                  <div>
+                    <span className="font-bold">Economy</span>: {formatPopulation(tooltip.value)}
+                  </div>
+                  <div>
+                    <span className="font-bold">Percent</span>: {tooltip.percent}%
+                  </div>
+                  <div>
+                    <span className="font-bold">Cells</span>: {tooltip.datum.cellCount}
+                  </div>
                 </>
               )}
             />
@@ -96,8 +108,10 @@ export default function Population({ provinces }: TProps) {
               data={averagePopulationBarData}
               renderTooltip={(tooltip) => (
                 <>
-                  <div className="font-semibold">{tooltip.label}</div>
-                  <div>Avg Pop/Cell: {tooltip.value.toFixed(2)}</div>
+                  <div className="font-bold">{tooltip.label}</div>
+                  <div>
+                    <span className="font-bold">Avg Pop/Cell</span>: {tooltip.value.toFixed(2)}
+                  </div>
                 </>
               )}
             />
@@ -109,8 +123,10 @@ export default function Population({ provinces }: TProps) {
               data={averageEconomyBarData}
               renderTooltip={(tooltip) => (
                 <>
-                  <div className="font-semibold">{tooltip.label}</div>
-                  <div>Avg Economy/Cell: {tooltip.value.toFixed(2)}</div>
+                  <div className="font-bold">{tooltip.label}</div>
+                  <div>
+                    <span className="font-bold">Avg Economy/Cell</span>: {tooltip.value.toFixed(2)}
+                  </div>
                 </>
               )}
             />
