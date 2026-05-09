@@ -45,6 +45,20 @@ export default function TerrainStatistic({ terrains }: TProps) {
           )}
         />
       </div>
+      <div className="mt-3 flex flex-wrap justify-center gap-2">
+        {pieData.map((item) => (
+          <div
+            key={`terrain-legend-${item.type}`}
+            className="inline-flex items-center gap-1 rounded border border-white/10 bg-slate-900/45 px-2 py-1 text-[11px] text-slate-200"
+          >
+            <span
+              className="inline-block size-2 rounded-full"
+              style={{ backgroundColor: item.color }}
+            />
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
     </BlurCard>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import { Button } from 'src/components/ui/button';
+import { Input } from 'src/components/ui/input';
 import { useMapContext } from 'src/contexts/map.context';
 import { useLogisticsGameStore } from 'src/store/logisticsGameStore';
 
@@ -31,7 +32,7 @@ export default function LogisticsGamePanel() {
   return (
     <BlurCard title="Logistics">
       <div className="space-y-2">
-        <input
+        <Input
           type="checkbox"
           checked={enabled}
           onChange={(event) => setEnabled(event.target.checked)}

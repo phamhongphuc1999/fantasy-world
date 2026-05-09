@@ -3,6 +3,7 @@
 import { ChangeEventHandler } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import { Button } from 'src/components/ui/button';
+import { Input } from 'src/components/ui/input';
 import { useMapContext } from 'src/contexts/map.context';
 import {
   buildMapSvg,
@@ -99,7 +100,7 @@ export default function ExportTab() {
       </BlurCard>
       <BlurCard title="Import Data">
         <label className="block text-xs text-slate-300">Import JSON Schema</label>
-        <input
+        <Input
           type="file"
           accept="application/json,.json"
           onChange={handleImportJson}

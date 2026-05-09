@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
+import { Input } from 'src/components/ui/input';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
 export default function CountryModePanel() {
@@ -31,7 +32,7 @@ export default function CountryModePanel() {
       <div className="space-y-2">
         <label className="text-xs text-slate-300">Country count (2-40)</label>
         <div className="flex items-center gap-2">
-          <input
+          <Input
             type="number"
             min={2}
             max={40}

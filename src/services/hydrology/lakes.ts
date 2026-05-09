@@ -224,19 +224,6 @@ function filterAndLimitLakes(cells: TCell[], flow: Float32Array) {
   }
 }
 
-function buildLakeSizeMap(cells: TCell[]) {
-  const lakeSizeByCell = new Map<number, number>();
-  const regions = buildLakeRegions(cells);
-
-  for (const region of regions) {
-    const size = region.length;
-    for (const cellId of region) {
-      lakeSizeByCell.set(cellId, size);
-    }
-  }
-  return lakeSizeByCell;
-}
-
 function buildPlainsRegionSizeMap(cells: TCell[]) {
   const regionSizeByCell = new Int32Array(cells.length);
   const plainsRegions = collectConnectedComponents(
@@ -281,11 +268,4 @@ function buildHydrologyRegionMaps(cells: TCell[]): THydrologyRegionMaps {
   return { lakeSizeByCell, plainRegionSizeByCell, hasLargePlains, hasVeryLargePlains };
 }
 
-export {
-  buildHydrologyRegionMaps,
-  buildLakeSizeMap,
-  buildPlainsRegionSizeMap,
-  classifyInlandWater,
-  expandLakes,
-  filterAndLimitLakes,
-};
+export { buildHydrologyRegionMaps, classifyInlandWater, expandLakes, filterAndLimitLakes };

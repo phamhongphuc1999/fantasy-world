@@ -1,3 +1,4 @@
+import { Input } from 'src/components/ui/input';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
 type TLayerToggleProps = {
@@ -11,7 +12,7 @@ function LayerToggle({ label, checked, disabled = false, onChange }: TLayerToggl
   return (
     <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950/55 px-3 py-2">
       <span className={disabled ? 'text-slate-500' : 'text-sm text-slate-100'}>{label}</span>
-      <input
+      <Input
         type="checkbox"
         checked={checked}
         disabled={disabled}

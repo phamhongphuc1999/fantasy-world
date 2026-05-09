@@ -2,13 +2,8 @@
 
 import BlurCard from 'src/components/BlurCard';
 import TerrainStatistic from 'src/components/TerrainStatistic';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from 'src/components/ui/dialog';
+import { XIcon } from 'lucide-react';
+import { Button } from 'src/components/ui/button';
 import useNationStatistic from 'src/hooks/useNationStatistic';
 import { getNationColor } from 'src/services/rendering/colors';
 import { formatPopulation } from 'src/services/utils/format';
@@ -26,16 +21,26 @@ type TProps = {
 export default function NationDetailDialog({ open, onOpenChange, nationId, mesh }: TProps) {
   const { nation, data } = useNationStatistic(nationId, mesh);
 
+  if (!open) return null;
+
   if (!nation || !data) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[min(52rem,calc(100vw-1rem))] border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md sm:max-w-[min(52rem,calc(100vw-1rem))]">
-          <DialogHeader>
-            <DialogTitle>Nation Detail</DialogTitle>
-            <DialogDescription className="text-slate-300">No nation selected.</DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+      <div className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm">
+        <section className="relative h-dvh w-dvw border border-white/15 bg-slate-950/60 p-4 text-slate-100 backdrop-blur-md">
+          <Button
+            type="button"
+            variant="ghost"
+            className="absolute top-2 right-2"
+            size="icon-sm"
+            onClick={() => onOpenChange(false)}
+          >
+            <XIcon />
+            <span className="sr-only">Close</span>
+          </Button>
+          <h2 className="text-base font-medium">Nation Detail</h2>
+          <p className="mt-2 text-sm text-slate-300">No nation selected.</p>
+        </section>
+      </div>
     );
   }
 
@@ -49,25 +54,28 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        overlayClassName="supports-backdrop-filter:backdrop-blur-none"
-        className="h-full w-full border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md"
-      >
-        <DialogHeader>
-          <DialogTitle
-            tabIndex={-1}
-            className="font-bold outline-none"
-            style={{ color: getNationColor(nation.id) }}
-          >
+    <div className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm">
+      <section className="relative flex h-dvh min-h-0 w-dvw flex-col border border-white/15 bg-slate-950/60 p-4 text-slate-100 backdrop-blur-md">
+        <Button
+          type="button"
+          variant="ghost"
+          className="absolute top-2 right-2"
+          size="icon-sm"
+          onClick={() => onOpenChange(false)}
+        >
+          <XIcon />
+          <span className="sr-only">Close</span>
+        </Button>
+        <header className="mb-3 flex flex-col gap-2">
+          <h2 className="text-base font-bold" style={{ color: getNationColor(nation.id) }}>
             {nation.name}
-          </DialogTitle>
-          <DialogDescription className="text-slate-300">
+          </h2>
+          <p className="text-sm text-slate-300">
             Nation #{nation.id} · Land Cells: {data.nationCells.length} · Capital:{' '}
             {nation.capitalCellId !== null ? `#${nation.capitalCellId}` : 'None'}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1 text-sm">
+          </p>
+        </header>
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1 text-sm">
           <BlurCard title="Population">
             {populationRows.map((row) => (
               <div key={row}>{row}</div>
@@ -82,7 +90,7 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
               : 'No economic hubs'}
           </BlurCard>
         </div>
-      </DialogContent>
-    </Dialog>
+      </section>
+    </div>
   );
 }
