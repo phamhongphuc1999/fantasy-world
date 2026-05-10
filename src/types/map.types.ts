@@ -47,7 +47,7 @@ export type TBiome =
   | 'freshwater'
   | 'marine';
 
-export type TBorderType = 'country' | 'province';
+export type TBorderType = 'nation' | 'province';
 export type TBorderConfig = {
   landformCost: TNumRecordLandform;
   biomeCost: TNumRecordBiome;
@@ -60,7 +60,7 @@ export type TBorderConfig = {
   smoothness: { edgeNoiseWeight: number; jaggedPenalty: number };
 };
 
-export type TTopographyPreset = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
+export type TTopography = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
 
 export interface TTopographyCell {
   elevation: number;
@@ -174,8 +174,8 @@ export interface TDisplaySettings {
   rainShadow: boolean;
   economy: boolean;
   rivers: boolean;
-  countryBorders: boolean;
-  countryFill: boolean;
+  nationBorders: boolean;
+  nationFill: boolean;
   provinceBorders: boolean;
   ethnicBorders: boolean;
   ethnicFill: boolean;
@@ -184,9 +184,9 @@ export interface TDisplaySettings {
   cellData: boolean;
 }
 
-export interface TTopographyPresetOption {
+export interface TTopographyOption {
   label: string;
-  value: TTopographyPreset;
+  value: TTopography;
 }
 
 export interface TGenerationConfig {
@@ -195,7 +195,7 @@ export interface TGenerationConfig {
   seed: string;
   cellCount: number;
   seaLevel: number;
-  topographyPreset: TTopographyPreset;
+  topography: TTopography;
   nationCount: number;
   climateControl: {
     temperatureOffset: number;

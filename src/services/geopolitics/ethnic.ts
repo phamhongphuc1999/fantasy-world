@@ -15,8 +15,8 @@ const T_MIN_ETHNIC_POPULATION = 1000;
 function getEthnicGroupCount(landCellCount: number, nationCount: number, config: TEthnicConfig) {
   const byLand = Math.floor(landCellCount / 1300);
   return Math.max(
-    config.majorGroupCountMin,
-    Math.min(config.majorGroupCountMax, Math.max(nationCount, byLand))
+    config.majorGroupMin,
+    Math.min(config.majorGroupMax, Math.max(nationCount, byLand))
   );
 }
 
@@ -234,7 +234,7 @@ function addEthnicFragmentation(
     const groupCells = cells
       .filter((cell) => ethnicOwner[cell.id] === group.id && isLand(cell))
       .map((cell) => cell.id);
-    if (groupCells.length < config.minorityClusterMinCells * 2) continue;
+    if (groupCells.length < config.minorityClusterMin * 2) continue;
     const mountainCandidates = groupCells.filter((cellId) => cells[cellId].landform === 'mountain');
     if (mountainCandidates.length === 0) continue;
     const anchorId = mountainCandidates[Math.floor(random() * mountainCandidates.length)] as number;

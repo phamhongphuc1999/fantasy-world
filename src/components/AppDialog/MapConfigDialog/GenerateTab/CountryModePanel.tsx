@@ -16,21 +16,21 @@ export default function CountryModePanel() {
       nextValue < 2 ||
       nextValue > 40
     ) {
-      setError('Country count must be an integer between 2 and 40.');
+      setError('Nation count must be an integer between 2 and 40.');
       return;
     }
     const success = setNationCount(nextValue);
     if (!success) {
-      setError('Country count must be an integer between 2 and 40.');
+      setError('Nation count must be an integer between 2 and 40.');
       return;
     }
     setError('');
   }
 
   return (
-    <BlurCard title="Country Mode">
+    <BlurCard title="Nation Mode">
       <div className="space-y-2">
-        <label className="text-xs text-slate-300">Country count (2-40)</label>
+        <label className="text-xs text-slate-300">Nation count (2-40)</label>
         <div className="flex items-center gap-2">
           <Input
             type="number"

@@ -10,9 +10,9 @@ import {
   expandLakes,
   filterAndLimitLakes,
 } from 'src/services/hydrology/lakes';
-import { computeAdvancedPrecipitation } from 'src/services/hydrology/precipitation';
+import { computePrecipitation } from 'src/services/hydrology/precipitation';
 import { runRiverGeneration } from 'src/services/hydrology/river';
-import { computeAdvancedTemperature } from 'src/services/hydrology/temperature';
+import { computeTemperature } from 'src/services/hydrology/temperature';
 import { buildWindField } from 'src/services/hydrology/wind';
 import { TCell, TDelaunayMesh } from 'src/types/map.types';
 import { classifyBiomes } from '../terrain/biomeClassifier';
@@ -187,7 +187,7 @@ function runHydrologyInternal({
   const waterInfluence = buildWaterInfluence(cells);
   const reliefByCell = new Float32Array(cells.length);
   const windField = buildWindField(cells, mesh.height, seed);
-  const advancedPrecipitation = computeAdvancedPrecipitation({
+  const advancedPrecipitation = computePrecipitation({
     cells,
     height: mesh.height,
     seaLevel,
@@ -202,7 +202,7 @@ function runHydrologyInternal({
     reliefByCell[cellIndex] = cell.elevation - neighborAverage;
   }
 
-  const temperatureByCell = computeAdvancedTemperature({
+  const temperatureByCell = computeTemperature({
     cells,
     seaLevel,
     seed,

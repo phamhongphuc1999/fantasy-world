@@ -23,7 +23,7 @@ export function buildMapSvg(mesh: TDelaunayMesh, displaySettings: TDisplaySettin
         : LANDFORM_CONFIG[cell.landform].color;
       const color = cell.isWater
         ? defaultColor
-        : displaySettings.countryFill
+        : displaySettings.nationFill
           ? getNationColor(cell.nationId)
           : displaySettings.ethnicFill
             ? getNationColor(cell.ethnicId)

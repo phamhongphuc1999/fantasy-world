@@ -23,9 +23,17 @@ import EthnicPanel from './EthnicPanel';
 import ExportTab from './ExportTab';
 import GenerateTab from './GenerateTab';
 import NationsPanel from './NationsPanel';
+import PalettePanel from './PalettePanel';
 
 const T_MAP_CONFIG_ACTIVE_PANEL_KEY = 'map-config-active-panel';
-const T_ALLOWED_PANELS = new Set(['generation', 'display', 'nations', 'ethnic', 'export']);
+const T_ALLOWED_PANELS = new Set([
+  'generation',
+  'display',
+  'palette',
+  'nations',
+  'ethnic',
+  'export',
+]);
 
 export default function MapConfigDialog() {
   const { resetToDefaults } = useMapExplorerStore();
@@ -71,6 +79,7 @@ export default function MapConfigDialog() {
               <SelectItem value="nations">Nations</SelectItem>
               <SelectItem value="ethnic">Ethnic</SelectItem>
               <SelectItem value="export">Export</SelectItem>
+              <SelectItem value="palette">Palette</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -82,22 +91,11 @@ export default function MapConfigDialog() {
           </Button>
           <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
             {activePanel === 'generation' && <GenerateTab />}
-            {activePanel === 'display' && (
-              <div className="space-y-4">
-                <DisplayModePanel />
-              </div>
-            )}
-            {activePanel === 'nations' && (
-              <div className="space-y-4">
-                <NationsPanel />
-              </div>
-            )}
-            {activePanel === 'ethnic' && (
-              <div className="space-y-4">
-                <EthnicPanel />
-              </div>
-            )}
+            {activePanel === 'display' && <DisplayModePanel />}
+            {activePanel === 'nations' && <NationsPanel />}
+            {activePanel === 'ethnic' && <EthnicPanel />}
             {activePanel === 'export' && <ExportTab />}
+            {activePanel === 'palette' && <PalettePanel />}
           </div>
         </div>
       </DialogContent>

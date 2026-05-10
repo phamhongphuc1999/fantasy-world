@@ -1,4 +1,5 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/MapConfig';
+import { LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
 import { getMetricRange } from 'src/services/utils/stats';
 import { normalize } from 'src/services/utils/math';
 import { buildDistanceMap, collectConnectedComponents } from 'src/services/core/graph';
@@ -116,26 +117,8 @@ function scoreCapital(
       : edgeDistance >= CAPITAL_VIEWPORT_MARGIN + 6
         ? 0.1
         : 0;
-  const safetyScore =
-    cell.landform === 'plain' || cell.landform === 'valley'
-      ? 0.3
-      : cell.landform === 'coast'
-        ? 0.1
-        : cell.landform === 'hills' || cell.landform === 'plateau'
-          ? 0.2
-          : cell.landform === 'mountain' || cell.landform === 'volcanic_field'
-            ? -0.25
-            : -0.05;
-  const terrainFlatness =
-    cell.landform === 'plain' || cell.landform === 'valley'
-      ? 0.9
-      : cell.landform === 'hills' || cell.landform === 'plateau'
-        ? 0.65
-        : cell.landform === 'coast'
-          ? 0.75
-          : cell.landform === 'mountain' || cell.landform === 'volcanic_field'
-            ? 0.25
-            : 0.5;
+  const safetyScore = LANDFORM_CONFIG[cell.landform].safetyScore;
+  const terrainFlatness = LANDFORM_CONFIG[cell.landform].terrainFlatness;
   const terrainBias =
     terrainFlatness * 0.65 + (cell.landform === 'plain' || cell.landform === 'valley' ? 0.35 : 0);
   const adjustedSafety = safetyScore * 0.6 + terrainBias * 0.4 + edgeSafety * 0.15;
@@ -191,9 +174,9 @@ export function pickEconomicAndCapital(
     const random = createSeededRandom(`${seed}:capital:${nationId}`);
 
     let hubCount = 1;
-    if (landSize >= GEOPOLITICAL_CONFIG.hubCount.mediumNationMinLand) hubCount = 3;
-    else if (landSize >= GEOPOLITICAL_CONFIG.hubCount.smallNationMinLand) hubCount = 2;
-    hubCount = Math.min(hubCount, GEOPOLITICAL_CONFIG.hubCount.maxHubsPerNation);
+    if (landSize >= GEOPOLITICAL_CONFIG.hubs.mediumNationMinLand) hubCount = 3;
+    else if (landSize >= GEOPOLITICAL_CONFIG.hubs.smallNationMinLand) hubCount = 2;
+    hubCount = Math.min(hubCount, GEOPOLITICAL_CONFIG.hubs.maxHubsPerNation);
 
     const borderDistanceMap = getDistanceMap(cells, nationLand, (cellId) => {
       for (const neighborId of cells[cellId].neighbors) {
@@ -310,7 +293,6 @@ export function pickEconomicAndCapital(
           if (distToCapital < 45) score -= 0.12;
           else if (distToCapital < 70) score -= 0.05;
         }
-
         return { cellId: cell.id, score };
       })
       .sort((a, b) => b.score - a.score);

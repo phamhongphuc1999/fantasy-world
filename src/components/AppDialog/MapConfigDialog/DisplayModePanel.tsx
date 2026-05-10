@@ -79,19 +79,19 @@ export default function DisplayModePanel() {
         onChange={(checked) => setDisplayLayer('rivers', checked)}
       />
       <LayerToggle
-        label="Country Borders"
-        checked={displaySettings.countryBorders}
-        onChange={(checked) => setDisplayLayer('countryBorders', checked)}
+        label="Nation Borders"
+        checked={displaySettings.nationBorders}
+        onChange={(checked) => setDisplayLayer('nationBorders', checked)}
       />
       <LayerToggle
-        label="Country Fill"
-        checked={displaySettings.countryFill}
-        onChange={(checked) => setDisplayLayer('countryFill', checked)}
+        label="Nation Fill"
+        checked={displaySettings.nationFill}
+        onChange={(checked) => setDisplayLayer('nationFill', checked)}
       />
       <LayerToggle
         label="Province Borders"
         checked={displaySettings.provinceBorders}
-        disabled={!displaySettings.countryBorders}
+        disabled={!displaySettings.nationBorders}
         onChange={(checked) => setDisplayLayer('provinceBorders', checked)}
       />
       <LayerToggle

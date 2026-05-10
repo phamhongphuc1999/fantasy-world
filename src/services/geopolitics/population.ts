@@ -1,4 +1,5 @@
 import { buildDistanceMap } from 'src/services/core/graph';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
 import { TCell, TDelaunayMesh } from 'src/types/map.types';
 import { clamp } from '../utils/math';
 import { createSeededRandom } from '../core/seededRandom';
@@ -35,7 +36,7 @@ const POP_MODEL = {
     minBoost: 0.9,
     boostRange: 0.7,
   },
-} as const;
+};
 
 function calcWaterAccessBase(cells: TCell[]) {
   const distances = buildDistanceMap(cells, {
@@ -59,35 +60,6 @@ function calcWaterAccessBase(cells: TCell[]) {
     );
   }
   return accessibility;
-}
-
-function landformBaseWeight(cell: TCell) {
-  if (cell.landform === 'valley') return 1;
-  if (cell.landform === 'plain') return 0.92;
-  if (cell.landform === 'coast') return 0.88;
-  if (cell.landform === 'hills') return 0.62;
-  if (cell.landform === 'plateau') return 0.52;
-  if (cell.landform === 'volcanic_field') return 0.4;
-  if (cell.landform === 'mountain') return 0.22;
-  return 0;
-}
-
-function biomeFactor(cell: TCell) {
-  if (cell.biome === 'plain') return 1.55;
-  if (cell.biome === 'temperate_forest') return 1.05;
-  if (cell.biome === 'grassland') return 1;
-  if (cell.biome === 'savanna') return 0.86;
-  if (cell.biome === 'boreal_forest') return 0.72;
-  if (cell.biome === 'tropical_forest') return 0.7;
-  if (cell.biome === 'steppe') return 0.58;
-  if (cell.biome === 'wetland') return 0.52;
-  if (cell.biome === 'desert_cold') return 0.28;
-  if (cell.biome === 'desert_hot') return 0.2;
-  if (cell.biome === 'tundra') return 0.18;
-  if (cell.biome === 'ice') return 0.05;
-  if (cell.biome === 'montane_shrub') return 0.3;
-  if (cell.biome === 'marine' || cell.biome === 'freshwater' || cell.biome === 'unknown') return 0;
-  return 0.65;
 }
 
 function climateSuitability(cell: TCell) {
@@ -157,8 +129,8 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelau
     }
     landCellCount += 1;
 
-    const base = landformBaseWeight(cell);
-    const biome = biomeFactor(cell);
+    const base = LANDFORM_CONFIG[cell.landform].populationFactor;
+    const biome = BIOME_CONFIG[cell.biome].populationFactor;
     const climate = climateSuitability(cell);
     const water = adjustedWaterAccess(cell, cells, waterAccessScore[cell.id] as number);
     const human = humanSettlementBoost(cell);

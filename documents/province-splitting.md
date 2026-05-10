@@ -1,8 +1,8 @@
-# Province Splitting Reimplementation Spec (Exact Behavior)
+# Province Splitting Reimplementation Spec (Updated)
 
 ## Main File
 
-`src/services/buildGeopolitics/provinces.ts`
+`src/services/geopolitics/provinces.ts`
 
 ## Constants That Affect Exact Output
 

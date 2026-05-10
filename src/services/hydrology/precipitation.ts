@@ -3,7 +3,7 @@ import { TCell } from 'src/types/map.types';
 import { clamp } from '../utils/math';
 import { TWindVector } from './wind';
 
-type TAdvancedPrecipitationInput = {
+type TPrecipitationParams = {
   cells: TCell[];
   height: number;
   seaLevel: number;
@@ -67,14 +67,14 @@ function getUpwindMoisture(cell: TCell, cells: TCell[], wind: TWindVector, moist
   return totalMoisture / totalWeight;
 }
 
-export function computeAdvancedPrecipitation({
+export function computePrecipitation({
   cells,
   height,
   seaLevel,
   flow,
   waterInfluence,
   windField,
-}: TAdvancedPrecipitationInput): TAdvancedPrecipitationOutput {
+}: TPrecipitationParams): TAdvancedPrecipitationOutput {
   const cellCount = cells.length;
   const moisture = new Float32Array(cellCount);
   const nextMoisture = new Float32Array(cellCount);

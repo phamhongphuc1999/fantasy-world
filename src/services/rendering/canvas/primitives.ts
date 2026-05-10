@@ -1,9 +1,9 @@
-import { type MouseEvent } from 'react';
+import { type MouseEvent, type PointerEvent } from 'react';
 import { TCell, TPoint } from 'src/types/map.types';
 import { drawPolygon } from './shared';
 
 export function getCanvasPoint(
-  event: MouseEvent<HTMLCanvasElement>,
+  event: MouseEvent<HTMLCanvasElement> | PointerEvent<HTMLCanvasElement>,
   width: number,
   height: number
 ) {

@@ -1,18 +1,18 @@
 import ClimateControlPanel from './ClimateControlPanel';
-import TerrainPresetSelect from './TerrainPresetSelect';
 import CountryModePanel from './CountryModePanel';
 import LogisticsGamePanel from './LogisticsGamePanel';
 import SeaLevelPanel from './SeaLevelPanel';
 import SeedPanel from './SeedPanel';
+import TopographySelect from './TopographySelect';
 
 export default function GenerateTab() {
   return (
     <div className="space-y-4">
-      <TerrainPresetSelect />
-      <ClimateControlPanel />
+      <TopographySelect />
       <SeedPanel />
       <SeaLevelPanel />
       <CountryModePanel />
+      <ClimateControlPanel />
       <LogisticsGamePanel />
     </div>
   );

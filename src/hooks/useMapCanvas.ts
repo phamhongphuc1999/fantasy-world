@@ -89,7 +89,7 @@ export default function useMapCanvas(params: TProps) {
       !displaySettings.precipitation &&
       !displaySettings.rainShadow &&
       !displaySettings.economy &&
-      !displaySettings.countryFill &&
+      !displaySettings.nationFill &&
       !displaySettings.ethnicFill;
 
     const showLandformReliefBase =
@@ -101,7 +101,7 @@ export default function useMapCanvas(params: TProps) {
       !displaySettings.precipitation &&
       !displaySettings.rainShadow &&
       !displaySettings.economy &&
-      !displaySettings.countryFill &&
+      !displaySettings.nationFill &&
       !displaySettings.ethnicFill;
 
     const showBiomeReliefBase =
@@ -113,7 +113,7 @@ export default function useMapCanvas(params: TProps) {
       !displaySettings.precipitation &&
       !displaySettings.rainShadow &&
       !displaySettings.economy &&
-      !displaySettings.countryFill &&
+      !displaySettings.nationFill &&
       !displaySettings.ethnicFill;
 
     let minPopulation = Number.POSITIVE_INFINITY;
@@ -260,7 +260,7 @@ export default function useMapCanvas(params: TProps) {
       applyShadedRelief(context, cells, { intensity: 0.62, verticalExaggeration: 10.5 });
     }
 
-    if (displaySettings.countryFill) drawCountryFill(context, cells);
+    if (displaySettings.nationFill) drawCountryFill(context, cells);
     if (displaySettings.ethnicFill)
       drawEthnicFill(context, cells, displaySettings.landform || displaySettings.biome);
 
@@ -282,13 +282,13 @@ export default function useMapCanvas(params: TProps) {
       }
     }
 
-    if (displaySettings.countryBorders) {
+    if (displaySettings.nationBorders) {
       drawGrayBorders(context, cells);
       drawUrbanHierarchy(context, cells);
     }
 
     if (displaySettings.ethnicBorders) drawEthnicBorders(context, cells);
-    if (displaySettings.countryBorders && displaySettings.provinceBorders)
+    if (displaySettings.nationBorders && displaySettings.provinceBorders)
       drawProvinceBorders(context, cells);
 
     if (displaySettings.ethnicLabels) {
@@ -296,7 +296,7 @@ export default function useMapCanvas(params: TProps) {
     } else if (displaySettings.labels) {
       if (displaySettings.ethnicFill || displaySettings.ethnicBorders) {
         drawRegionNames(context, cells, nations, ethnics, 'ethnic');
-      } else if (displaySettings.countryBorders) {
+      } else if (displaySettings.nationBorders) {
         drawRegionNames(context, cells, nations, ethnics, 'nation');
       }
     }

@@ -54,7 +54,7 @@ export default function MapProvider({ children }: TProps) {
     seed,
     cellCount,
     seaLevel,
-    topographyPreset,
+    topography,
     nationCount,
     climateControl,
     setCellCount,
@@ -105,7 +105,7 @@ export default function MapProvider({ children }: TProps) {
         seed,
         cellCount,
         seaLevel,
-        topographyPreset,
+        topography,
         nationCount,
         climateControl,
       });
@@ -118,7 +118,7 @@ export default function MapProvider({ children }: TProps) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [cellCount, climateControl, nationCount, seaLevel, seed, topographyPreset]);
+  }, [cellCount, climateControl, nationCount, seaLevel, seed, topography]);
 
   const handlePointerMove = useCallback(
     (x: number, y: number) => {

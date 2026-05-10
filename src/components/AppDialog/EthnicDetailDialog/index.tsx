@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import PieChart from 'src/components/charts/PieChart';
 import TerrainStatistic from 'src/components/TerrainStatistic';
@@ -19,13 +20,33 @@ type TProps = {
 };
 
 export default function EthnicDetailDialog({ open, onOpenChange, ethnicId, mesh }: TProps) {
+  const [chartSize, setChartSize] = useState(320);
   const { data } = useEthnicStatistic(ethnicId, mesh);
+
+  useEffect(() => {
+    const applyChartSize = () => {
+      if (window.innerWidth < 420) {
+        setChartSize(240);
+        return;
+      }
+      if (window.innerWidth < 640) {
+        setChartSize(280);
+        return;
+      }
+      setChartSize(320);
+    };
+
+    applyChartSize();
+    window.addEventListener('resize', applyChartSize);
+    return () => window.removeEventListener('resize', applyChartSize);
+  }, []);
+
   if (!open) return null;
 
   if (!data) {
     return (
       <div className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm">
-        <section className="relative h-dvh w-dvw border border-white/15 bg-slate-950/60 p-4 text-slate-100 backdrop-blur-md">
+        <section className="relative h-dvh w-dvw border border-white/15 bg-slate-950/60 p-3 text-slate-100 backdrop-blur-md sm:p-4 md:mx-auto md:my-4 md:h-[calc(100dvh-2rem)] md:w-[min(72rem,calc(100dvw-2rem))] md:rounded-xl">
           <Button
             type="button"
             variant="ghost"
@@ -58,7 +79,7 @@ export default function EthnicDetailDialog({ open, onOpenChange, ethnicId, mesh 
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm">
-      <section className="relative flex h-dvh min-h-0 w-dvw flex-col border border-white/15 bg-slate-950/60 p-4 text-slate-100 backdrop-blur-md">
+      <section className="relative flex h-dvh min-h-0 w-dvw flex-col border border-white/15 bg-slate-950/60 p-3 text-slate-100 backdrop-blur-md sm:p-4 md:mx-auto md:my-4 md:h-[calc(100dvh-2rem)] md:w-[min(72rem,calc(100dvw-2rem))] md:rounded-xl">
         <Button
           type="button"
           variant="ghost"
@@ -106,8 +127,8 @@ export default function EthnicDetailDialog({ open, onOpenChange, ethnicId, mesh 
                       Population (%)
                     </p>
                     <PieChart
-                      width={320}
-                      height={320}
+                      width={chartSize}
+                      height={chartSize}
                       data={nationPopulationPieData}
                       renderTooltip={(tooltip) => (
                         <>
@@ -129,8 +150,8 @@ export default function EthnicDetailDialog({ open, onOpenChange, ethnicId, mesh 
               <p className="text-slate-500">No nation coverage</p>
             )}
           </BlurCard>
-          <TerrainStatistic title="Landform" terrains={data.landforms} />
-          <TerrainStatistic title="Biome" terrains={data.biomes} />
+          <TerrainStatistic title="Landform" data={data.landforms} />
+          <TerrainStatistic title="Biome" data={data.biomes} />
         </div>
       </section>
     </div>

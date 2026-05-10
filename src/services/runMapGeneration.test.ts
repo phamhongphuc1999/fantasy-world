@@ -117,7 +117,7 @@ function makeConfig(seed: string): TGenerationConfig {
     seed,
     cellCount: 2000,
     seaLevel: DEFAULT_CONFIG.seaLevel,
-    topographyPreset: DEFAULT_CONFIG.topographyPreset,
+    topography: DEFAULT_CONFIG.topography,
     nationCount: DEFAULT_CONFIG.nationCount,
     climateControl: DEFAULT_CONFIG.climateControl,
   };

@@ -1,5 +1,5 @@
 import type { TSiteMetadata } from 'src/types/global';
-import type { TTopographyPresetOption } from 'src/types/map.types';
+import type { TTopographyOption } from 'src/types/map.types';
 import { ImageAsset } from './ImageAssets';
 
 export const APP_NAME = 'Fantasy World';
@@ -17,7 +17,7 @@ export const siteMetadata: TSiteMetadata = {
     'fantasy map generator, procedural world generation, seeded map generation, world building tool, terrain and river simulation, nation borders, ethnic regions',
 };
 
-export const TOPOGRAPHY_PRESET_OPTIONS: TTopographyPresetOption[] = [
+export const TOPOGRAPHY_OPTIONS: TTopographyOption[] = [
   { label: 'Balanced', value: 'balanced' },
   { label: 'Archipelago', value: 'archipelago' },
   { label: 'Ranges', value: 'ranges' },

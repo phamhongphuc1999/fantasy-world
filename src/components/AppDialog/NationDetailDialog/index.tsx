@@ -26,7 +26,7 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
   if (!nation || !data) {
     return (
       <div className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm">
-        <section className="relative h-dvh w-dvw border border-white/15 bg-slate-950/60 p-4 text-slate-100 backdrop-blur-md">
+        <section className="relative h-dvh w-dvw border border-white/15 bg-slate-950/60 p-3 text-slate-100 backdrop-blur-md sm:p-4 md:mx-auto md:my-4 md:h-[calc(100dvh-2rem)] md:w-[min(72rem,calc(100dvw-2rem))] md:rounded-xl">
           <Button
             type="button"
             variant="ghost"
@@ -55,7 +55,7 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm">
-      <section className="relative flex h-dvh min-h-0 w-dvw flex-col border border-white/15 bg-slate-950/60 p-4 text-slate-100 backdrop-blur-md">
+      <section className="relative flex h-dvh min-h-0 w-dvw flex-col border border-white/15 bg-slate-950/60 p-3 text-slate-100 backdrop-blur-md sm:p-4 md:mx-auto md:my-4 md:h-[calc(100dvh-2rem)] md:w-[min(72rem,calc(100dvw-2rem))] md:rounded-xl">
         <Button
           type="button"
           variant="ghost"
@@ -81,8 +81,8 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
               <div key={row}>{row}</div>
             ))}
           </BlurCard>
-          <TerrainStatistic title="Landform" terrains={data.landforms} />
-          <TerrainStatistic title="Biome" terrains={data.biomes} />
+          <TerrainStatistic title="Landform" data={data.landforms} />
+          <TerrainStatistic title="Biome" data={data.biomes} />
           <Population provinces={data.provinces} />
           <Ethnics ethnics={data.ethnics} />
           <BlurCard title="Economic Hub">

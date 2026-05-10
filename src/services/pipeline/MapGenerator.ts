@@ -26,7 +26,7 @@ export class MapGenerator {
       mesh,
       seed: this.config.seed,
       seaLevel: this.config.seaLevel,
-      topographyPreset: this.config.topographyPreset,
+      topography: this.config.topography,
     });
   }
 

@@ -1,10 +1,10 @@
+import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
 import { findNearestCell } from 'src/services/utils/geometry';
 import { clamp } from 'src/services/utils/math';
 import { sortDescStable } from 'src/services/utils/stats';
-import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
 import { TCell, TCellOwnerParams } from 'src/types/map.types';
 import { hashSeed } from '../core/seededRandom';
-import { getProvinceSeedScore } from './costPolicies';
+import { getProvinceSeedScore } from './cost';
 import { getBoundaryStepCost, isLand } from './shared';
 
 const IDEAL_PROVINCE_POP = 500_000;
@@ -28,7 +28,7 @@ const PROVINCE_TUNING = {
     geography: { largeSparseFactor: 1.35, terrainAdjustedMinFactor: 0.9 },
     economySpecialFactor: 1.45,
   },
-} as const;
+};
 
 function getProvinceCellWeight(cell: TCell) {
   let weight = 1;

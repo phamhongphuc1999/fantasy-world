@@ -4,7 +4,7 @@ import { hashSeed } from '../core/seededRandom';
 import { clamp } from '../utils/math';
 import { TWindVector } from './wind';
 
-type TComputeAdvancedTemperatureInput = {
+type TComputeTemperatureParams = {
   cells: TCell[];
   seaLevel: number;
   seed: string;
@@ -84,7 +84,7 @@ function smoothTemperature(cells: TCell[], temperature: Float32Array) {
   }
 }
 
-export function computeAdvancedTemperature({
+export function computeTemperature({
   cells,
   seaLevel,
   seed,
@@ -94,7 +94,7 @@ export function computeAdvancedTemperature({
   reliefByCell,
   windField,
   height,
-}: TComputeAdvancedTemperatureInput) {
+}: TComputeTemperatureParams) {
   const temperature = new Float32Array(cells.length);
   const marineDistance = buildMarineDistance(cells);
   const seasonNoise = ((hashSeed(`${seed}:temperature:season`) % 10000) / 9999) * 2 - 1;

@@ -139,7 +139,7 @@ function limitNationPopulation(cells: TCell[], owner: Int32Array, seed: string) 
 
 function runNationStabilityPass(cells: TCell[], owner: Int32Array, preserveNationCount: number) {
   alignNaturalTerrainClusters(cells, owner);
-  limitMountainSplit(cells, owner, 'country');
+  limitMountainSplit(cells, owner, 'nation');
   enforceMinNationArea(cells, owner, preserveNationCount);
 }
 

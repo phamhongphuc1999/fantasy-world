@@ -46,8 +46,11 @@ export default function MapCanvasPanel() {
   useMapOverlay({ canvasRef: overlayCanvasRef, cells, width, height, hoverIndex });
 
   return (
-    <div className="flex h-full w-full items-center justify-center overflow-hidden">
-      <div className="relative max-h-full w-full" style={{ aspectRatio: `${width}/${height}` }}>
+    <div className="flex h-full w-full items-center justify-center overflow-hidden p-2 sm:p-0">
+      <div
+        className="relative max-h-full w-full max-w-full"
+        style={{ aspectRatio: `${width}/${height}` }}
+      >
         <canvas
           id="map-base-canvas"
           ref={baseCanvasRef}
@@ -60,12 +63,12 @@ export default function MapCanvasPanel() {
           width={width}
           height={height}
           className="absolute inset-0 h-full w-full cursor-pointer"
-          onMouseMove={(event) => {
+          onPointerMove={(event) => {
             const point = getCanvasPoint(event, width, height);
             handlePointerMove(point.x, point.y);
             setHoverClientPoint({ x: event.clientX, y: event.clientY });
           }}
-          onMouseLeave={() => {
+          onPointerLeave={() => {
             setHoverIndex(null);
             setHoverClientPoint(null);
           }}
@@ -84,8 +87,8 @@ export default function MapCanvasPanel() {
 
             const shouldOpenEthnicDetail =
               (displaySettings.ethnicFill || displaySettings.ethnicBorders) &&
-              !displaySettings.countryFill &&
-              !displaySettings.countryBorders;
+              !displaySettings.nationFill &&
+              !displaySettings.nationBorders;
             if (shouldOpenEthnicDetail) {
               const ethnicId = cells[clickedId]?.ethnicId ?? null;
               if (ethnicId === null) return;

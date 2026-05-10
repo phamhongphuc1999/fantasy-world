@@ -1,9 +1,4 @@
-import {
-  TBorderConfig,
-  TBorderType,
-  TDisplaySettings,
-  TTopographyPreset,
-} from 'src/types/map.types';
+import { TBorderConfig, TBorderType, TDisplaySettings, TTopography } from 'src/types/map.types';
 
 export const NATION_COLORS = [
   '#e6194b',
@@ -52,7 +47,7 @@ export const DEFAULT_CONFIG: {
   seed: string;
   cellCount: number;
   seaLevel: number;
-  topographyPreset: TTopographyPreset;
+  topography: TTopography;
   nationCount: number;
   climateControl: {
     temperatureOffset: number;
@@ -66,14 +61,14 @@ export const DEFAULT_CONFIG: {
   seed: 'world-001',
   cellCount: 10000,
   seaLevel: 0.5,
-  topographyPreset: 'balanced',
+  topography: 'balanced',
   nationCount: 8,
   climateControl: {
-    temperatureOffset: 0,
-    temperatureContrast: 1,
-    precipitationScale: 1,
-    precipitationOffset: 0,
-    humanImpact: 0.25,
+    temperatureOffset: 0.2,
+    temperatureContrast: 1.5,
+    precipitationScale: 1.5,
+    precipitationOffset: 0.3,
+    humanImpact: 0.5,
   },
   displaySettings: {
     landform: false,
@@ -86,8 +81,8 @@ export const DEFAULT_CONFIG: {
     rainShadow: false,
     economy: false,
     rivers: false,
-    countryBorders: false,
-    countryFill: false,
+    nationBorders: false,
+    nationFill: false,
     provinceBorders: false,
     ethnicBorders: false,
     ethnicFill: false,
@@ -133,12 +128,7 @@ export const TOPOGRAPHY_CONFIG = {
     basinAmplitudeBase: 0.16,
     basinAmplitudeRange: 0.18,
   },
-  warp: {
-    frequency: 2.2,
-    strength: 0.2,
-    secondaryFrequency: 5.1,
-    secondaryStrength: 0.08,
-  },
+  warp: { frequency: 2.2, strength: 0.2, secondaryFrequency: 5.1, secondaryStrength: 0.08 },
   noise: {
     macroDivisor: 1.58,
     secondaryFrequency: 1.6,
@@ -147,28 +137,11 @@ export const TOPOGRAPHY_CONFIG = {
     jaggedFrequency: 5.2,
     jaggedBase: 0.72,
     jaggedRange: 0.62,
-    fbm: {
-      octaves: 8,
-      persistence: 0.53,
-      lacunarity: 2.08,
-    },
-    ridged: {
-      octaves: 7,
-      persistence: 0.49,
-      lacunarity: 2.2,
-      sharpness: 1.75,
-    },
-    billow: {
-      octaves: 7,
-      persistence: 0.5,
-      lacunarity: 1.96,
-    },
+    fbm: { octaves: 8, persistence: 0.53, lacunarity: 2.08 },
+    ridged: { octaves: 7, persistence: 0.49, lacunarity: 2.2, sharpness: 1.75 },
+    billow: { octaves: 7, persistence: 0.5, lacunarity: 1.96 },
   },
-  shelf: {
-    edgeOffset: 0.005,
-    edgeRange: 0.18,
-    weight: 0.05,
-  },
+  shelf: { edgeOffset: 0.005, edgeRange: 0.18, weight: 0.05 },
   blend: {
     macro: 0.3,
     secondary: 0.18,
@@ -183,10 +156,7 @@ export const TOPOGRAPHY_CONFIG = {
     maxUplift: 1.2,
     maxRift: 1,
   },
-  mountainRecovery: {
-    quantileStart: 0.86,
-    peakBoostMax: 0.14,
-  },
+  mountainRecovery: { quantileStart: 0.86, peakBoostMax: 0.14 },
 };
 
 export const PRESET_CONFIG = {
@@ -226,27 +196,14 @@ export const RIVER_CONFIG = {
   minFluxToFormRiver: 30,
   landWaterThreshold: 0.2,
   cellsNumberModifierExp: 0.25,
-  depression: {
-    maxIterations: 200,
-    epsilon: 0.0001,
-    coastLift: 0.0015,
-  },
-  width: {
-    fluxFactor: 500,
-    maxFluxWidth: 1,
-    lengthFactor: 200,
-    minWidth: 0.8,
-    maxWidth: 4.8,
-  },
-  meander: {
-    base: 0.5,
-    minSegmentLength: 16,
-  },
+  depression: { maxIterations: 200, epsilon: 0.0001, coastLift: 0.0015 },
+  width: { fluxFactor: 500, maxFluxWidth: 1, lengthFactor: 200, minWidth: 0.8, maxWidth: 4.8 },
+  meander: { base: 0.5, minSegmentLength: 16 },
   minRiverCells: 6,
 };
 
 export const BORDER_CONFIG: Record<TBorderType, TBorderConfig> = {
-  country: {
+  nation: {
     landformCost: {
       marine_deep: 1.2,
       marine_shallow: 1.2,
@@ -327,17 +284,13 @@ export const BORDER_CONFIG: Record<TBorderType, TBorderConfig> = {
 };
 
 export const GEOPOLITICAL_CONFIG = {
-  targetLandCellsPerNation: 620,
-  minNationLandRatio: 0,
-  minNationLandCells: 10,
-  territorialRadiusMinCells: 3,
-  territorialRadiusMaxCells: 3,
-  narrowStraitThresholdCells: 6,
-  frontierNoiseWeight: 0.22,
-  hubCount: { smallNationMinLand: 450, mediumNationMinLand: 900, maxHubsPerNation: 3 },
+  minLandRatio: 0,
+  minLandCells: 10,
+  frontierNoise: 0.22,
+  hubs: { smallNationMinLand: 450, mediumNationMinLand: 900, maxHubsPerNation: 3 },
   ethnic: {
-    majorGroupCountMin: 6,
-    majorGroupCountMax: 12,
+    majorGroupMin: 6,
+    majorGroupMax: 12,
     dominantShareMin: 0.5,
     dominantShareMax: 0.8,
     secondaryShareMin: 0.1,
@@ -347,6 +300,6 @@ export const GEOPOLITICAL_CONFIG = {
     terrainInfluenceStrength: 1,
     distancePenalty: 0.045,
     smoothingPasses: 1,
-    minorityClusterMinCells: 5,
+    minorityClusterMin: 5,
   },
 };

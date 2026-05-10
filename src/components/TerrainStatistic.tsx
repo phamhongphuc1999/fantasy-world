@@ -4,40 +4,52 @@ import { TBiome, TLandform } from 'src/types/map.types';
 import BlurCard from './BlurCard';
 import PieChart from './charts/PieChart';
 
-interface TTerrainStatistic {
+interface TStatistic {
   terrain: string;
   count: number;
   percent: number;
 }
 
 interface TProps {
-  terrains: TTerrainStatistic[];
+  data: TStatistic[];
   title?: string;
 }
 
-export default function TerrainStatistic({ terrains, title = 'Terrain' }: TProps) {
+export default function TerrainStatistic({ data, title = 'Terrain' }: TProps) {
   const pieData: Array<TPieChartData & { type: string; cellCount: number; icon: string }> =
-    terrains.map((item) => {
+    data.map((item) => {
       const landformKey = item.terrain as TLandform;
       const biomeKey = item.terrain as TBiome;
-      const landformLabel = LANDFORM_CONFIG[landformKey].label;
-      const biomeLabel = BIOME_CONFIG[biomeKey].label;
+      const landform = LANDFORM_CONFIG[landformKey];
+      const biome = BIOME_CONFIG[biomeKey];
 
-      if (landformLabel) {
+      if (landform) {
         return {
           type: item.terrain,
-          label: landformLabel,
+          label: landform.label,
           value: item.percent,
-          color: LANDFORM_CONFIG[landformKey].color,
+          color: landform.color,
           cellCount: item.count,
-          icon: '🧭',
+          icon: landform.icon,
         };
       }
+
+      if (biome) {
+        return {
+          type: item.terrain,
+          label: biome.label,
+          value: item.percent,
+          color: biome.color,
+          cellCount: item.count,
+          icon: biome.icon,
+        };
+      }
+
       return {
         type: item.terrain,
-        label: biomeLabel || item.terrain,
+        label: item.terrain,
         value: item.percent,
-        color: BIOME_CONFIG[biomeKey].color || '#64748b',
+        color: '#64748b',
         cellCount: item.count,
         icon: '🌿',
       };
