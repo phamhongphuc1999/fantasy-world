@@ -50,16 +50,8 @@ interface TProps {
 
 export default function MapProvider({ children }: TProps) {
   const generationIdRef = useRef(0);
-  const {
-    seed,
-    cellCount,
-    seaLevel,
-    terrainPreset,
-    terrainRatios,
-    nationCount,
-    setCellCount,
-    setHoverIndex,
-  } = useMapExplorerStore();
+  const { seed, cellCount, seaLevel, terrainPreset, nationCount, setCellCount, setHoverIndex } =
+    useMapExplorerStore();
 
   const [mesh, setMesh] = useState(mapContextDefault.mesh);
   const [isGenerating, setIsGenerating] = useState(true);
@@ -106,7 +98,6 @@ export default function MapProvider({ children }: TProps) {
         cellCount,
         seaLevel,
         terrainPreset,
-        terrainRatios,
         nationCount,
       });
       const nextMesh = generator.generate();
@@ -118,7 +109,7 @@ export default function MapProvider({ children }: TProps) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [cellCount, nationCount, seaLevel, seed, terrainPreset, terrainRatios]);
+  }, [cellCount, nationCount, seaLevel, seed, terrainPreset]);
 
   const handlePointerMove = useCallback(
     (x: number, y: number) => {

@@ -1,10 +1,4 @@
-import {
-  TBorderConfig,
-  TBorderType,
-  TDisplaySettings,
-  TTerrainPreset,
-  TTerrainRatioMap,
-} from 'src/types/map.types';
+import { TBorderConfig, TBorderType, TDisplaySettings, TTerrainPreset } from 'src/types/map.types';
 
 export const NATION_COLORS = [
   '#e6194b',
@@ -55,7 +49,6 @@ export const DEFAULT_CONFIG: {
   seaLevel: number;
   terrainPreset: TTerrainPreset;
   nationCount: number;
-  terrainRatios: TTerrainRatioMap;
   displaySettings: TDisplaySettings;
 } = {
   seed: 'world-001',
@@ -63,19 +56,8 @@ export const DEFAULT_CONFIG: {
   seaLevel: 0.5,
   terrainPreset: 'balanced',
   nationCount: 8,
-  terrainRatios: {
-    plains: 0.32,
-    forest: 0.18,
-    swamp: 0.11,
-    desert: 0.07,
-    badlands: 0.05,
-    volcanic: 0.01,
-    hills: 0.1,
-    mountains: 0.08,
-    plateau: 0.08,
-  },
   displaySettings: {
-    terrain: true,
+    terrain: false,
     terrainRelief: true,
     population: false,
     temperature: false,
@@ -231,8 +213,6 @@ export const HYDROLOGY_CONFIG = {
   coastOutlet: -2,
   waterInfluenceIters: 6,
   waterInfluenceSelfW: 1.2,
-  rainShadowMinDiff: 0.03,
-  rainShadowScale: 2.8,
   deepWaterDepth: 0.14,
   coastBand: 0.015,
   valleyReliefMax: -0.01,
@@ -245,14 +225,29 @@ export const HYDROLOGY_CONFIG = {
   mountainReliefMin: 0.075,
   hillReliefMin: 0.04,
   plateauReliefCap: 0.016,
+  plateauPrecipMin: 0.22,
+  plateauPrecipMax: 0.58,
   newLandBand: 0.06,
   desertTempMin: 0.54,
   desertPrecipMax: 0.18,
   desertRainShadowMin: 0.34,
+  badlandsElevAboveSeaMin: 0.12,
+  badlandsReliefMin: 0.012,
   swampPrecipMin: 0.76,
   swampElevMax: 0.61,
   swampReliefCap: 0.009,
   forestPrecipMin: 0.56,
+  forestTempMin: 0.22,
+  aridDesertPrecipMax: 0.2,
+  aridDesertTempMin: 0.56,
+  aridDesertRainShadowMin: 0.35,
+  volcanicElevNearMountainDelta: 0.04,
+  volcanicPrecipMax: 0.34,
+  volcanicTempMin: 0.42,
+  valleySecondaryReliefMax: -0.008,
+  valleySecondaryPrecipMin: 0.44,
+  hillsSecondaryReliefMin: 0.03,
+  hillsSecondaryElevAboveSeaMin: 0.08,
   erosionMax: 0.08,
   erosionSlopeW: 0.2,
   erosionFlowW: 0.012,
@@ -302,65 +297,53 @@ export const HYDROLOGY_CONFIG = {
   relaxedRiverSrcElevDrop: 0.14,
   relaxedRiverMinLen: 4,
   relaxedRiverFlowMin: 2.8,
-  tempLatW: 0.85,
-  tempElevW: 0.72,
-  tempWaterW: 0.08,
   precipWaterW: 0.56,
   precipLatW: 0.18,
   precipFlowW: 0.08,
-  precipRainShadowW: 0.38,
   oroElevStart: 0.6,
   oroW: 0.25,
   oroMax: 0.25,
-  region: {
-    minBase: 6,
-    minScale: 0.35,
-    smoothPasses: 2,
-    dominantMin: 3,
-    dominantBonus: 0.24,
-    currentBonus: 0.15,
-    switchGap: 0.2,
+  wind: {
+    tradeLatMax: 0.23,
+    westerlyLatMax: 0.7,
+    tradeSpeed: 1,
+    westerlySpeed: 1.05,
+    polarSpeed: 0.75,
+    equatorBlend: 0.22,
+    noise: 0.18,
   },
-  terrainBalance: {
-    plainsMinShare: 0.3,
-    plainsMaxShare: 0.4,
-
-    forestMinShare: 0.18,
-    forestMaxShare: 0.26,
-
-    swampMinShare: 0.12,
-    swampMaxShare: 0.2,
-
-    desertMinShare: 0.05,
-    desertMaxShare: 0.1,
-
-    badlandsMinShare: 0.02,
-    badlandsMaxShare: 0.05,
-
-    volcanicMinShare: 0.004,
-    volcanicMaxShare: 0.01,
-
-    hillsMinShare: 0.08,
-    hillsMaxShare: 0.15,
-
-    mountainsMinShare: 0.06,
-    mountainsMaxShare: 0.13,
-
-    plateauMinShare: 0.05,
-    plateauMaxShare: 0.1,
+  moistureAdvection: {
+    iterations: 4,
+    carry: 0.82,
+    selfCarry: 0.18,
+    localRecharge: 0.06,
+    maxSource: 1,
   },
-  terrainClusterMinCells: {
-    forest: 10,
-    mountains: 8,
-    hills: 7,
-    swamp: 6,
-    desert: 6,
-    badlands: 5,
-    volcanic: 4,
-    valley: 5,
-    plateau: 7,
+  orographic: {
+    upliftScale: 1.1,
+    leeDryingScale: 0.72,
+    shieldingPow: 1.35,
+    rainShadowGain: 0.75,
+    rainShadowDecay: 0.8,
   },
-  antiAlias: { isolatedMax: 1, dominantMin: 3, passes: 2 },
+  microphysics: {
+    tauCloud: 3.2,
+    tauFallout: 4.4,
+    cloudDrawdown: 0.6,
+  },
+  temperatureModel: {
+    seasonPhase: 0.25,
+    latBase: 0.82,
+    latCurve: 1.1,
+    lapseDry: 0.72,
+    lapseMoistMin: 0.36,
+    precipLapseInfluence: 0.5,
+    maritimeRadius: 18,
+    maritimeStrength: 0.12,
+    aspectStrength: 0.03,
+    coldPoolStrength: 0.06,
+    smoothingPasses: 1,
+  },
 };
 
 export const RIVER_GEN_CONFIG = {

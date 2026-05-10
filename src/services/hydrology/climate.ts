@@ -35,21 +35,6 @@ export function buildWaterInfluence(cells: TCell[]): Float32Array {
   return waterInfluence;
 }
 
-export function getRainShadow(cell: TCell, cells: TCell[]) {
-  let obstruction = 0;
-
-  for (const neighborId of cell.neighbors) {
-    const neighbor = cells[neighborId];
-    if (neighbor.site[0] >= cell.site[0]) continue;
-
-    const elevationDelta = neighbor.elevation - cell.elevation;
-    if (elevationDelta > HYDROLOGY_CONFIG.rainShadowMinDiff) {
-      obstruction += elevationDelta;
-    }
-  }
-  return clamp(obstruction * HYDROLOGY_CONFIG.rainShadowScale, 0, 1);
-}
-
 export function getTerrain(
   cell: TCell,
   seaLevel: number,
@@ -94,8 +79,8 @@ export function getTerrain(
   if (
     cell.elevation > HYDROLOGY_CONFIG.plateauElevMin &&
     relief < HYDROLOGY_CONFIG.plateauReliefCap &&
-    precipitation > 0.22 &&
-    precipitation < 0.58
+    precipitation > HYDROLOGY_CONFIG.plateauPrecipMin &&
+    precipitation < HYDROLOGY_CONFIG.plateauPrecipMax
   ) {
     return 'plateau';
   }
@@ -109,7 +94,12 @@ export function getTerrain(
     precipitation < HYDROLOGY_CONFIG.desertPrecipMax &&
     rainShadow > HYDROLOGY_CONFIG.desertRainShadowMin
   ) {
-    if (cell.elevation > seaLevel + 0.12 && relief > 0.012) return 'badlands';
+    if (
+      cell.elevation > seaLevel + HYDROLOGY_CONFIG.badlandsElevAboveSeaMin &&
+      relief > HYDROLOGY_CONFIG.badlandsReliefMin
+    ) {
+      return 'badlands';
+    }
     return 'desert';
   }
 
@@ -121,19 +111,39 @@ export function getTerrain(
     return 'swamp';
   }
 
-  if (precipitation > HYDROLOGY_CONFIG.forestPrecipMin && temperature > 0.22) {
+  if (
+    precipitation > HYDROLOGY_CONFIG.forestPrecipMin &&
+    temperature > HYDROLOGY_CONFIG.forestTempMin
+  ) {
     return 'forest';
   }
-  if (precipitation < 0.2 && temperature > 0.56 && rainShadow > 0.35) return 'desert';
   if (
-    cell.elevation > HYDROLOGY_CONFIG.mountainElevMin - 0.04 &&
-    precipitation < 0.34 &&
-    temperature > 0.42
+    precipitation < HYDROLOGY_CONFIG.aridDesertPrecipMax &&
+    temperature > HYDROLOGY_CONFIG.aridDesertTempMin &&
+    rainShadow > HYDROLOGY_CONFIG.aridDesertRainShadowMin
+  ) {
+    return 'desert';
+  }
+  if (
+    cell.elevation >
+      HYDROLOGY_CONFIG.mountainElevMin - HYDROLOGY_CONFIG.volcanicElevNearMountainDelta &&
+    precipitation < HYDROLOGY_CONFIG.volcanicPrecipMax &&
+    temperature > HYDROLOGY_CONFIG.volcanicTempMin
   ) {
     return 'volcanic';
   }
-  if (relief < -0.008 && precipitation > 0.44) return 'valley';
-  if (relief > 0.03 && cell.elevation > seaLevel + 0.08) return 'hills';
+  if (
+    relief < HYDROLOGY_CONFIG.valleySecondaryReliefMax &&
+    precipitation > HYDROLOGY_CONFIG.valleySecondaryPrecipMin
+  ) {
+    return 'valley';
+  }
+  if (
+    relief > HYDROLOGY_CONFIG.hillsSecondaryReliefMin &&
+    cell.elevation > seaLevel + HYDROLOGY_CONFIG.hillsSecondaryElevAboveSeaMin
+  ) {
+    return 'hills';
+  }
   return 'plains';
 }
 

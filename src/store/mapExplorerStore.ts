@@ -1,13 +1,7 @@
 'use client';
 
 import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
-import { normalizeTerrainRatios } from 'src/services/terrain/ratios';
-import {
-  TDisplaySettings,
-  TTerrainPreset,
-  TTerrainRatioKey,
-  TTerrainRatioMap,
-} from 'src/types/map.types';
+import { TDisplaySettings, TTerrainPreset } from 'src/types/map.types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -17,7 +11,6 @@ interface TMapExplorerState {
   seaLevel: number;
   terrainPreset: TTerrainPreset;
   nationCount: number;
-  terrainRatios: TTerrainRatioMap;
   displaySettings: TDisplaySettings;
   hoverIndex: number | null;
   hoverClientPoint: { x: number; y: number } | null;
@@ -29,7 +22,6 @@ type TMapExplorerActions = {
   setSeaLevel: (seaLevel: number) => void;
   setTerrainPreset: (terrainPreset: TTerrainPreset) => void;
   setNationCount: (nationCount: number) => boolean;
-  applyTerrainRatios: (terrainRatiosDraft: TTerrainRatioMap) => void;
   setDisplaySettings: (displaySettings: TDisplaySettings) => void;
   setDisplayLayer: <K extends keyof TDisplaySettings>(layer: K, enabled: boolean) => void;
   setHoverIndex: (hoverIndex: number | null) => void;
@@ -46,27 +38,10 @@ const DEFAULT_STATE: TMapExplorerState = {
   seaLevel: DEFAULT_CONFIG.seaLevel,
   terrainPreset: DEFAULT_CONFIG.terrainPreset,
   nationCount: DEFAULT_CONFIG.nationCount,
-  terrainRatios: DEFAULT_CONFIG.terrainRatios,
   displaySettings: DEFAULT_CONFIG.displaySettings,
   hoverIndex: null,
   hoverClientPoint: null,
 };
-
-function migrateTerrainRatios(raw?: Partial<Record<string, number>>) {
-  if (!raw) return DEFAULT_CONFIG.terrainRatios;
-  const plainValue = raw.plains ?? raw.plain;
-  return normalizeTerrainRatios({
-    plains: plainValue,
-    forest: raw.forest,
-    swamp: raw.swamp,
-    desert: raw.desert,
-    badlands: raw.badlands,
-    volcanic: raw.volcanic,
-    hills: raw.hills,
-    mountains: raw.mountains,
-    plateau: raw.plateau,
-  });
-}
 
 export const useMapExplorerStore = create<TMapExplorerStore>()(
   persist(
@@ -90,15 +65,6 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         if (nationCount < 2 || nationCount > 40) return false;
         set({ nationCount, hoverIndex: null });
         return true;
-      },
-      applyTerrainRatios(terrainRatiosDraft: TTerrainRatioMap) {
-        const terrainRatios = normalizeTerrainRatios(get().terrainRatios);
-        const changed = Object.keys(terrainRatios).some((key) => {
-          const terrainKey = key as TTerrainRatioKey;
-          return Math.abs(terrainRatios[terrainKey] - terrainRatiosDraft[terrainKey]) > 0.0001;
-        });
-        if (!changed) return;
-        set({ terrainRatios: terrainRatiosDraft, hoverIndex: null });
       },
       setDisplaySettings(displaySettings: TDisplaySettings) {
         const normalizedBase = { ...DEFAULT_CONFIG.displaySettings, ...displaySettings };
@@ -135,21 +101,16 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         seaLevel: state.seaLevel,
         terrainPreset: state.terrainPreset,
         nationCount: state.nationCount,
-        terrainRatios: state.terrainRatios,
         displaySettings: state.displaySettings,
       }),
-      version: 4,
+      version: 5,
       migrate: (persistedState) => {
         const state = persistedState as Partial<TMapExplorerState> | undefined;
         if (!state) return DEFAULT_STATE;
-        const terrainRatios = migrateTerrainRatios(
-          state.terrainRatios as unknown as Partial<Record<string, number>> | undefined
-        );
         const persistedDisplaySettings = state.displaySettings as TDisplaySettings | undefined;
         return {
           ...DEFAULT_STATE,
           ...state,
-          terrainRatios,
           displaySettings: { ...DEFAULT_CONFIG.displaySettings, ...persistedDisplaySettings },
         };
       },

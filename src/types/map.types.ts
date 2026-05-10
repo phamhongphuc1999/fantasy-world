@@ -185,19 +185,6 @@ export interface TDisplaySettings {
   cellData: boolean;
 }
 
-export type TTerrainRatioKey =
-  | 'plains'
-  | 'forest'
-  | 'swamp'
-  | 'desert'
-  | 'badlands'
-  | 'volcanic'
-  | 'hills'
-  | 'mountains'
-  | 'plateau';
-
-export type TTerrainRatioMap = Record<TTerrainRatioKey, number>;
-
 export interface TTerrainPresetOption {
   label: string;
   value: TTerrainPreset;
@@ -210,7 +197,6 @@ export interface TGenerationConfig {
   cellCount: number;
   seaLevel: number;
   terrainPreset: TTerrainPreset;
-  terrainRatios: TTerrainRatioMap;
   nationCount: number;
 }
 

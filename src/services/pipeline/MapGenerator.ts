@@ -35,7 +35,6 @@ export class MapGenerator {
       mesh,
       seaLevel: this.config.seaLevel,
       seed: this.config.seed,
-      terrainRatios: this.config.terrainRatios,
     });
   }
 

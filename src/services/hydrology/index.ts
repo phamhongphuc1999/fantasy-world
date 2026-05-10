@@ -1,25 +1,16 @@
 import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
-import {
-  buildWaterInfluence,
-  getRainShadow,
-  getSuitability,
-  getTerrain,
-} from 'src/services/hydrology/climate';
+import { buildWaterInfluence, getSuitability, getTerrain } from 'src/services/hydrology/climate';
 import {
   classifyInlandWater,
   expandLakes,
   filterAndLimitLakes,
 } from 'src/services/hydrology/lakes';
+import { computeAdvancedPrecipitation } from 'src/services/hydrology/precipitation';
 import { runRiverGeneration } from 'src/services/hydrology/river';
-import {
-  antiAliasTerrains,
-  clusterLandTerrains,
-  joinSmallZones,
-  rebalanceTerrain,
-  toTerrainBalance,
-} from 'src/services/hydrology/terrain';
-import { TCell, TDelaunayMesh, TTerrain, TTerrainRatioMap } from 'src/types/map.types';
+import { computeAdvancedTemperature } from 'src/services/hydrology/temperature';
+import { buildWindField } from 'src/services/hydrology/wind';
+import { TCell, TDelaunayMesh, TTerrain } from 'src/types/map.types';
 import { clamp } from '../utils/math';
 import { getAvgNeighbor } from '../utils/topology';
 
@@ -27,7 +18,6 @@ interface TBuildHydrologyOptions {
   mesh: TDelaunayMesh;
   seaLevel: number;
   seed: string;
-  terrainRatios?: TTerrainRatioMap;
 }
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutlet;
@@ -38,12 +28,7 @@ function sortIndicesByElevation(elevations: Float32Array) {
   return indices;
 }
 
-function runHydrologyInternal({
-  mesh,
-  seaLevel,
-  seed,
-  terrainRatios,
-}: TBuildHydrologyOptions): TDelaunayMesh {
+function runHydrologyInternal({ mesh, seaLevel, seed }: TBuildHydrologyOptions): TDelaunayMesh {
   const cellCount = mesh.cells.length;
   const elevations = new Float32Array(cellCount);
   const adjustedElevations = new Float32Array(cellCount);
@@ -178,42 +163,40 @@ function runHydrologyInternal({
   });
 
   const waterInfluence = buildWaterInfluence(cells);
-  const rainShadowByCell = new Float32Array(cells.length);
   const reliefByCell = new Float32Array(cells.length);
+  const windField = buildWindField(cells, mesh.height, seed);
+  const advancedPrecipitation = computeAdvancedPrecipitation({
+    cells,
+    height: mesh.height,
+    seaLevel,
+    flow,
+    waterInfluence,
+    windField,
+  });
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
-    rainShadowByCell[cellIndex] = getRainShadow(cell, cells);
     const neighborAverage = getAvgNeighbor(cell, cells);
     reliefByCell[cellIndex] = cell.elevation - neighborAverage;
   }
 
+  const temperatureByCell = computeAdvancedTemperature({
+    cells,
+    seaLevel,
+    seed,
+    waterInfluence,
+    precipitation: advancedPrecipitation.precipitation,
+    flow,
+    reliefByCell,
+    windField,
+    height: mesh.height,
+  });
+
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
-    const latitude = Math.abs((cell.site[1] / mesh.height) * 2 - 1);
-    const temperature = clamp(
-      1 -
-        latitude * HYDROLOGY_CONFIG.tempLatW -
-        Math.max(0, cell.elevation - seaLevel) * HYDROLOGY_CONFIG.tempElevW +
-        waterInfluence[cellIndex] * HYDROLOGY_CONFIG.tempWaterW,
-      0,
-      1
-    );
-    const rainShadow = rainShadowByCell[cellIndex];
-    const orographicRain = clamp(
-      Math.max(0, cell.elevation - HYDROLOGY_CONFIG.oroElevStart) * HYDROLOGY_CONFIG.oroW,
-      0,
-      HYDROLOGY_CONFIG.oroMax
-    );
-    const precipitation = clamp(
-      waterInfluence[cellIndex] * HYDROLOGY_CONFIG.precipWaterW +
-        (1 - latitude) * HYDROLOGY_CONFIG.precipLatW +
-        Math.log2(cell.flow + 1) * HYDROLOGY_CONFIG.precipFlowW +
-        orographicRain -
-        rainShadow * HYDROLOGY_CONFIG.precipRainShadowW,
-      0,
-      1
-    );
+    const temperature = temperatureByCell[cellIndex] as number;
+    const rainShadow = advancedPrecipitation.rainShadow[cellIndex];
+    const precipitation = advancedPrecipitation.precipitation[cellIndex];
 
     const relief = reliefByCell[cellIndex];
     const terrain = getTerrain(cell, seaLevel, temperature, precipitation, rainShadow, relief);
@@ -266,15 +249,6 @@ function runHydrologyInternal({
 
   mesh.rivers = result.rivers;
 
-  clusterLandTerrains(cells, seaLevel);
-  const terrainBalance = terrainRatios
-    ? toTerrainBalance(terrainRatios)
-    : HYDROLOGY_CONFIG.terrainBalance;
-  rebalanceTerrain(cells, terrainBalance);
-  antiAliasTerrains(cells);
-  joinSmallZones(cells, seaLevel);
-  antiAliasTerrains(cells);
-
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
     cell.biome = TERRAIN_CONFIG[cell.terrain].label;
@@ -284,11 +258,6 @@ function runHydrologyInternal({
   return { ...mesh, cells, rivers: mesh.rivers ?? [] };
 }
 
-export function buildHydrology({
-  mesh,
-  seaLevel,
-  seed,
-  terrainRatios,
-}: TBuildHydrologyOptions): TDelaunayMesh {
-  return runHydrologyInternal({ mesh, seaLevel, seed, terrainRatios });
+export function buildHydrology({ mesh, seaLevel, seed }: TBuildHydrologyOptions): TDelaunayMesh {
+  return runHydrologyInternal({ mesh, seaLevel, seed });
 }
