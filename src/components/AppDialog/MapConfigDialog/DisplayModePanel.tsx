@@ -29,14 +29,24 @@ export default function DisplayModePanel() {
   return (
     <div className="flex flex-wrap gap-2">
       <LayerToggle
-        label="Terrain"
-        checked={displaySettings.terrain}
-        onChange={(checked) => setDisplayLayer('terrain', checked)}
+        label="Landform"
+        checked={displaySettings.landform}
+        onChange={(checked) => setDisplayLayer('landform', checked)}
       />
       <LayerToggle
-        label="Terrain 2.5D"
-        checked={displaySettings.terrainRelief}
-        onChange={(checked) => setDisplayLayer('terrainRelief', checked)}
+        label="Landform 2.5D"
+        checked={displaySettings.landformRelief}
+        onChange={(checked) => setDisplayLayer('landformRelief', checked)}
+      />
+      <LayerToggle
+        label="Biome"
+        checked={displaySettings.biome}
+        onChange={(checked) => setDisplayLayer('biome', checked)}
+      />
+      <LayerToggle
+        label="Biome 2.5D"
+        checked={displaySettings.biomeRelief}
+        onChange={(checked) => setDisplayLayer('biomeRelief', checked)}
       />
       <LayerToggle
         label="Population"

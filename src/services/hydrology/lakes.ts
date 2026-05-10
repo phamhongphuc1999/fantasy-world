@@ -2,7 +2,6 @@ import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { collectConnectedComponents, floodFromSeeds } from 'src/services/core/graph';
 import { TFifoQueue } from 'src/services/core/queue';
 import { TCell } from 'src/types/map.types';
-import { isMarineWaterTerrain } from '../terrain/rules';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutlet;
 function expandLakes(cells: TCell[], flow: Float32Array, downstream: Int32Array) {
@@ -49,8 +48,8 @@ function expandLakes(cells: TCell[], flow: Float32Array, downstream: Int32Array)
 
         neighbor.isLake = true;
         neighbor.isWater = true;
-        neighbor.terrain = 'lake';
-        neighbor.biome = 'Freshwater Lake';
+        neighbor.landform = 'lake';
+        neighbor.biome = 'freshwater';
         neighbor.suitability = 0.12;
         expanded += 1;
         queue.enqueue(neighborId);
@@ -63,8 +62,8 @@ function expandLakes(cells: TCell[], flow: Float32Array, downstream: Int32Array)
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
     if (!cell.isLake) continue;
-    cell.terrain = 'lake';
-    cell.biome = 'Freshwater Lake';
+    cell.landform = 'lake';
+    cell.biome = 'freshwater';
     cell.suitability = 0.12;
   }
 }
@@ -75,6 +74,10 @@ function buildLakeRegions(cells: TCell[]) {
     (cell) => cell.isLake,
     (_current, neighbor) => neighbor.isLake
   );
+}
+
+function isMarineLandform(cell: TCell) {
+  return cell.landform === 'marine_deep' || cell.landform === 'marine_shallow';
 }
 
 function touchesMapBoundary(cell: TCell, width: number, height: number) {
@@ -159,8 +162,8 @@ function classifyInlandWater(
       waterCell.isWater = true;
       waterCell.isLake = isLake;
       waterCell.isRiver = false;
-      waterCell.terrain = isLake ? 'lake' : 'inland-sea';
-      waterCell.biome = isLake ? 'Freshwater Lake' : 'Inland Sea';
+      waterCell.landform = isLake ? 'lake' : 'marine_deep';
+      waterCell.biome = isLake ? 'freshwater' : 'marine';
       waterCell.suitability = isLake ? 0.12 : 0;
     }
   }
@@ -175,7 +178,7 @@ function filterAndLimitLakes(cells: TCell[], flow: Float32Array) {
 
     for (const cellId of region) {
       for (const neighborId of cells[cellId].neighbors) {
-        if (isMarineWaterTerrain(cells[neighborId].terrain)) {
+        if (isMarineLandform(cells[neighborId])) {
           touchesSea = true;
           break;
         }
@@ -188,8 +191,8 @@ function filterAndLimitLakes(cells: TCell[], flow: Float32Array) {
         const cell = cells[cellId];
         cell.isLake = false;
         cell.isWater = false;
-        cell.terrain = 'coast';
-        cell.biome = 'Coastal Littoral';
+        cell.landform = 'coast';
+        cell.biome = 'savanna';
         cell.suitability = 0.6;
       }
       continue;
@@ -217,8 +220,8 @@ function filterAndLimitLakes(cells: TCell[], flow: Float32Array) {
       const cell = cells[cellId];
       cell.isLake = false;
       cell.isWater = false;
-      cell.terrain = 'valley';
-      cell.biome = 'River Valley';
+      cell.landform = 'valley';
+      cell.biome = 'wetland';
       cell.suitability = 0.52;
     }
   }
@@ -228,8 +231,8 @@ function buildPlainsRegionSizeMap(cells: TCell[]) {
   const regionSizeByCell = new Int32Array(cells.length);
   const plainsRegions = collectConnectedComponents(
     cells,
-    (cell) => cell.terrain === 'plains',
-    (_current, neighbor) => neighbor.terrain === 'plains'
+    (cell) => cell.landform === 'plain',
+    (_current, neighbor) => neighbor.landform === 'plain'
   );
 
   for (const region of plainsRegions) {

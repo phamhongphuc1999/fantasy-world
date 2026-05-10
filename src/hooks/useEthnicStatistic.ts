@@ -15,7 +15,8 @@ export default function useEthnicStatistic(ethnicId: number | null, mesh: TDelau
 
     const nationNameById = new Map(mesh.nations.map((nation) => [nation.id, nation.name]));
     const populationByNation = new Map<number, number>();
-    const terrainCount = new Map<string, number>();
+    const landformCount = new Map<string, number>();
+    const biomeCount = new Map<string, number>();
 
     for (const cell of ethnicCells) {
       if (cell.nationId !== null) {
@@ -24,7 +25,8 @@ export default function useEthnicStatistic(ethnicId: number | null, mesh: TDelau
           (populationByNation.get(cell.nationId) || 0) + cell.population
         );
       }
-      terrainCount.set(cell.terrain, (terrainCount.get(cell.terrain) || 0) + 1);
+      landformCount.set(cell.landform, (landformCount.get(cell.landform) || 0) + 1);
+      biomeCount.set(cell.biome, (biomeCount.get(cell.biome) || 0) + 1);
     }
 
     const nations = Array.from(populationByNation.entries())
@@ -35,7 +37,14 @@ export default function useEthnicStatistic(ethnicId: number | null, mesh: TDelau
       }))
       .sort((a, b) => b.population - a.population);
 
-    const terrains = Array.from(terrainCount.entries())
+    const landforms = Array.from(landformCount.entries())
+      .map(([terrain, count]) => ({
+        terrain,
+        count,
+        percent: toPercent(count, ethnicCells.length),
+      }))
+      .sort((a, b) => b.count - a.count);
+    const biomes = Array.from(biomeCount.entries())
       .map(([terrain, count]) => ({
         terrain,
         count,
@@ -43,7 +52,7 @@ export default function useEthnicStatistic(ethnicId: number | null, mesh: TDelau
       }))
       .sort((a, b) => b.count - a.count);
 
-    return { ethnics, ethnicCells, totalPopulation, nations, terrains };
+    return { ethnics, ethnicCells, totalPopulation, nations, landforms, biomes };
   }, [ethnicId, mesh.cells, mesh.ethnics, mesh.nations]);
 
   return { data };

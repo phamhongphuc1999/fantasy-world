@@ -1,13 +1,12 @@
 import { getNationColor } from 'src/services/rendering/colors';
 import { toEdgeKey } from 'src/services/utils/geometry';
-import { isRenderWaterTerrain } from 'src/services/terrain/rules';
 import { TCell, TPoint } from 'src/types/map.types';
 import { drawPolygon, edgeNoiseValue } from './shared';
 
 type TEdgeOwner = { start: TPoint; end: TPoint; cell: TCell };
 
 export function isLandCell(cell: TCell) {
-  return !cell.isWater && !isRenderWaterTerrain(cell.terrain);
+  return !cell.isWater && !cell.isLake;
 }
 
 function fillLandCells(

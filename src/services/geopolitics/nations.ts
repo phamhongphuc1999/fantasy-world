@@ -630,7 +630,7 @@ export function buildLandNations(cells: TCell[], seed: string, nationCount: numb
 }
 
 export function alignNaturalTerrainClusters(cells: TCell[], owner: Int32Array) {
-  const targetTerrains = new Set(['mountains', 'hills', 'forest', 'swamp', 'tundra']);
+  const targetLandforms = new Set(['mountain', 'hills', 'plateau', 'valley']);
   const passes = 2;
 
   for (let pass = 0; pass < passes; pass += 1) {
@@ -639,7 +639,7 @@ export function alignNaturalTerrainClusters(cells: TCell[], owner: Int32Array) {
     for (let cellId = 0; cellId < cells.length; cellId += 1) {
       const cell = cells[cellId];
       if (!isLand(cell)) continue;
-      if (!targetTerrains.has(cell.terrain)) continue;
+      if (!targetLandforms.has(cell.landform)) continue;
       if (owner[cellId] < 0) continue;
 
       const nationCounts = new Map<number, number>();
@@ -647,7 +647,7 @@ export function alignNaturalTerrainClusters(cells: TCell[], owner: Int32Array) {
       for (const neighborId of cell.neighbors) {
         const neighbor = cells[neighborId];
         if (!isLand(neighbor)) continue;
-        if (neighbor.terrain !== cell.terrain) continue;
+        if (neighbor.landform !== cell.landform) continue;
         sameTerrainNeighbors += 1;
         const nationId = owner[neighborId];
         if (nationId < 0) continue;

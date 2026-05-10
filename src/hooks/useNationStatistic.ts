@@ -12,7 +12,8 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
   const data = useMemo(() => {
     if (nation) {
       const nationCells = mesh.cells.filter((cell) => !cell.isWater && cell.nationId === nation.id);
-      const terrainCounts = new Map<string, number>();
+      const landformCounts = new Map<string, number>();
+      const biomeCounts = new Map<string, number>();
       const ethnicCounts = new Map<number, number>();
       const ethnicPopulation = new Map<number, number>();
       const ethnicEconomy = new Map<number, number>();
@@ -24,7 +25,8 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
       const provinceCellCountMap = new Map<number, number>();
 
       for (const cell of nationCells) {
-        terrainCounts.set(cell.terrain, (terrainCounts.get(cell.terrain) || 0) + 1);
+        landformCounts.set(cell.landform, (landformCounts.get(cell.landform) || 0) + 1);
+        biomeCounts.set(cell.biome, (biomeCounts.get(cell.biome) || 0) + 1);
         totalPopulation += cell.population;
         totalEconomy += cell.economy;
         if (cell.ethnicId !== null) {
@@ -51,7 +53,15 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
         }
       }
 
-      const terrains = Array.from(terrainCounts.entries())
+      const landforms = Array.from(landformCounts.entries())
+        .map(([terrain, count]) => ({
+          terrain,
+          count,
+          percent: toPercent(count, nationCells.length),
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8);
+      const biomes = Array.from(biomeCounts.entries())
         .map(([terrain, count]) => ({
           terrain,
           count,
@@ -85,7 +95,7 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
         }))
         .sort((a, b) => a.provinceId - b.provinceId);
 
-      return { nationCells, totalPopulation, totalEconomy, terrains, ethnics, provinces };
+      return { nationCells, totalPopulation, totalEconomy, landforms, biomes, ethnics, provinces };
     }
   }, [mesh.cells, mesh.ethnics, nation]);
 

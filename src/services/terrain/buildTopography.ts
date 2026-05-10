@@ -1,11 +1,5 @@
-import { TERRAIN_THRESHOLDS, TOPOGRAPHY_CONFIG } from 'src/configs/mapConfig';
-import {
-  TDelaunayMesh,
-  TLine,
-  TTerrain,
-  TTerrainPreset,
-  TTopographyCell,
-} from 'src/types/map.types';
+import { TOPOGRAPHY_CONFIG } from 'src/configs/mapConfig';
+import { TDelaunayMesh, TLine, TTerrainPreset, TTopographyCell } from 'src/types/map.types';
 import { createSeededRandom, hashSeed } from '../core/seededRandom';
 import { distanceToSegment } from '../utils/geometry';
 import { clamp, smoothStep } from '../utils/math';
@@ -81,16 +75,6 @@ function sampleFractalNoise(x: number, y: number, seedHash: number) {
   }
 
   return weight > 0 ? total / weight : 0;
-}
-
-function classifyTerrain(elevation: number, seaLevel: number): TTerrain {
-  if (elevation < seaLevel - TERRAIN_THRESHOLDS.deepWaterDepth) return 'deep-water';
-  if (elevation < seaLevel) return 'shallow-water';
-  if (elevation < seaLevel + TERRAIN_THRESHOLDS.coastBand) return 'coast';
-  if (elevation < TERRAIN_THRESHOLDS.plainsMax) return 'plains';
-  if (elevation < TERRAIN_THRESHOLDS.hillsMax) return 'hills';
-  if (elevation < TERRAIN_THRESHOLDS.mountainsMax) return 'mountains';
-  return 'tundra';
 }
 
 function sampleRidgedNoise(x: number, y: number, seedHash: number) {
@@ -225,8 +209,7 @@ function sampleSeedField(nx: number, ny: number, seeds: TReliefSeed[]) {
 }
 
 function buildCellTopography(elevation: number, seaLevel: number): TTopographyCell {
-  const terrain = classifyTerrain(elevation, seaLevel);
-  return { elevation, isWater: elevation < seaLevel, terrain };
+  return { elevation, isWater: elevation < seaLevel };
 }
 
 function reinforceHighMountains(elevations: Float32Array, seaLevel: number) {

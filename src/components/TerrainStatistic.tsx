@@ -1,6 +1,11 @@
-import { TERRAIN_CONFIG } from 'src/configs/constance';
+import {
+  BIOME_COLORS,
+  BIOME_LABELS,
+  LANDFORM_COLORS,
+  LANDFORM_LABELS,
+} from 'src/services/terrain/classification';
 import { TPieChartData } from 'src/types/global';
-import { TTerrain } from 'src/types/map.types';
+import { TBiome, TLandform } from 'src/types/map.types';
 import BlurCard from './BlurCard';
 import PieChart from './charts/PieChart';
 
@@ -12,32 +17,46 @@ interface TTerrainStatistic {
 
 interface TProps {
   terrains: TTerrainStatistic[];
+  title?: string;
 }
 
-export default function TerrainStatistic({ terrains }: TProps) {
-  const pieData: Array<TPieChartData & { type: TTerrain; cellCount: number }> = terrains.map(
-    (item) => {
-      const _key = item.terrain as TTerrain;
+export default function TerrainStatistic({ terrains, title = 'Terrain' }: TProps) {
+  const pieData: Array<TPieChartData & { type: string; cellCount: number; icon: string }> =
+    terrains.map((item) => {
+      const landformKey = item.terrain as TLandform;
+      const biomeKey = item.terrain as TBiome;
+      const landformLabel = LANDFORM_LABELS[landformKey];
+      const biomeLabel = BIOME_LABELS[biomeKey];
 
+      if (landformLabel) {
+        return {
+          type: item.terrain,
+          label: landformLabel,
+          value: item.percent,
+          color: LANDFORM_COLORS[landformKey],
+          cellCount: item.count,
+          icon: '🧭',
+        };
+      }
       return {
-        type: item.terrain as TTerrain,
-        label: item.terrain.replace('-', ' '),
+        type: item.terrain,
+        label: biomeLabel || item.terrain,
         value: item.percent,
-        color: TERRAIN_CONFIG[_key].color,
+        color: BIOME_COLORS[biomeKey] || '#64748b',
         cellCount: item.count,
+        icon: '🌿',
       };
-    }
-  );
+    });
 
   return (
-    <BlurCard title="Terrain">
+    <BlurCard title={title}>
       <div className="mt-2 flex justify-center">
         <PieChart
           data={pieData}
           renderTooltip={(tooltip) => (
             <div className="w-25">
               <div className="font-semibold">
-                {tooltip.label} {TERRAIN_CONFIG[tooltip.datum.type].icon}
+                {tooltip.label} {tooltip.datum.icon}
               </div>
               <div>Cells: {tooltip.datum.cellCount}</div>
               <div>Percent: {tooltip.percent}%</div>

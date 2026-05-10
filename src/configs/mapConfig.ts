@@ -49,6 +49,13 @@ export const DEFAULT_CONFIG: {
   seaLevel: number;
   terrainPreset: TTerrainPreset;
   nationCount: number;
+  climateControl: {
+    temperatureOffset: number;
+    temperatureContrast: number;
+    precipitationScale: number;
+    precipitationOffset: number;
+    humanImpact: number;
+  };
   displaySettings: TDisplaySettings;
 } = {
   seed: 'world-001',
@@ -56,7 +63,18 @@ export const DEFAULT_CONFIG: {
   seaLevel: 0.5,
   terrainPreset: 'balanced',
   nationCount: 8,
+  climateControl: {
+    temperatureOffset: 0,
+    temperatureContrast: 1,
+    precipitationScale: 1,
+    precipitationOffset: 0,
+    humanImpact: 0.25,
+  },
   displaySettings: {
+    landform: false,
+    landformRelief: false,
+    biome: false,
+    biomeRelief: true,
     terrain: false,
     terrainRelief: true,
     population: false,
@@ -344,6 +362,48 @@ export const HYDROLOGY_CONFIG = {
     coldPoolStrength: 0.06,
     smoothingPasses: 1,
   },
+  landformModel: {
+    coastMaxElevAboveSea: 0.02,
+    plainMaxElevAboveSea: 0.24,
+    valleyMaxElevAboveSea: 0.3,
+    highlandMinElevAboveSea: 0.34,
+    mountainMinElevAboveSea: 0.52,
+    volcanicMinElevAboveSea: 0.56,
+    plateauFlatnessMaxAbsSlope: 0.12,
+    mountainMinSlope: 0.16,
+    valleyReliefMax: -0.04,
+    valleyMinFlowSignal: 0.22,
+    valleyEnclosureMinRatio: 0.58,
+    valleyMinHigherNeighborDelta: 0.035,
+  },
+  biomeModel: {
+    desert: {
+      hotTempMin: 0.62,
+      hotAridityMax: 0.32,
+      hotPrecipMax: 0.22,
+      hotPlainAridityMax: 0.28,
+      hotPlainPrecipMax: 0.2,
+      coldTempMax: 0.48,
+      coldAridityMax: 0.42,
+      coldPrecipMax: 0.26,
+      transitionTempMin: 0.5,
+      transitionTempMax: 0.62,
+      flowPenaltyScale: 0.18,
+      humidPenaltyScale: 0.5,
+      singleCellDryNeighborRatioMin: 0.34,
+    },
+    humanPlain: {
+      baseThreshold: 0.66,
+      impactGain: 0.38,
+      waterBonusRiver: 0.28,
+      waterBonusNearby: 0.2,
+      tempIdeal: 0.55,
+      tempTolerance: 0.24,
+      desertNeighborPenalty: 0.42,
+      maxDesertNeighborRatio: 0.4,
+      neighborSmoothingPasses: 1,
+    },
+  },
 };
 
 export const RIVER_GEN_CONFIG = {
@@ -371,23 +431,35 @@ export const RIVER_GEN_CONFIG = {
 
 export const BORDER_CONFIG: Record<TBorderType, TBorderConfig> = {
   country: {
-    cost: {
-      plains: 1.1,
-      valley: 0.95,
+    landformCost: {
+      marine_deep: 1.2,
+      marine_shallow: 1.2,
       coast: 0.9,
-      forest: 1.2,
-      swamp: 1.9,
-      hills: 1.9,
-      plateau: 1.8,
-      mountains: 7.8,
-      volcanic: 8.6,
-      desert: 2.1,
-      badlands: 2.4,
-      tundra: 1.8,
       lake: 1.2,
-      'deep-water': 1.2,
-      'shallow-water': 1.2,
-      'inland-sea': 1.2,
+      plain: 1.1,
+      valley: 0.95,
+      hills: 1.9,
+      mountain: 7.8,
+      plateau: 1.8,
+      volcanic_field: 8.6,
+    },
+    biomeCost: {
+      unknown: 1,
+      plain: 1,
+      ice: 1.8,
+      tundra: 1.8,
+      boreal_forest: 1.25,
+      temperate_forest: 1.2,
+      tropical_forest: 1.35,
+      grassland: 1.05,
+      savanna: 1.1,
+      steppe: 2.4,
+      desert_hot: 2.1,
+      desert_cold: 2.1,
+      wetland: 1.9,
+      montane_shrub: 1.45,
+      freshwater: 1.2,
+      marine: 1.2,
     },
     penalty: { riverCross: 7.8, lakeCross: 8.4, ridgeCross: 10.5, shorelineEdgeBias: -0.3 },
     fragmentation: {
@@ -398,23 +470,35 @@ export const BORDER_CONFIG: Record<TBorderType, TBorderConfig> = {
     smoothness: { edgeNoiseWeight: 0.16, jaggedPenalty: 0.5 },
   },
   province: {
-    cost: {
-      plains: 1,
-      valley: 0.95,
+    landformCost: {
+      marine_deep: 1.2,
+      marine_shallow: 1.2,
       coast: 1.15,
-      forest: 1.35,
-      swamp: 1.85,
-      hills: 1.6,
-      plateau: 1.7,
-      mountains: 3.5,
-      volcanic: 4.2,
-      desert: 1.9,
-      badlands: 2.1,
-      tundra: 1.6,
       lake: 1.2,
-      'deep-water': 1.2,
-      'shallow-water': 1.2,
-      'inland-sea': 1.2,
+      plain: 1,
+      valley: 0.95,
+      hills: 1.6,
+      mountain: 3.5,
+      plateau: 1.7,
+      volcanic_field: 4.2,
+    },
+    biomeCost: {
+      unknown: 1,
+      plain: 1,
+      ice: 1.6,
+      tundra: 1.6,
+      boreal_forest: 1.45,
+      temperate_forest: 1.35,
+      tropical_forest: 1.5,
+      grassland: 1.05,
+      savanna: 1.1,
+      steppe: 2.1,
+      desert_hot: 1.9,
+      desert_cold: 1.9,
+      wetland: 1.85,
+      montane_shrub: 1.4,
+      freshwater: 1.2,
+      marine: 1.2,
     },
     penalty: { riverCross: 3.4, lakeCross: 4.2, ridgeCross: 4.8, shorelineEdgeBias: -0.2 },
     fragmentation: {

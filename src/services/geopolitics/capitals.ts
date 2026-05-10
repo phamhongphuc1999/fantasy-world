@@ -1,36 +1,13 @@
-import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
 import { getMetricRange } from 'src/services/utils/stats';
 import { normalize } from 'src/services/utils/math';
 import { buildDistanceMap, collectConnectedComponents } from 'src/services/core/graph';
 import { TCell, TNation } from 'src/types/map.types';
 import { createSeededRandom } from '../core/seededRandom';
-import { isWaterOrRiverCell } from '../terrain/rules';
+import { isWaterOrRiverCell } from '../cell/rules';
 import { CAPITAL_VIEWPORT_MARGIN, createRegionalName, isLand } from './shared';
 
-type TNationProfile = Pick<
-  TNation,
-  'populationMultiplier' | 'economyMultiplier' | 'terrainPopMods' | 'terrainEcoMods'
->;
-
-const defaultTerrainConfig = {
-  'deep-water': 0,
-  'shallow-water': 0,
-  'inland-sea': 0,
-  coast: 1,
-  lake: 1,
-  plains: 1,
-  plateau: 1,
-  forest: 1,
-  desert: 1,
-  badlands: 1,
-  swamp: 1,
-  valley: 1,
-  hills: 1,
-  mountains: 1,
-  volcanic: 1,
-  tundra: 1,
-};
+type TNationProfile = Pick<TNation, 'populationMultiplier' | 'economyMultiplier'>;
 
 const T_COMPONENT_SHARE_THRESHOLD = 0.3;
 const T_MIN_WEIGHT = 1e-6;
@@ -139,10 +116,28 @@ function scoreCapital(
       : edgeDistance >= CAPITAL_VIEWPORT_MARGIN + 6
         ? 0.1
         : 0;
-  const safetyScore = TERRAIN_CONFIG[cell.terrain].safetyScore;
-  const terrainFlatness = TERRAIN_CONFIG[cell.terrain].flatness;
+  const safetyScore =
+    cell.landform === 'plain' || cell.landform === 'valley'
+      ? 0.3
+      : cell.landform === 'coast'
+        ? 0.1
+        : cell.landform === 'hills' || cell.landform === 'plateau'
+          ? 0.2
+          : cell.landform === 'mountain' || cell.landform === 'volcanic_field'
+            ? -0.25
+            : -0.05;
+  const terrainFlatness =
+    cell.landform === 'plain' || cell.landform === 'valley'
+      ? 0.9
+      : cell.landform === 'hills' || cell.landform === 'plateau'
+        ? 0.65
+        : cell.landform === 'coast'
+          ? 0.75
+          : cell.landform === 'mountain' || cell.landform === 'volcanic_field'
+            ? 0.25
+            : 0.5;
   const terrainBias =
-    terrainFlatness * 0.65 + (cell.terrain === 'plains' || cell.terrain === 'valley' ? 0.35 : 0);
+    terrainFlatness * 0.65 + (cell.landform === 'plain' || cell.landform === 'valley' ? 0.35 : 0);
   const adjustedSafety = safetyScore * 0.6 + terrainBias * 0.4 + edgeSafety * 0.15;
 
   return (
@@ -155,7 +150,14 @@ function scoreCapital(
 }
 
 function economicHubScore(cell: TCell, cells: TCell[], population: number, economy: number) {
-  const geoScore = TERRAIN_CONFIG[cell.terrain].flatness;
+  const geoScore =
+    cell.landform === 'plain' || cell.landform === 'valley'
+      ? 0.95
+      : cell.landform === 'hills' || cell.landform === 'plateau'
+        ? 0.68
+        : cell.landform === 'coast'
+          ? 0.8
+          : 0.38;
   const waterScore = waterProximityScore(cell, cells);
   return population * 0.35 + economy * 0.4 + geoScore * 0.15 + waterScore * 0.1;
 }
@@ -338,8 +340,6 @@ export function pickEconomicAndCapital(
       name: nationName,
       populationMultiplier: profile?.populationMultiplier ?? 1,
       economyMultiplier: profile?.economyMultiplier ?? 1,
-      terrainPopMods: profile?.terrainPopMods ?? defaultTerrainConfig,
-      terrainEcoMods: profile?.terrainEcoMods ?? defaultTerrainConfig,
       capitalCellId,
       capitalCoords: capitalCellId !== null ? cells[capitalCellId].site : null,
       economicHubIds: hubCellIds,

@@ -1,6 +1,10 @@
-import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
-import { buildWaterInfluence, getSuitability, getTerrain } from 'src/services/hydrology/climate';
+import {
+  buildWaterInfluence,
+  getSuitabilityByLandformBiome,
+  getTerrain,
+  TClimateTerrainTag,
+} from 'src/services/hydrology/climate';
 import {
   classifyInlandWater,
   expandLakes,
@@ -10,7 +14,9 @@ import { computeAdvancedPrecipitation } from 'src/services/hydrology/precipitati
 import { runRiverGeneration } from 'src/services/hydrology/river';
 import { computeAdvancedTemperature } from 'src/services/hydrology/temperature';
 import { buildWindField } from 'src/services/hydrology/wind';
-import { TCell, TDelaunayMesh, TTerrain } from 'src/types/map.types';
+import { TCell, TDelaunayMesh } from 'src/types/map.types';
+import { classifyBiomes } from '../terrain/biomeClassifier';
+import { classifyLandforms } from '../terrain/landformClassifier';
 import { clamp } from '../utils/math';
 import { getAvgNeighbor } from '../utils/topology';
 
@@ -18,6 +24,13 @@ interface TBuildHydrologyOptions {
   mesh: TDelaunayMesh;
   seaLevel: number;
   seed: string;
+  climateControl: {
+    temperatureOffset: number;
+    temperatureContrast: number;
+    precipitationScale: number;
+    precipitationOffset: number;
+    humanImpact: number;
+  };
 }
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutlet;
@@ -28,7 +41,20 @@ function sortIndicesByElevation(elevations: Float32Array) {
   return indices;
 }
 
-function runHydrologyInternal({ mesh, seaLevel, seed }: TBuildHydrologyOptions): TDelaunayMesh {
+function applyTemperatureControl(value: number, offset: number, contrast: number) {
+  return clamp((value - 0.5) * contrast + 0.5 + offset, 0, 1);
+}
+
+function applyPrecipitationControl(value: number, offset: number, scale: number) {
+  return clamp(value * scale + offset, 0, 1);
+}
+
+function runHydrologyInternal({
+  mesh,
+  seaLevel,
+  seed,
+  climateControl,
+}: TBuildHydrologyOptions): TDelaunayMesh {
   const cellCount = mesh.cells.length;
   const elevations = new Float32Array(cellCount);
   const adjustedElevations = new Float32Array(cellCount);
@@ -135,14 +161,18 @@ function runHydrologyInternal({ mesh, seaLevel, seed }: TBuildHydrologyOptions):
       isRiverSource: false,
       isRiverMouth: false,
       isLake: isLake[cellIndex] === 1,
+      landform: 'plain',
       temperature: 0,
       precipitation: 0,
       rainShadow: 0,
+      petProxy: 0,
+      aridityIndex: 0,
+      temperatureSeasonality: 0,
+      precipitationSeasonality: 0,
       population: 0,
       economy: 0,
       waterAccessScore: 0,
-      terrain: 'plains' as TTerrain,
-      biome: '',
+      biome: 'unknown',
       suitability: 0,
       nationId: null,
       provinceId: null,
@@ -151,13 +181,6 @@ function runHydrologyInternal({ mesh, seaLevel, seed }: TBuildHydrologyOptions):
       isCapital: false,
       isEconomicHub: false,
     };
-
-    if (nextCell.isWater && !nextCell.isLake) {
-      nextCell.terrain =
-        nextCell.elevation < seaLevel - HYDROLOGY_CONFIG.deepWaterDepth
-          ? 'deep-water'
-          : 'shallow-water';
-    }
 
     return nextCell;
   });
@@ -191,22 +214,112 @@ function runHydrologyInternal({ mesh, seaLevel, seed }: TBuildHydrologyOptions):
     windField,
     height: mesh.height,
   });
+  const climateTerrainByCell = new Array<TClimateTerrainTag>(cells.length);
+  const aridityIndexByCell = new Float32Array(cells.length);
+  const petByCell = new Float32Array(cells.length);
+  const tempSeasonalityByCell = new Float32Array(cells.length);
+  const precipSeasonalityByCell = new Float32Array(cells.length);
+  const elevationAboveSeaByCell = new Float32Array(cells.length);
+  const temperatureAdjustedByCell = new Float32Array(cells.length);
+  const precipitationAdjustedByCell = new Float32Array(cells.length);
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
-    const temperature = temperatureByCell[cellIndex] as number;
+    const temperatureRaw = temperatureByCell[cellIndex] as number;
+    const temperature = applyTemperatureControl(
+      temperatureRaw,
+      climateControl.temperatureOffset,
+      climateControl.temperatureContrast
+    );
     const rainShadow = advancedPrecipitation.rainShadow[cellIndex];
-    const precipitation = advancedPrecipitation.precipitation[cellIndex];
+    const precipitationRaw = advancedPrecipitation.precipitation[cellIndex];
+    const precipitation = applyPrecipitationControl(
+      precipitationRaw,
+      climateControl.precipitationOffset,
+      climateControl.precipitationScale
+    );
 
     const relief = reliefByCell[cellIndex];
-    const terrain = getTerrain(cell, seaLevel, temperature, precipitation, rainShadow, relief);
+    const terrainTag = getTerrain(cell, seaLevel, temperature, precipitation, rainShadow, relief);
+    climateTerrainByCell[cellIndex] = terrainTag;
+    const petProxy = clamp(
+      0.22 + temperature * 0.78 + Math.max(0, 1 - waterInfluence[cellIndex]) * 0.1,
+      0.05,
+      1.2
+    );
+    const aridityIndex = clamp(precipitation / Math.max(petProxy, 0.0001), 0, 2);
+    const temperatureSeasonality = clamp(
+      Math.abs(cell.site[1] / mesh.height - 0.5) * 2 * 0.35 +
+        Math.max(0, 1 - waterInfluence[cellIndex]) * 0.15,
+      0,
+      1
+    );
+    const precipitationSeasonality = clamp(
+      0.2 + rainShadow * 0.5 + Math.max(0, 1 - precipitation) * 0.2,
+      0,
+      1
+    );
+    const elevationAboveSea = Math.max(0, cell.elevation - seaLevel);
 
-    cell.terrain = terrain;
-    cell.biome = TERRAIN_CONFIG[terrain].label;
-    cell.suitability = getSuitability(terrain, precipitation, temperature);
+    cell.suitability = getSuitabilityByLandformBiome(
+      cell.landform,
+      cell.biome,
+      precipitation,
+      temperature
+    );
     cell.temperature = temperature;
     cell.precipitation = precipitation;
     cell.rainShadow = rainShadow;
+    cell.petProxy = petProxy;
+    cell.aridityIndex = aridityIndex;
+    cell.temperatureSeasonality = temperatureSeasonality;
+    cell.precipitationSeasonality = precipitationSeasonality;
+    temperatureAdjustedByCell[cellIndex] = temperature;
+    precipitationAdjustedByCell[cellIndex] = precipitation;
+    aridityIndexByCell[cellIndex] = aridityIndex;
+    petByCell[cellIndex] = petProxy;
+    tempSeasonalityByCell[cellIndex] = temperatureSeasonality;
+    precipSeasonalityByCell[cellIndex] = precipitationSeasonality;
+    elevationAboveSeaByCell[cellIndex] = elevationAboveSea;
+  }
+
+  const landforms = classifyLandforms({
+    cells,
+    seaLevel,
+    reliefByCell,
+    flow,
+    climateTerrainByCell,
+  });
+  const biomes = classifyBiomes({
+    landforms,
+    temperature: temperatureAdjustedByCell,
+    precipitation: precipitationAdjustedByCell,
+    aridityIndex: aridityIndexByCell,
+    temperatureSeasonality: tempSeasonalityByCell,
+    precipitationSeasonality: precipSeasonalityByCell,
+    elevationAboveSea: elevationAboveSeaByCell,
+    flow,
+    neighborsByCell: cells.map((cell) => cell.neighbors),
+    isRiverByCell: isRiver,
+    isLakeByCell: isLake,
+    humanImpact: climateControl.humanImpact,
+  });
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+    const cell = cells[cellIndex];
+    const landform = landforms[cellIndex] as NonNullable<(typeof landforms)[number]>;
+    const biome = biomes[cellIndex] as NonNullable<(typeof biomes)[number]>;
+    cell.landform = landform;
+    cell.biome = biome;
+    cell.petProxy = petByCell[cellIndex] as number;
+    cell.aridityIndex = aridityIndexByCell[cellIndex] as number;
+    cell.temperatureSeasonality = tempSeasonalityByCell[cellIndex] as number;
+    cell.precipitationSeasonality = precipSeasonalityByCell[cellIndex] as number;
+    cell.suitability = getSuitabilityByLandformBiome(
+      landform,
+      biome,
+      cell.precipitation,
+      cell.temperature
+    );
   }
 
   expandLakes(cells, flow, downstream);
@@ -251,13 +364,22 @@ function runHydrologyInternal({ mesh, seaLevel, seed }: TBuildHydrologyOptions):
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
-    cell.biome = TERRAIN_CONFIG[cell.terrain].label;
-    cell.suitability = getSuitability(cell.terrain, cell.precipitation, cell.temperature);
+    cell.suitability = getSuitabilityByLandformBiome(
+      cell.landform,
+      cell.biome,
+      cell.precipitation,
+      cell.temperature
+    );
   }
 
   return { ...mesh, cells, rivers: mesh.rivers ?? [] };
 }
 
-export function buildHydrology({ mesh, seaLevel, seed }: TBuildHydrologyOptions): TDelaunayMesh {
-  return runHydrologyInternal({ mesh, seaLevel, seed });
+export function buildHydrology({
+  mesh,
+  seaLevel,
+  seed,
+  climateControl,
+}: TBuildHydrologyOptions): TDelaunayMesh {
+  return runHydrologyInternal({ mesh, seaLevel, seed, climateControl });
 }

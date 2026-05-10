@@ -1,7 +1,6 @@
 'use client';
 
 import { RefObject, useEffect } from 'react';
-import { TERRAIN_CONFIG } from 'src/configs/constance';
 import {
   drawCountryFill,
   drawEthnicBorders,
@@ -30,6 +29,7 @@ import {
 } from 'src/services/rendering/canvas/primitives';
 import { applyShadedRelief } from 'src/services/rendering/canvas/relief';
 import { getRiverStrokeWidth } from 'src/services/rendering/rivers';
+import { BIOME_COLORS, LANDFORM_COLORS } from 'src/services/terrain/classification';
 import { TCell, TDisplaySettings, TEthnic, TNation } from 'src/types/map.types';
 
 const T_SITE_MARKER_LIMIT = 4000;
@@ -76,12 +76,14 @@ export default function useMapCanvas(params: TProps) {
 
     for (const cell of cells) {
       if (isLandCell(cell)) continue;
-      drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 1, 'transparent', 0);
+      drawCellShape(context, cell, LANDFORM_COLORS[cell.landform], 1, 'transparent', 0);
     }
 
     const showUniformLand =
-      !displaySettings.terrain &&
-      !displaySettings.terrainRelief &&
+      !displaySettings.landform &&
+      !displaySettings.landformRelief &&
+      !displaySettings.biome &&
+      !displaySettings.biomeRelief &&
       !displaySettings.population &&
       !displaySettings.temperature &&
       !displaySettings.precipitation &&
@@ -90,9 +92,22 @@ export default function useMapCanvas(params: TProps) {
       !displaySettings.countryFill &&
       !displaySettings.ethnicFill;
 
-    const showTerrainReliefBase =
-      displaySettings.terrainRelief &&
-      !displaySettings.terrain &&
+    const showLandformReliefBase =
+      displaySettings.landformRelief &&
+      !displaySettings.landform &&
+      !displaySettings.biome &&
+      !displaySettings.population &&
+      !displaySettings.temperature &&
+      !displaySettings.precipitation &&
+      !displaySettings.rainShadow &&
+      !displaySettings.economy &&
+      !displaySettings.countryFill &&
+      !displaySettings.ethnicFill;
+
+    const showBiomeReliefBase =
+      displaySettings.biomeRelief &&
+      !displaySettings.biome &&
+      !displaySettings.landform &&
       !displaySettings.population &&
       !displaySettings.temperature &&
       !displaySettings.precipitation &&
@@ -132,17 +147,31 @@ export default function useMapCanvas(params: TProps) {
       }
     }
 
-    if (displaySettings.terrain) {
+    if (displaySettings.landform) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 1, 'transparent', 0);
+        drawCellShape(context, cell, LANDFORM_COLORS[cell.landform], 1, 'transparent', 0);
       }
     }
 
-    if (showTerrainReliefBase) {
+    if (displaySettings.biome) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 1, 'transparent', 0);
+        drawCellShape(context, cell, BIOME_COLORS[cell.biome], 1, 'transparent', 0);
+      }
+    }
+
+    if (showLandformReliefBase) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        drawCellShape(context, cell, LANDFORM_COLORS[cell.landform], 1, 'transparent', 0);
+      }
+    }
+
+    if (showBiomeReliefBase) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        drawCellShape(context, cell, BIOME_COLORS[cell.biome], 1, 'transparent', 0);
       }
     }
 
@@ -217,8 +246,11 @@ export default function useMapCanvas(params: TProps) {
     }
 
     const showShadedRelief =
-      displaySettings.terrainRelief &&
-      (displaySettings.terrain || showTerrainReliefBase) &&
+      (displaySettings.landformRelief || displaySettings.biomeRelief) &&
+      (displaySettings.landform ||
+        displaySettings.biome ||
+        showLandformReliefBase ||
+        showBiomeReliefBase) &&
       !displaySettings.population &&
       !displaySettings.temperature &&
       !displaySettings.precipitation &&
@@ -229,7 +261,8 @@ export default function useMapCanvas(params: TProps) {
     }
 
     if (displaySettings.countryFill) drawCountryFill(context, cells);
-    if (displaySettings.ethnicFill) drawEthnicFill(context, cells, displaySettings.terrain);
+    if (displaySettings.ethnicFill)
+      drawEthnicFill(context, cells, displaySettings.landform || displaySettings.biome);
 
     if (displaySettings.rivers) {
       for (const cell of cells) {
@@ -269,7 +302,7 @@ export default function useMapCanvas(params: TProps) {
     }
 
     if (
-      displaySettings.terrain &&
+      (displaySettings.landform || displaySettings.biome) &&
       !displaySettings.population &&
       !displaySettings.temperature &&
       !displaySettings.precipitation &&

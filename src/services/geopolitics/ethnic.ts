@@ -36,9 +36,9 @@ function pickEthnicCoreSeeds(cells: TCell[], cellIds: number[], count: number, s
       .map((cellId) => cells[cellId])
       .map((cell) => {
         let score = cell.suitability * 1.3;
-        if (cell.terrain === 'plains' || cell.terrain === 'valley') score += 1.1;
-        if (cell.terrain === 'forest') score += 0.35;
-        if (cell.terrain === 'mountains') score += 0.2;
+        if (cell.landform === 'plain' || cell.landform === 'valley') score += 1.1;
+        if (cell.biome === 'temperate_forest' || cell.biome === 'tropical_forest') score += 0.35;
+        if (cell.landform === 'mountain') score += 0.2;
         if (cell.isRiver || cell.isLake) score += 0.35;
         score += random() * 0.5;
         return { cellId: cell.id, score };
@@ -102,7 +102,7 @@ function buildEthnicField(
             ? 1 - config.crossBorderBlend
             : 0;
         step += borderPenalty;
-        if (cells[current.cellId].terrain === 'mountains' && neighbor.terrain === 'mountains') {
+        if (cells[current.cellId].landform === 'mountain' && neighbor.landform === 'mountain') {
           step += config.fragmentationLevel * 0.35;
         }
         if (cells[current.cellId].isRiver || neighbor.isRiver) step += 0.3;
@@ -235,7 +235,7 @@ function addEthnicFragmentation(
       .filter((cell) => ethnicOwner[cell.id] === group.id && isLand(cell))
       .map((cell) => cell.id);
     if (groupCells.length < config.minorityClusterMinCells * 2) continue;
-    const mountainCandidates = groupCells.filter((cellId) => cells[cellId].terrain === 'mountains');
+    const mountainCandidates = groupCells.filter((cellId) => cells[cellId].landform === 'mountain');
     if (mountainCandidates.length === 0) continue;
     const anchorId = mountainCandidates[Math.floor(random() * mountainCandidates.length)] as number;
     let frontier = [anchorId];
@@ -245,7 +245,7 @@ function addEthnicFragmentation(
       for (const currentId of frontier) {
         for (const neighborId of cells[currentId].neighbors) {
           if (painted.has(neighborId) || !isLand(cells[neighborId])) continue;
-          if (cells[neighborId].terrain !== 'mountains' && cells[neighborId].terrain !== 'hills')
+          if (cells[neighborId].landform !== 'mountain' && cells[neighborId].landform !== 'hills')
             continue;
           if (random() > 0.62) continue;
           painted.add(neighborId);
@@ -323,7 +323,7 @@ function smoothCrossBorderEthnics(
         const localSupport = localCounts.get(ethnicId) || 0;
         const crossSupport = crossBorderCounts.get(ethnicId) || 0;
         const mountainBridge =
-          cells[cellId].terrain === 'mountains' || cells[cellId].terrain === 'hills' ? 0.35 : 0;
+          cells[cellId].landform === 'mountain' || cells[cellId].landform === 'hills' ? 0.35 : 0;
         const score = localSupport + crossSupport * (1 + config.crossBorderBlend) + mountainBridge;
         if (score > bestScore) {
           bestScore = score;
@@ -388,7 +388,7 @@ function expandCrossBorderEthnics(
           if (frontier.length === 0) break;
         }
         const terrainBias =
-          cells[cellId].terrain === 'mountains' || cells[cellId].terrain === 'hills' ? 0.3 : 0;
+          cells[cellId].landform === 'mountain' || cells[cellId].landform === 'hills' ? 0.3 : 0;
         const noise = (random() - 0.5) * 0.35;
         const score =
           borderCount * (1.4 + config.crossBorderBlend) +

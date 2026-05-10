@@ -19,7 +19,7 @@ function makeTimestamp() {
 
 export default function ExportTab() {
   const { mesh, importFromSnapshot } = useMapContext();
-  const { seed, cellCount, seaLevel, terrainPreset, nationCount, displaySettings } =
+  const { seed, cellCount, seaLevel, terrainPreset, nationCount, climateControl, displaySettings } =
     useMapExplorerStore();
 
   const handleExportPng = () => {
@@ -43,6 +43,7 @@ export default function ExportTab() {
         seaLevel,
         terrainPreset,
         nationCount,
+        climateControl,
       },
       displaySettings,
       mesh: {

@@ -2,7 +2,6 @@ import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
 import { TCell } from 'src/types/map.types';
 import { hashSeed } from '../core/seededRandom';
 import { clamp } from '../utils/math';
-import { isMarineWaterTerrain } from '../terrain/rules';
 import { TWindVector } from './wind';
 
 type TComputeAdvancedTemperatureInput = {
@@ -27,7 +26,8 @@ function buildMarineDistance(cells: TCell[]) {
   const queue: number[] = [];
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
-    if (!isMarineWaterTerrain(cells[cellIndex].terrain)) continue;
+    const landform = cells[cellIndex].landform;
+    if (landform !== 'marine_deep' && landform !== 'marine_shallow') continue;
     distance[cellIndex] = 0;
     queue.push(cellIndex);
   }

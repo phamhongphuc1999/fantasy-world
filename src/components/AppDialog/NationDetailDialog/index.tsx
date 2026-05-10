@@ -81,7 +81,8 @@ export default function NationDetailDialog({ open, onOpenChange, nationId, mesh 
               <div key={row}>{row}</div>
             ))}
           </BlurCard>
-          <TerrainStatistic terrains={data.terrains} />
+          <TerrainStatistic title="Landform" terrains={data.landforms} />
+          <TerrainStatistic title="Biome" terrains={data.biomes} />
           <Population provinces={data.provinces} />
           <Ethnics ethnics={data.ethnics} />
           <BlurCard title="Economic Hub">

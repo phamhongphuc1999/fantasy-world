@@ -1,3 +1,4 @@
+import ClimateControlPanel from './ClimateControlPanel';
 import TerrainPresetSelect from './TerrainPresetSelect';
 import CountryModePanel from './CountryModePanel';
 import LogisticsGamePanel from './LogisticsGamePanel';
@@ -8,6 +9,7 @@ export default function GenerateTab() {
   return (
     <div className="space-y-4">
       <TerrainPresetSelect />
+      <ClimateControlPanel />
       <SeedPanel />
       <SeaLevelPanel />
       <CountryModePanel />

@@ -5,12 +5,21 @@ import { TDisplaySettings, TTerrainPreset } from 'src/types/map.types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+type TClimateControl = {
+  temperatureOffset: number;
+  temperatureContrast: number;
+  precipitationScale: number;
+  precipitationOffset: number;
+  humanImpact: number;
+};
+
 interface TMapExplorerState {
   seed: string;
   cellCount: number;
   seaLevel: number;
   terrainPreset: TTerrainPreset;
   nationCount: number;
+  climateControl: TClimateControl;
   displaySettings: TDisplaySettings;
   hoverIndex: number | null;
   hoverClientPoint: { x: number; y: number } | null;
@@ -22,6 +31,11 @@ type TMapExplorerActions = {
   setSeaLevel: (seaLevel: number) => void;
   setTerrainPreset: (terrainPreset: TTerrainPreset) => void;
   setNationCount: (nationCount: number) => boolean;
+  setClimateControl: (climateControl: TClimateControl) => void;
+  setClimateControlField: <K extends keyof TClimateControl>(
+    field: K,
+    value: TClimateControl[K]
+  ) => void;
   setDisplaySettings: (displaySettings: TDisplaySettings) => void;
   setDisplayLayer: <K extends keyof TDisplaySettings>(layer: K, enabled: boolean) => void;
   setHoverIndex: (hoverIndex: number | null) => void;
@@ -38,6 +52,7 @@ const DEFAULT_STATE: TMapExplorerState = {
   seaLevel: DEFAULT_CONFIG.seaLevel,
   terrainPreset: DEFAULT_CONFIG.terrainPreset,
   nationCount: DEFAULT_CONFIG.nationCount,
+  climateControl: DEFAULT_CONFIG.climateControl,
   displaySettings: DEFAULT_CONFIG.displaySettings,
   hoverIndex: null,
   hoverClientPoint: null,
@@ -65,6 +80,15 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         if (nationCount < 2 || nationCount > 40) return false;
         set({ nationCount, hoverIndex: null });
         return true;
+      },
+      setClimateControl(climateControl: TClimateControl) {
+        set({ climateControl, hoverIndex: null });
+      },
+      setClimateControlField<K extends keyof TClimateControl>(field: K, value: TClimateControl[K]) {
+        set((state) => ({
+          climateControl: { ...state.climateControl, [field]: value },
+          hoverIndex: null,
+        }));
       },
       setDisplaySettings(displaySettings: TDisplaySettings) {
         const normalizedBase = { ...DEFAULT_CONFIG.displaySettings, ...displaySettings };
@@ -101,9 +125,10 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         seaLevel: state.seaLevel,
         terrainPreset: state.terrainPreset,
         nationCount: state.nationCount,
+        climateControl: state.climateControl,
         displaySettings: state.displaySettings,
       }),
-      version: 5,
+      version: 7,
       migrate: (persistedState) => {
         const state = persistedState as Partial<TMapExplorerState> | undefined;
         if (!state) return DEFAULT_STATE;
@@ -111,6 +136,7 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         return {
           ...DEFAULT_STATE,
           ...state,
+          climateControl: { ...DEFAULT_CONFIG.climateControl, ...state.climateControl },
           displaySettings: { ...DEFAULT_CONFIG.displaySettings, ...persistedDisplaySettings },
         };
       },

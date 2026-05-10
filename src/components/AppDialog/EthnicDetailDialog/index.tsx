@@ -129,7 +129,8 @@ export default function EthnicDetailDialog({ open, onOpenChange, ethnicId, mesh 
               <p className="text-slate-500">No nation coverage</p>
             )}
           </BlurCard>
-          <TerrainStatistic terrains={data.terrains} />
+          <TerrainStatistic title="Landform" terrains={data.landforms} />
+          <TerrainStatistic title="Biome" terrains={data.biomes} />
         </div>
       </section>
     </div>

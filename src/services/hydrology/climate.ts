@@ -1,7 +1,23 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
-import { TCell, TTerrain } from 'src/types/map.types';
+import { TBiome, TCell, TLandform } from 'src/types/map.types';
 import { clamp } from '../utils/math';
-import { terrainBaseSuitability } from '../terrain/rules';
+
+export type TClimateTerrainTag =
+  | 'lake'
+  | 'deep-water'
+  | 'shallow-water'
+  | 'coast'
+  | 'tundra'
+  | 'mountains'
+  | 'hills'
+  | 'plateau'
+  | 'valley'
+  | 'badlands'
+  | 'desert'
+  | 'swamp'
+  | 'forest'
+  | 'volcanic'
+  | 'plains';
 
 export function buildWaterInfluence(cells: TCell[]): Float32Array {
   let waterInfluence = new Float32Array(cells.length);
@@ -42,7 +58,7 @@ export function getTerrain(
   precipitation: number,
   rainShadow: number,
   relief: number
-): TTerrain {
+): TClimateTerrainTag {
   if (cell.isLake) return 'lake';
   if (cell.elevation < seaLevel - HYDROLOGY_CONFIG.deepWaterDepth) return 'deep-water';
   if (cell.elevation < seaLevel) return 'shallow-water';
@@ -147,16 +163,44 @@ export function getTerrain(
   return 'plains';
 }
 
-export function getSuitability(
-  terrain: TTerrain,
+function climateSuitability(precipitation: number, temperature: number) {
+  const climateScore = 1 - Math.abs(temperature - 0.52) * 1.15;
+  const moistureScore = 1 - Math.abs(precipitation - 0.52) * 0.95;
+  return clamp(climateScore * 0.45 + moistureScore * 0.45 + 0.1, 0, 1);
+}
+
+export function getSuitabilityByLandformBiome(
+  landform: TLandform,
+  biome: TBiome,
   precipitation: number,
   temperature: number
 ): number {
-  const baseSuitability = terrainBaseSuitability(terrain);
-  if (baseSuitability !== null) return baseSuitability;
+  if (landform === 'marine_deep') return 0;
+  if (landform === 'marine_shallow') return 0.02;
+  if (landform === 'lake') return 0.12;
+  if (biome === 'ice') return 0.03;
+  if (biome === 'tundra') return 0.16;
+  if (biome === 'desert_hot') return 0.22;
+  if (biome === 'desert_cold') return 0.2;
+  if (biome === 'wetland') return 0.5;
 
-  const climateScore = 1 - Math.abs(temperature - 0.52) * 1.15;
-  const moistureScore = 1 - Math.abs(precipitation - 0.52) * 0.95;
+  const climate = climateSuitability(precipitation, temperature);
+  let factor = 1;
+  if (landform === 'plain') factor += 0.16;
+  if (landform === 'valley') factor += 0.22;
+  if (landform === 'coast') factor += 0.12;
+  if (landform === 'hills') factor -= 0.05;
+  if (landform === 'plateau') factor -= 0.08;
+  if (landform === 'mountain' || landform === 'volcanic_field') factor -= 0.28;
 
-  return clamp(climateScore * 0.45 + moistureScore * 0.45 + 0.1, 0, 1);
+  if (biome === 'plain') factor += 0.2;
+  if (biome === 'temperate_forest') factor += 0.1;
+  if (biome === 'grassland') factor += 0.08;
+  if (biome === 'savanna') factor += 0.03;
+  if (biome === 'boreal_forest') factor -= 0.04;
+  if (biome === 'tropical_forest') factor -= 0.08;
+  if (biome === 'steppe') factor -= 0.1;
+  if (biome === 'montane_shrub') factor -= 0.14;
+
+  return clamp(climate * factor, 0, 1);
 }

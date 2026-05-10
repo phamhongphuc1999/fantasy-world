@@ -1,11 +1,4 @@
-import {
-  TCell,
-  TCellOwnerParams,
-  TDelaunayMesh,
-  TEthnic,
-  TNumRecordTerrain,
-  TTerrain,
-} from 'src/types/map.types';
+import { TCell, TCellOwnerParams, TDelaunayMesh, TEthnic } from 'src/types/map.types';
 import { createSeededRandom } from '../core/seededRandom';
 import { pickEconomicAndCapital } from './capitals';
 import { buildEthnicRegions } from './ethnic';
@@ -31,49 +24,9 @@ type TBuildGeopoliticsOptions = {
   nationCount: number;
 };
 
-type TTerrainRangeMap = Record<TTerrain, [min: number, max: number]>;
-
 const T_NATION_POPULATION_MULTIPLIER_RANGE: [number, number] = [0.1, 5.0];
 const T_NATION_ECONOMY_MULTIPLIER_RANGE: [number, number] = [0.1, 20];
 const T_MIN_NATION_POPULATION = 500;
-
-const T_TERRAIN_POPULATION_MODIFIER_RANGES: TTerrainRangeMap = {
-  'deep-water': [0, 0.02],
-  'shallow-water': [0.05, 0.2],
-  'inland-sea': [0.02, 0.1],
-  coast: [0.6, 1.2],
-  lake: [0.5, 0.9],
-  plains: [0.4, 0.8],
-  valley: [0.5, 1.0],
-  forest: [0.3, 0.7],
-  plateau: [0.2, 0.5],
-  hills: [0.2, 0.6],
-  swamp: [0.05, 0.2],
-  tundra: [0.02, 0.1],
-  badlands: [0.01, 0.05],
-  desert: [0.01, 0.1],
-  mountains: [0.1, 0.4],
-  volcanic: [0.05, 0.3],
-};
-
-const T_TERRAIN_ECONOMY_MODIFIER_RANGES: TTerrainRangeMap = {
-  'deep-water': [0.1, 0.5],
-  'shallow-water': [0.4, 1.0],
-  'inland-sea': [0.2, 0.6],
-  coast: [1.2, 3.0],
-  lake: [0.8, 1.4],
-  plains: [0.8, 1.5],
-  valley: [1.0, 1.8],
-  forest: [0.7, 1.5],
-  plateau: [0.5, 1.0],
-  hills: [0.8, 1.8],
-  swamp: [0.2, 0.7],
-  tundra: [0.1, 0.6],
-  badlands: [0.2, 1.2],
-  desert: [0.1, 1.8],
-  mountains: [1.2, 3.5],
-  volcanic: [0.8, 2.5],
-};
 
 type TNationAssignment = {
   owner: Int32Array;
@@ -83,8 +36,6 @@ type TNationAssignment = {
 type TNationProfile = {
   populationMultiplier: number;
   economyMultiplier: number;
-  terrainPopMods: TNumRecordTerrain;
-  terrainEcoMods: TNumRecordTerrain;
 };
 
 function randomBetween(random: () => number, min: number, max: number) {
@@ -97,18 +48,6 @@ function buildNationProfiles(owner: Int32Array, seed: string) {
 
   for (const nationId of nationIds) {
     const random = createSeededRandom(`${seed}:nation-profile:${nationId}`);
-    const terrainPopMods = Object.fromEntries(
-      Object.entries(T_TERRAIN_POPULATION_MODIFIER_RANGES).map(([terrain, [min, max]]) => [
-        terrain,
-        randomBetween(random, min, max),
-      ])
-    ) as TNumRecordTerrain;
-    const terrainEcoMods = Object.fromEntries(
-      Object.entries(T_TERRAIN_ECONOMY_MODIFIER_RANGES).map(([terrain, [min, max]]) => [
-        terrain,
-        randomBetween(random, min, max),
-      ])
-    ) as TNumRecordTerrain;
 
     nationProfiles.set(nationId, {
       populationMultiplier: randomBetween(
@@ -121,8 +60,6 @@ function buildNationProfiles(owner: Int32Array, seed: string) {
         T_NATION_ECONOMY_MULTIPLIER_RANGE[0],
         T_NATION_ECONOMY_MULTIPLIER_RANGE[1]
       ),
-      terrainPopMods,
-      terrainEcoMods,
     });
   }
 
@@ -134,6 +71,26 @@ function mapNationsToCells(
   owner: Int32Array,
   nationProfiles: Map<number, TNationProfile>
 ) {
+  function populationModifier(cell: TCell) {
+    let factor = 1;
+    if (cell.landform === 'plain' || cell.landform === 'valley') factor += 0.18;
+    if (cell.landform === 'mountain' || cell.landform === 'volcanic_field') factor -= 0.28;
+    if (cell.biome === 'wetland') factor -= 0.14;
+    if (cell.biome === 'desert_hot' || cell.biome === 'desert_cold') factor -= 0.2;
+    if (cell.biome === 'temperate_forest' || cell.biome === 'tropical_forest') factor += 0.08;
+    return Math.max(0.2, factor);
+  }
+
+  function economyModifier(cell: TCell) {
+    let factor = 1;
+    if (cell.landform === 'coast' || cell.landform === 'valley') factor += 0.22;
+    if (cell.landform === 'mountain') factor -= 0.1;
+    if (cell.landform === 'volcanic_field') factor += 0.08;
+    if (cell.biome === 'steppe') factor += 0.05;
+    if (cell.biome === 'desert_hot') factor -= 0.08;
+    return Math.max(0.25, factor);
+  }
+
   return cells.map((cell) => {
     if (!isLand(cell)) return cell;
     const nationId = owner[cell.id];
@@ -141,8 +98,8 @@ function mapNationsToCells(
     const profile = nationProfiles.get(nationId);
     if (!profile) return cell;
 
-    const terrainPopulationModifier = profile.terrainPopMods[cell.terrain] ?? 1;
-    const terrainEconomyModifier = profile.terrainEcoMods[cell.terrain] ?? 1;
+    const terrainPopulationModifier = populationModifier(cell);
+    const terrainEconomyModifier = economyModifier(cell);
     const population = Math.round(
       cell.population * profile.populationMultiplier * terrainPopulationModifier
     );
