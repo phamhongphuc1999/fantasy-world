@@ -7,25 +7,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from 'src/components/ui/select';
-import { TERRAIN_PRESET_OPTIONS } from 'src/configs/constance';
+import { TOPOGRAPHY_PRESET_OPTIONS } from 'src/configs/constance';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TTerrainPreset } from 'src/types/map.types';
+import { TTopographyPreset } from 'src/types/map.types';
 
 export default function TerrainPresetSelect() {
-  const { terrainPreset, setTerrainPreset } = useMapExplorerStore();
+  const { topographyPreset, setTopographyPreset } = useMapExplorerStore();
 
   return (
-    <BlurCard title="Terrain Preset">
+    <BlurCard title="Topography Preset">
       <Select
-        value={terrainPreset}
-        onValueChange={(value) => setTerrainPreset(value as TTerrainPreset)}
+        value={topographyPreset}
+        onValueChange={(value) => setTopographyPreset(value as TTopographyPreset)}
       >
         <SelectTrigger>
-          <SelectValue placeholder="Terrain Preset" />
+          <SelectValue placeholder="Topography Preset" />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            {TERRAIN_PRESET_OPTIONS.map((option) => (
+            {TOPOGRAPHY_PRESET_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>

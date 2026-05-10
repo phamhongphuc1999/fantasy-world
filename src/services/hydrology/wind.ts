@@ -1,6 +1,8 @@
-import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { PRECIPITATION_MODEL } from 'src/configs/MapConfig/hydrology.config';
 import { TCell } from 'src/types/map.types';
 import { hashSeed } from '../core/seededRandom';
+
+const WIND_MODEL = PRECIPITATION_MODEL.wind;
 
 export type TWindVector = {
   x: number;
@@ -23,32 +25,32 @@ function baseWind(latitude: number) {
   const toEquator = latitude > 0 ? 1 : -1;
   const toPole = latitude > 0 ? -1 : 1;
 
-  if (absLat <= HYDROLOGY_CONFIG.wind.tradeLatMax) {
-    const equatorBlend = 1 - absLat / Math.max(0.0001, HYDROLOGY_CONFIG.wind.tradeLatMax);
+  if (absLat <= WIND_MODEL.tradeLatMax) {
+    const equatorBlend = 1 - absLat / Math.max(0.0001, WIND_MODEL.tradeLatMax);
     return {
       x: -1,
-      y: toEquator * HYDROLOGY_CONFIG.wind.equatorBlend * equatorBlend,
-      speed: HYDROLOGY_CONFIG.wind.tradeSpeed,
+      y: toEquator * WIND_MODEL.equatorBlend * equatorBlend,
+      speed: WIND_MODEL.tradeSpeed,
     };
   }
 
-  if (absLat <= HYDROLOGY_CONFIG.wind.westerlyLatMax) {
+  if (absLat <= WIND_MODEL.westerlyLatMax) {
     return {
       x: 1,
       y: toPole * 0.2,
-      speed: HYDROLOGY_CONFIG.wind.westerlySpeed,
+      speed: WIND_MODEL.westerlySpeed,
     };
   }
 
   return {
     x: -1,
     y: toEquator * 0.15,
-    speed: HYDROLOGY_CONFIG.wind.polarSpeed,
+    speed: WIND_MODEL.polarSpeed,
   };
 }
 
 export function buildWindField(cells: TCell[], height: number, seed: string): TWindVector[] {
-  const noiseStrength = HYDROLOGY_CONFIG.wind.noise;
+  const noiseStrength = WIND_MODEL.noise;
 
   return cells.map((cell) => {
     const latitude = signedLatitude(cell.site[1], height);

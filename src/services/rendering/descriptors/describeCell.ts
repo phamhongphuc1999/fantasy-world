@@ -1,9 +1,9 @@
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
 import { clamp } from 'src/services/utils/math';
-import { BIOME_LABELS, LANDFORM_LABELS } from 'src/services/terrain/classification';
 import { TCell, TCellDescription } from 'src/types/map.types';
 
 export function describeCell(cell: TCell): TCellDescription {
-  const terrainType = LANDFORM_LABELS[cell.landform];
+  const terrainType = LANDFORM_CONFIG[cell.landform].label;
   const suitabilityPercent = Math.round(clamp(cell.suitability, 0, 1) * 100);
   const temperatureC = Math.round(-12 + cell.temperature * 44);
   const precipitationPercent = Math.round(cell.precipitation * 100);
@@ -12,7 +12,7 @@ export function describeCell(cell: TCell): TCellDescription {
   return {
     terrainType,
     elevation: cell.elevation.toFixed(3),
-    biome: BIOME_LABELS[cell.biome],
+    biome: BIOME_CONFIG[cell.biome].label,
     flow: cell.flow.toFixed(2),
     suitability: `${suitabilityPercent}%`,
     population: String(cell.population),

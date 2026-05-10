@@ -1,5 +1,5 @@
-import { TOPOGRAPHY_CONFIG } from 'src/configs/mapConfig';
-import { TDelaunayMesh, TLine, TTerrainPreset, TTopographyCell } from 'src/types/map.types';
+import { TOPOGRAPHY_CONFIG } from 'src/configs/MapConfig';
+import { TDelaunayMesh, TLine, TTopographyCell, TTopographyPreset } from 'src/types/map.types';
 import { createSeededRandom, hashSeed } from '../core/seededRandom';
 import { distanceToSegment } from '../utils/geometry';
 import { clamp, smoothStep } from '../utils/math';
@@ -9,7 +9,7 @@ interface TBuildTopographyOptions {
   mesh: TDelaunayMesh;
   seed: string;
   seaLevel: number;
-  terrainPreset: TTerrainPreset;
+  topographyPreset: TTopographyPreset;
 }
 
 type TBoundaryLine = TLine & {
@@ -241,7 +241,7 @@ export function buildTopography({
   mesh,
   seed,
   seaLevel,
-  terrainPreset,
+  topographyPreset,
 }: TBuildTopographyOptions): TDelaunayMesh {
   const noise = createNoiseSampler();
   const macroHash = hashSeed(`${seed}:macro`);
@@ -388,7 +388,7 @@ export function buildTopography({
   const presetElevations = applyTerrainPreset({
     mesh,
     seed,
-    preset: terrainPreset,
+    preset: topographyPreset,
     elevations: baseElevations,
   });
   const elevations = reinforceHighMountains(presetElevations, seaLevel);

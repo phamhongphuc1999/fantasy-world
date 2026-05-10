@@ -1,5 +1,5 @@
-import { PRESET_CONFIG } from 'src/configs/mapConfig';
-import { TMesh, TTerrainPreset } from 'src/types/map.types';
+import { PRESET_CONFIG } from 'src/configs/MapConfig';
+import { TMesh, TTopographyPreset } from 'src/types/map.types';
 import { createSeededRandom, hashSeed } from '../core/seededRandom';
 import { clamp } from '../utils/math';
 import {
@@ -14,7 +14,7 @@ import {
 interface TApplyTerrainPresetOptions {
   mesh: TMesh;
   seed: string;
-  preset: TTerrainPreset;
+  preset: TTopographyPreset;
   elevations: Float32Array;
 }
 

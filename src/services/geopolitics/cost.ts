@@ -1,4 +1,4 @@
-import { BORDER_CONFIG } from 'src/configs/mapConfig';
+import { BORDER_CONFIG } from 'src/configs/MapConfig';
 import { TBorderType, TCell } from 'src/types/map.types';
 
 export default class Cost {

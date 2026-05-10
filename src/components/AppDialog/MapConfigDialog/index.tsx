@@ -25,18 +25,11 @@ import GenerateTab from './GenerateTab';
 import NationsPanel from './NationsPanel';
 
 const T_MAP_CONFIG_ACTIVE_PANEL_KEY = 'map-config-active-panel';
-const T_ALLOWED_PANELS = new Set([
-  'terrain',
-  'generation',
-  'display',
-  'nations',
-  'ethnic',
-  'export',
-]);
+const T_ALLOWED_PANELS = new Set(['generation', 'display', 'nations', 'ethnic', 'export']);
 
 export default function MapConfigDialog() {
   const { resetToDefaults } = useMapExplorerStore();
-  const [activePanel, setActivePanel] = useState('terrain');
+  const [activePanel, setActivePanel] = useState('generation');
 
   useEffect(() => {
     const stored = window.localStorage.getItem(T_MAP_CONFIG_ACTIVE_PANEL_KEY);

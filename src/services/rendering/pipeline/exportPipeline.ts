@@ -1,8 +1,8 @@
 import { getNationColor } from 'src/services/rendering/colors';
 import { getRiverStrokeWidth } from 'src/services/rendering/rivers';
-import { BIOME_COLORS, LANDFORM_COLORS } from 'src/services/terrain/classification';
 import { TDelaunayMesh, TDisplaySettings, TPoint } from 'src/types/map.types';
 import { getRiverSegmentEndPoint } from 'src/services/rendering/canvas/primitives';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
 
 function toPolygonPath(points: TPoint[]) {
   if (points.length === 0) return '';
@@ -18,7 +18,9 @@ export function buildMapSvg(mesh: TDelaunayMesh, displaySettings: TDisplaySettin
   const background = `<rect width="${mesh.width}" height="${mesh.height}" fill="#09131f" />`;
   const landLayer = mesh.cells
     .map((cell) => {
-      const defaultColor = cell.isWater ? BIOME_COLORS[cell.biome] : LANDFORM_COLORS[cell.landform];
+      const defaultColor = cell.isWater
+        ? BIOME_CONFIG[cell.biome].color
+        : LANDFORM_CONFIG[cell.landform].color;
       const color = cell.isWater
         ? defaultColor
         : displaySettings.countryFill
@@ -26,9 +28,9 @@ export function buildMapSvg(mesh: TDelaunayMesh, displaySettings: TDisplaySettin
           : displaySettings.ethnicFill
             ? getNationColor(cell.ethnicId)
             : displaySettings.landform
-              ? LANDFORM_COLORS[cell.landform]
+              ? LANDFORM_CONFIG[cell.landform].color
               : displaySettings.biome
-                ? BIOME_COLORS[cell.biome]
+                ? BIOME_CONFIG[cell.biome].color
                 : defaultColor;
       const opacity = cell.isWater ? 0.95 : 0.96;
       return `<path d="${toPolygonPath(cell.polygon)}" fill="${color}" fill-opacity="${opacity}" />`;

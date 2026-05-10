@@ -1,8 +1,9 @@
-import { HYDROLOGY_CONFIG, RIVER_GEN_CONFIG } from 'src/configs/mapConfig';
+import { RIVER_CONFIG } from 'src/configs/MapConfig';
+import { CORE } from 'src/configs/MapConfig/hydrology.config';
 import { TCell, TPoint, TRiver, TRiverEndType, TRiverKind } from 'src/types/map.types';
 import { createSeededRandom } from '../core/seededRandom';
 
-const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutlet;
+const T_COAST_OUTLET = CORE.coastOutletId;
 
 type TRiverGenerationResult = {
   downstream: Int32Array;
@@ -33,24 +34,24 @@ function sortIndicesByElevation(elevation: Float32Array) {
 function prepareTerrain(cells: TCell[], elevation: Float32Array, isLand: Uint8Array) {
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
-    const land = !cell.isWater && cell.elevation >= RIVER_GEN_CONFIG.landWaterThreshold;
+    const land = !cell.isWater && cell.elevation >= RIVER_CONFIG.landWaterThreshold;
     isLand[cellIndex] = land ? 1 : 0;
     elevation[cellIndex] = cell.elevation;
 
     if (!land) continue;
     const hasWaterNeighbor = cell.neighbors.some((neighborId) => cells[neighborId].isWater);
     if (hasWaterNeighbor) {
-      elevation[cellIndex] += RIVER_GEN_CONFIG.depression.coastLift;
+      elevation[cellIndex] += RIVER_CONFIG.depression.coastLift;
     }
   }
 }
 
 function fillDepressions(cells: TCell[], elevation: Float32Array, isLand: Uint8Array) {
   const filled = new Float32Array(elevation);
-  const epsilon = RIVER_GEN_CONFIG.depression.epsilon;
+  const epsilon = RIVER_CONFIG.depression.epsilon;
   let iterations = 0;
 
-  for (; iterations < RIVER_GEN_CONFIG.depression.maxIterations; iterations += 1) {
+  for (; iterations < RIVER_CONFIG.depression.maxIterations; iterations += 1) {
     let changed = 0;
     for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
       if (isLand[cellIndex] === 0) continue;
@@ -109,7 +110,7 @@ function accumulateFlow(
   const downstream = new Int32Array(cells.length);
   downstream.fill(-1);
 
-  const cellModifier = Math.pow(cells.length / 10000, RIVER_GEN_CONFIG.cellsNumberModifierExp);
+  const cellModifier = Math.pow(cells.length / 10000, RIVER_CONFIG.cellsNumberModifierExp);
   const flow = new Float32Array(cells.length);
   const effectiveFlow = new Float32Array(cells.length);
 
@@ -232,8 +233,8 @@ function buildRiverGraph(
   seed: string
 ) {
   const threshold =
-    RIVER_GEN_CONFIG.minFluxToFormRiver *
-    Math.pow(cells.length / 10000, RIVER_GEN_CONFIG.cellsNumberModifierExp);
+    RIVER_CONFIG.minFluxToFormRiver *
+    Math.pow(cells.length / 10000, RIVER_CONFIG.cellsNumberModifierExp);
   const riverByCell = new Int32Array(cells.length);
   riverByCell.fill(-1);
   const riversRaw = new Map<number, number[]>();
@@ -312,7 +313,7 @@ function buildRiverGraph(
   const riverWidthByCell = new Float32Array(cells.length);
 
   for (const [riverId, chain] of riversRaw.entries()) {
-    if (chain.length < RIVER_GEN_CONFIG.minRiverCells) {
+    if (chain.length < RIVER_CONFIG.minRiverCells) {
       for (const cellId of chain) riverByCell[cellId] = -1;
       continue;
     }
@@ -367,9 +368,9 @@ function buildRiverGraph(
       if (index > 0) {
         const previous = polyline[polyline.length - 2] as TPoint;
         const segmentLength = Math.hypot(cell.site[0] - previous[0], cell.site[1] - previous[1]);
-        if (segmentLength >= RIVER_GEN_CONFIG.meander.minSegmentLength) {
+        if (segmentLength >= RIVER_CONFIG.meander.minSegmentLength) {
           const t = index / Math.max(1, chain.length - 1);
-          const amount = RIVER_GEN_CONFIG.meander.base * (1 - t) * 6;
+          const amount = RIVER_CONFIG.meander.base * (1 - t) * 6;
           const mx = (cell.site[0] + previous[0]) * 0.5;
           const my = (cell.site[1] + previous[1]) * 0.5;
           const dx = cell.site[0] - previous[0];
@@ -386,19 +387,19 @@ function buildRiverGraph(
     const startFlow = flow[sourceCellId];
     const startingWidth =
       Math.min(
-        RIVER_GEN_CONFIG.width.maxFluxWidth,
-        Math.pow(Math.max(0, startFlow), 0.7) / RIVER_GEN_CONFIG.width.fluxFactor
+        RIVER_CONFIG.width.maxFluxWidth,
+        Math.pow(Math.max(0, startFlow), 0.7) / RIVER_CONFIG.width.fluxFactor
       ) +
-      RIVER_GEN_CONFIG.width.minWidth * 0.2;
+      RIVER_CONFIG.width.minWidth * 0.2;
 
     for (let pointIndex = 0; pointIndex < chain.length; pointIndex += 1) {
       const cellId = chain[pointIndex] as number;
       const fluxWidth = Math.min(
-        RIVER_GEN_CONFIG.width.maxFluxWidth,
-        Math.pow(Math.max(0, flow[cellId]), 0.7) / RIVER_GEN_CONFIG.width.fluxFactor
+        RIVER_CONFIG.width.maxFluxWidth,
+        Math.pow(Math.max(0, flow[cellId]), 0.7) / RIVER_CONFIG.width.fluxFactor
       );
       const t = pointIndex / Math.max(1, chain.length - 1);
-      const linearGrow = pointIndex / Math.max(1, RIVER_GEN_CONFIG.width.lengthFactor * 0.85);
+      const linearGrow = pointIndex / Math.max(1, RIVER_CONFIG.width.lengthFactor * 0.85);
       const earlyProgression = Math.log2(pointIndex + 2) * 0.14;
       const downstreamBoost = Math.pow(t, 1.65) * 1.55;
       const lengthWidth = linearGrow + earlyProgression + downstreamBoost;
@@ -426,7 +427,7 @@ function buildRiverGraph(
       const offset = pointOffsets[pointIndex] as number;
       riverWidthByCell[cellId] = Math.max(
         riverWidthByCell[cellId],
-        Math.min(RIVER_GEN_CONFIG.width.maxWidth, Math.max(0.45, Math.pow(offset / 1.5, 1.8)))
+        Math.min(RIVER_CONFIG.width.maxWidth, Math.max(0.45, Math.pow(offset / 1.5, 1.8)))
       );
     }
 
@@ -448,7 +449,7 @@ function buildRiverGraph(
     const polygon = [...leftBank, ...rightBank.reverse()];
     const mouthOffset = pointOffsets[pointOffsets.length - 1] ?? startingWidth;
     const mouthWidth = Math.min(
-      RIVER_GEN_CONFIG.width.maxWidth,
+      RIVER_CONFIG.width.maxWidth,
       Math.max(0.45, Math.pow(mouthOffset / 1.5, 1.8))
     );
 

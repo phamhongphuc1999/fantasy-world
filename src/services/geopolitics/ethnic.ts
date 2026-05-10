@@ -1,4 +1,4 @@
-import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/MapConfig';
 import { findNearestCell } from 'src/services/utils/geometry';
 import { sortDescStable } from 'src/services/utils/stats';
 import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';

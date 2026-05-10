@@ -1,6 +1,7 @@
 'use client';
 
 import { RefObject, useEffect } from 'react';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
 import {
   drawCountryFill,
   drawEthnicBorders,
@@ -29,7 +30,6 @@ import {
 } from 'src/services/rendering/canvas/primitives';
 import { applyShadedRelief } from 'src/services/rendering/canvas/relief';
 import { getRiverStrokeWidth } from 'src/services/rendering/rivers';
-import { BIOME_COLORS, LANDFORM_COLORS } from 'src/services/terrain/classification';
 import { TCell, TDisplaySettings, TEthnic, TNation } from 'src/types/map.types';
 
 const T_SITE_MARKER_LIMIT = 4000;
@@ -76,7 +76,7 @@ export default function useMapCanvas(params: TProps) {
 
     for (const cell of cells) {
       if (isLandCell(cell)) continue;
-      drawCellShape(context, cell, LANDFORM_COLORS[cell.landform], 1, 'transparent', 0);
+      drawCellShape(context, cell, LANDFORM_CONFIG[cell.landform].color, 1, 'transparent', 0);
     }
 
     const showUniformLand =
@@ -150,28 +150,28 @@ export default function useMapCanvas(params: TProps) {
     if (displaySettings.landform) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, LANDFORM_COLORS[cell.landform], 1, 'transparent', 0);
+        drawCellShape(context, cell, LANDFORM_CONFIG[cell.landform].color, 1, 'transparent', 0);
       }
     }
 
     if (displaySettings.biome) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, BIOME_COLORS[cell.biome], 1, 'transparent', 0);
+        drawCellShape(context, cell, BIOME_CONFIG[cell.biome].color, 1, 'transparent', 0);
       }
     }
 
     if (showLandformReliefBase) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, LANDFORM_COLORS[cell.landform], 1, 'transparent', 0);
+        drawCellShape(context, cell, LANDFORM_CONFIG[cell.landform].color, 1, 'transparent', 0);
       }
     }
 
     if (showBiomeReliefBase) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, BIOME_COLORS[cell.biome], 1, 'transparent', 0);
+        drawCellShape(context, cell, BIOME_CONFIG[cell.biome].color, 1, 'transparent', 0);
       }
     }
 

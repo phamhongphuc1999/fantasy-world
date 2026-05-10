@@ -1,4 +1,4 @@
-import { BORDER_CONFIG } from 'src/configs/mapConfig';
+import { BORDER_CONFIG } from 'src/configs/MapConfig';
 import { collectConnectedComponents } from 'src/services/core/graph';
 import { TBorderType, TCell, TLandform, TZoneType } from 'src/types/map.types';
 import Cost from './cost';

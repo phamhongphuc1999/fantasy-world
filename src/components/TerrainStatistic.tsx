@@ -1,9 +1,4 @@
-import {
-  BIOME_COLORS,
-  BIOME_LABELS,
-  LANDFORM_COLORS,
-  LANDFORM_LABELS,
-} from 'src/services/terrain/classification';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
 import { TPieChartData } from 'src/types/global';
 import { TBiome, TLandform } from 'src/types/map.types';
 import BlurCard from './BlurCard';
@@ -25,15 +20,15 @@ export default function TerrainStatistic({ terrains, title = 'Terrain' }: TProps
     terrains.map((item) => {
       const landformKey = item.terrain as TLandform;
       const biomeKey = item.terrain as TBiome;
-      const landformLabel = LANDFORM_LABELS[landformKey];
-      const biomeLabel = BIOME_LABELS[biomeKey];
+      const landformLabel = LANDFORM_CONFIG[landformKey].label;
+      const biomeLabel = BIOME_CONFIG[biomeKey].label;
 
       if (landformLabel) {
         return {
           type: item.terrain,
           label: landformLabel,
           value: item.percent,
-          color: LANDFORM_COLORS[landformKey],
+          color: LANDFORM_CONFIG[landformKey].color,
           cellCount: item.count,
           icon: '🧭',
         };
@@ -42,7 +37,7 @@ export default function TerrainStatistic({ terrains, title = 'Terrain' }: TProps
         type: item.terrain,
         label: biomeLabel || item.terrain,
         value: item.percent,
-        color: BIOME_COLORS[biomeKey] || '#64748b',
+        color: BIOME_CONFIG[biomeKey].color || '#64748b',
         cellCount: item.count,
         icon: '🌿',
       };

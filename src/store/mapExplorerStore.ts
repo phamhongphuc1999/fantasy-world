@@ -1,7 +1,7 @@
 'use client';
 
-import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
-import { TDisplaySettings, TTerrainPreset } from 'src/types/map.types';
+import { DEFAULT_CONFIG } from 'src/configs/MapConfig';
+import { TDisplaySettings, TTopographyPreset } from 'src/types/map.types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -17,7 +17,7 @@ interface TMapExplorerState {
   seed: string;
   cellCount: number;
   seaLevel: number;
-  terrainPreset: TTerrainPreset;
+  topographyPreset: TTopographyPreset;
   nationCount: number;
   climateControl: TClimateControl;
   displaySettings: TDisplaySettings;
@@ -29,7 +29,7 @@ type TMapExplorerActions = {
   setSeed: (seed: string) => void;
   setCellCount: (cellCount: number) => void;
   setSeaLevel: (seaLevel: number) => void;
-  setTerrainPreset: (terrainPreset: TTerrainPreset) => void;
+  setTopographyPreset: (topographyPreset: TTopographyPreset) => void;
   setNationCount: (nationCount: number) => boolean;
   setClimateControl: (climateControl: TClimateControl) => void;
   setClimateControlField: <K extends keyof TClimateControl>(
@@ -50,7 +50,7 @@ const DEFAULT_STATE: TMapExplorerState = {
   seed: DEFAULT_CONFIG.seed,
   cellCount: DEFAULT_CONFIG.cellCount,
   seaLevel: DEFAULT_CONFIG.seaLevel,
-  terrainPreset: DEFAULT_CONFIG.terrainPreset,
+  topographyPreset: DEFAULT_CONFIG.topographyPreset,
   nationCount: DEFAULT_CONFIG.nationCount,
   climateControl: DEFAULT_CONFIG.climateControl,
   displaySettings: DEFAULT_CONFIG.displaySettings,
@@ -73,8 +73,8 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         if (seaLevel === seaLevelDraft) return;
         set({ seaLevel: seaLevelDraft, hoverIndex: null });
       },
-      setTerrainPreset(terrainPreset: TTerrainPreset) {
-        set({ terrainPreset, hoverIndex: null });
+      setTopographyPreset(topographyPreset: TTopographyPreset) {
+        set({ topographyPreset, hoverIndex: null });
       },
       setNationCount(nationCount: number) {
         if (nationCount < 2 || nationCount > 40) return false;
@@ -123,19 +123,23 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         seed: state.seed,
         cellCount: state.cellCount,
         seaLevel: state.seaLevel,
-        terrainPreset: state.terrainPreset,
+        topographyPreset: state.topographyPreset,
         nationCount: state.nationCount,
         climateControl: state.climateControl,
         displaySettings: state.displaySettings,
       }),
-      version: 7,
+      version: 8,
       migrate: (persistedState) => {
-        const state = persistedState as Partial<TMapExplorerState> | undefined;
+        const state = persistedState as
+          | (Partial<TMapExplorerState> & { terrainPreset?: TTopographyPreset })
+          | undefined;
         if (!state) return DEFAULT_STATE;
         const persistedDisplaySettings = state.displaySettings as TDisplaySettings | undefined;
         return {
           ...DEFAULT_STATE,
           ...state,
+          topographyPreset:
+            state.topographyPreset || state.terrainPreset || DEFAULT_CONFIG.topographyPreset,
           climateControl: { ...DEFAULT_CONFIG.climateControl, ...state.climateControl },
           displaySettings: { ...DEFAULT_CONFIG.displaySettings, ...persistedDisplaySettings },
         };

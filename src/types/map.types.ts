@@ -60,7 +60,7 @@ export type TBorderConfig = {
   smoothness: { edgeNoiseWeight: number; jaggedPenalty: number };
 };
 
-export type TTerrainPreset = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
+export type TTopographyPreset = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
 
 export interface TTopographyCell {
   elevation: number;
@@ -168,8 +168,6 @@ export interface TDisplaySettings {
   landformRelief: boolean;
   biome: boolean;
   biomeRelief: boolean;
-  terrain: boolean;
-  terrainRelief: boolean;
   population: boolean;
   temperature: boolean;
   precipitation: boolean;
@@ -186,9 +184,9 @@ export interface TDisplaySettings {
   cellData: boolean;
 }
 
-export interface TTerrainPresetOption {
+export interface TTopographyPresetOption {
   label: string;
-  value: TTerrainPreset;
+  value: TTopographyPreset;
 }
 
 export interface TGenerationConfig {
@@ -197,7 +195,7 @@ export interface TGenerationConfig {
   seed: string;
   cellCount: number;
   seaLevel: number;
-  terrainPreset: TTerrainPreset;
+  topographyPreset: TTopographyPreset;
   nationCount: number;
   climateControl: {
     temperatureOffset: number;
@@ -214,18 +212,6 @@ export interface TGenerationStages {
   hydrology: TDelaunayMesh;
   population: TDelaunayMesh;
   geopolitics: TDelaunayMesh;
-}
-
-export interface THydrology {
-  initDownstreamMs: number;
-  flowAccumulationMs: number;
-  erosionAdjustmentMs: number;
-  climateAndTerrainMs: number;
-  lakesMs: number;
-  riversMs: number;
-  terrainPostProcessMs: number;
-  finalizeBiomeMs: number;
-  totalMs: number;
 }
 
 export interface TCellDescription {

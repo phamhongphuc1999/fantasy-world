@@ -1,4 +1,4 @@
-import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/MapConfig';
 import { getMetricRange } from 'src/services/utils/stats';
 import { normalize } from 'src/services/utils/math';
 import { buildDistanceMap, collectConnectedComponents } from 'src/services/core/graph';

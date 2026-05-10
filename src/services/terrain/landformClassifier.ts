@@ -1,4 +1,4 @@
-import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { ELEVATION_CONFIG, LANDFORM_MODEL } from 'src/configs/MapConfig/hydrology.config';
 import { TCell, TLandform } from 'src/types/map.types';
 import { TClimateTerrainTag } from '../hydrology/climate';
 import { clamp } from '../utils/math';
@@ -37,9 +37,9 @@ function isValleyContext(
   flowSignal: number,
   seaLevel: number
 ) {
-  const model = HYDROLOGY_CONFIG.landformModel;
-  if (elevationAboveSea > model.valleyMaxElevAboveSea) return false;
-  if (slopeSignal > model.valleyReliefMax) return false;
+  const model = LANDFORM_MODEL;
+  if (elevationAboveSea > ELEVATION_CONFIG.maxValley) return false;
+  if (slopeSignal > model.valleyMax) return false;
   if (flowSignal < model.valleyMinFlowSignal) return false;
 
   let validNeighbors = 0;
@@ -69,7 +69,7 @@ function classifyLandformForCell(
   climateTerrain: TClimateTerrainTag,
   cells: TCell[]
 ): TLandform {
-  const model = HYDROLOGY_CONFIG.landformModel;
+  const model = LANDFORM_MODEL;
 
   if (cell.isWater) {
     if (cell.isLake) return 'lake';
@@ -78,7 +78,7 @@ function classifyLandformForCell(
   }
 
   if (
-    cell.elevation <= seaLevel + model.coastMaxElevAboveSea ||
+    cell.elevation <= seaLevel + ELEVATION_CONFIG.coast ||
     climateTerrain === 'coast' ||
     hasMarineNeighbor(cell, cells)
   ) {
@@ -88,8 +88,8 @@ function classifyLandformForCell(
   const elevationAboveSea = Math.max(0, cell.elevation - seaLevel);
   const slopeSignal = getSlopeSignal(relief);
   const flowSignal = getFlowSignal(localFlow);
-  const inHighland = elevationAboveSea >= model.highlandMinElevAboveSea;
-  const inMountainBand = elevationAboveSea >= model.mountainMinElevAboveSea;
+  const inHighland = elevationAboveSea >= ELEVATION_CONFIG.minHighland;
+  const inMountainBand = elevationAboveSea >= ELEVATION_CONFIG.minMountain;
 
   const scoreMountain = elevationAboveSea * 1.25 + Math.max(0, slopeSignal) * 0.85;
   const scoreHills = elevationAboveSea * 0.7 + Math.max(0, slopeSignal) * 0.95;
@@ -102,7 +102,7 @@ function classifyLandformForCell(
     Math.max(0, elevationAboveSea - 0.22) * 0.8 +
     Math.max(0, slopeSignal - 0.12) * 0.5;
 
-  const allowPlain = elevationAboveSea <= model.plainMaxElevAboveSea && !inHighland;
+  const allowPlain = elevationAboveSea <= ELEVATION_CONFIG.maxPlain && !inHighland;
   const allowValley = isValleyContext(
     cell,
     cells,
@@ -115,7 +115,7 @@ function classifyLandformForCell(
   const allowPlateau = true;
   const allowMountain = inMountainBand || slopeSignal >= model.mountainMinSlope;
   const allowVolcanic =
-    climateTerrain === 'volcanic' && elevationAboveSea >= model.volcanicMinElevAboveSea;
+    climateTerrain === 'volcanic' && elevationAboveSea >= ELEVATION_CONFIG.minVolcanic;
 
   let best: TLandform = inHighland ? 'plateau' : 'plain';
   let bestScore = allowPlain ? scorePlain : Number.NEGATIVE_INFINITY;

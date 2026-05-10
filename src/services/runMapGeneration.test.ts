@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
+import { DEFAULT_CONFIG, MAP_VIEWPORT_CONFIG } from 'src/configs/MapConfig';
 import { TDelaunayMesh, TGenerationConfig, TGenerationStages } from 'src/types/map.types';
 import { describe, expect, it } from 'vitest';
 import { MapGenerator } from './pipeline/MapGenerator';
@@ -117,7 +117,7 @@ function makeConfig(seed: string): TGenerationConfig {
     seed,
     cellCount: 2000,
     seaLevel: DEFAULT_CONFIG.seaLevel,
-    terrainPreset: DEFAULT_CONFIG.terrainPreset,
+    topographyPreset: DEFAULT_CONFIG.topographyPreset,
     nationCount: DEFAULT_CONFIG.nationCount,
     climateControl: DEFAULT_CONFIG.climateControl,
   };

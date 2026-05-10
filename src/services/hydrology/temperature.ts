@@ -1,4 +1,4 @@
-import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { TEMPERATURE_MODEL } from 'src/configs/MapConfig/hydrology.config';
 import { TCell } from 'src/types/map.types';
 import { hashSeed } from '../core/seededRandom';
 import { clamp } from '../utils/math';
@@ -67,7 +67,7 @@ function getAlongWindSlope(cell: TCell, cells: TCell[], wind: TWindVector) {
 
 function smoothTemperature(cells: TCell[], temperature: Float32Array) {
   const next = new Float32Array(temperature.length);
-  for (let pass = 0; pass < HYDROLOGY_CONFIG.temperatureModel.smoothingPasses; pass += 1) {
+  for (let pass = 0; pass < TEMPERATURE_MODEL.smoothingPasses; pass += 1) {
     for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
       const cell = cells[cellIndex];
       if (cell.neighbors.length === 0) {
@@ -98,43 +98,36 @@ export function computeAdvancedTemperature({
   const temperature = new Float32Array(cells.length);
   const marineDistance = buildMarineDistance(cells);
   const seasonNoise = ((hashSeed(`${seed}:temperature:season`) % 10000) / 9999) * 2 - 1;
-  const seasonPhase = HYDROLOGY_CONFIG.temperatureModel.seasonPhase + seasonNoise * 0.08;
+  const seasonPhase = TEMPERATURE_MODEL.seasonPhase + seasonNoise * 0.08;
   const seasonOffset = Math.sin(Math.PI * 2 * seasonPhase) * 0.04;
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
     const latitude = Math.abs((cell.site[1] / height) * 2 - 1);
     const latitudeCooling =
-      Math.pow(latitude, HYDROLOGY_CONFIG.temperatureModel.latCurve) *
-      HYDROLOGY_CONFIG.temperatureModel.latBase;
+      Math.pow(latitude, TEMPERATURE_MODEL.latCurve) * TEMPERATURE_MODEL.latBase;
 
     const moistFactor = clamp(precipitation[cellIndex], 0, 1);
     const lapseRate =
-      HYDROLOGY_CONFIG.temperatureModel.lapseDry -
-      moistFactor * HYDROLOGY_CONFIG.temperatureModel.precipLapseInfluence;
-    const effectiveLapse = Math.max(HYDROLOGY_CONFIG.temperatureModel.lapseMoistMin, lapseRate);
+      TEMPERATURE_MODEL.lapseDry - moistFactor * TEMPERATURE_MODEL.precipLapseInfluence;
+    const effectiveLapse = Math.max(TEMPERATURE_MODEL.lapseMoistMin, lapseRate);
     const elevationCooling = Math.max(0, cell.elevation - seaLevel) * effectiveLapse;
 
     const marineDist = marineDistance[cellIndex];
     const maritimeInfluence =
       marineDist < 0
         ? 0
-        : clamp(
-            1 - marineDist / Math.max(1, HYDROLOGY_CONFIG.temperatureModel.maritimeRadius),
-            0,
-            1
-          );
+        : clamp(1 - marineDist / Math.max(1, TEMPERATURE_MODEL.maritimeRadius), 0, 1);
     const maritimeModeration =
       (waterInfluence[cellIndex] * 0.5 + maritimeInfluence * 0.5) *
-      HYDROLOGY_CONFIG.temperatureModel.maritimeStrength;
+      TEMPERATURE_MODEL.maritimeStrength;
 
     const alongWindSlope = getAlongWindSlope(cell, cells, windField[cellIndex] as TWindVector);
-    const aspectCooling =
-      clamp(alongWindSlope * 80, -1, 1) * HYDROLOGY_CONFIG.temperatureModel.aspectStrength;
+    const aspectCooling = clamp(alongWindSlope * 80, -1, 1) * TEMPERATURE_MODEL.aspectStrength;
     const coldPool =
       Math.max(0, -reliefByCell[cellIndex]) *
       Math.max(0, 1 - flow[cellIndex] / 4) *
-      HYDROLOGY_CONFIG.temperatureModel.coldPoolStrength;
+      TEMPERATURE_MODEL.coldPoolStrength;
 
     temperature[cellIndex] = clamp(
       1 -

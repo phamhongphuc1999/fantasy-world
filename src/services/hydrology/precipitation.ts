@@ -1,4 +1,4 @@
-import { HYDROLOGY_CONFIG } from 'src/configs/mapConfig';
+import { PRECIPITATION_MODEL } from 'src/configs/MapConfig/hydrology.config';
 import { TCell } from 'src/types/map.types';
 import { clamp } from '../utils/math';
 import { TWindVector } from './wind';
@@ -86,7 +86,7 @@ export function computeAdvancedPrecipitation({
 
   for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
     moisture[cellIndex] = clamp(
-      waterInfluence[cellIndex] * HYDROLOGY_CONFIG.moistureAdvection.maxSource,
+      waterInfluence[cellIndex] * PRECIPITATION_MODEL.moistureAdvection.maxSource,
       0,
       1
     );
@@ -94,7 +94,7 @@ export function computeAdvancedPrecipitation({
 
   for (
     let iteration = 0;
-    iteration < HYDROLOGY_CONFIG.moistureAdvection.iterations;
+    iteration < PRECIPITATION_MODEL.moistureAdvection.iterations;
     iteration += 1
   ) {
     for (let cellIndex = 0; cellIndex < cellCount; cellIndex += 1) {
@@ -102,11 +102,11 @@ export function computeAdvancedPrecipitation({
       const wind = windField[cellIndex];
       const upwindMoisture = getUpwindMoisture(cell, cells, wind, moisture);
       const advectedMoisture =
-        upwindMoisture * HYDROLOGY_CONFIG.moistureAdvection.carry +
-        moisture[cellIndex] * HYDROLOGY_CONFIG.moistureAdvection.selfCarry;
+        upwindMoisture * PRECIPITATION_MODEL.moistureAdvection.carry +
+        moisture[cellIndex] * PRECIPITATION_MODEL.moistureAdvection.selfCarry;
       const recharge =
         waterInfluence[cellIndex] *
-        HYDROLOGY_CONFIG.moistureAdvection.localRecharge *
+        PRECIPITATION_MODEL.moistureAdvection.localRecharge *
         (iteration + 1);
       const localMoisture = clamp(
         Math.max(moisture[cellIndex], advectedMoisture + recharge),
@@ -118,41 +118,43 @@ export function computeAdvancedPrecipitation({
       const uplift = Math.max(0, gradient);
       const descent = Math.max(0, -gradient);
 
-      const cloudSource = uplift * HYDROLOGY_CONFIG.orographic.upliftScale * localMoisture;
-      const cloudLoss = cloud[cellIndex] / HYDROLOGY_CONFIG.microphysics.tauCloud;
+      const cloudSource = uplift * PRECIPITATION_MODEL.orographic.upliftScale * localMoisture;
+      const cloudLoss = cloud[cellIndex] / PRECIPITATION_MODEL.microphysics.tauCloud;
       const nextCloud = Math.max(0, cloud[cellIndex] + cloudSource - cloudLoss);
       const hydroGain = cloudLoss;
-      const hydroLoss = hydro[cellIndex] / HYDROLOGY_CONFIG.microphysics.tauFallout;
+      const hydroLoss = hydro[cellIndex] / PRECIPITATION_MODEL.microphysics.tauFallout;
       const nextHydro = Math.max(0, hydro[cellIndex] + hydroGain - hydroLoss);
       const mountainRain = hydroLoss;
 
       const leeDrying =
         descent *
-        HYDROLOGY_CONFIG.orographic.leeDryingScale *
-        Math.pow(Math.max(0, localMoisture), HYDROLOGY_CONFIG.orographic.shieldingPow);
+        PRECIPITATION_MODEL.orographic.leeDryingScale *
+        Math.pow(Math.max(0, localMoisture), PRECIPITATION_MODEL.orographic.shieldingPow);
 
       const rainShadowIndex = clamp(
-        dryMemory[cellIndex] * HYDROLOGY_CONFIG.orographic.rainShadowDecay +
-          leeDrying * HYDROLOGY_CONFIG.orographic.rainShadowGain,
+        dryMemory[cellIndex] * PRECIPITATION_MODEL.orographic.rainShadowDecay +
+          leeDrying * PRECIPITATION_MODEL.orographic.rainShadowGain,
         0,
         1
       );
 
       const elevationRain = clamp(
-        Math.max(0, cell.elevation - HYDROLOGY_CONFIG.oroElevStart) * HYDROLOGY_CONFIG.oroW,
+        Math.max(0, cell.elevation - PRECIPITATION_MODEL.orographicSimple.elevationStart) *
+          PRECIPITATION_MODEL.orographicSimple.weight,
         0,
-        HYDROLOGY_CONFIG.oroMax
+        PRECIPITATION_MODEL.orographicSimple.maxBonus
       );
-      const latitudeRain = getLatitudeFactor(cell.site[1], height) * HYDROLOGY_CONFIG.precipLatW;
-      const flowRain = Math.log2(flow[cellIndex] + 1) * HYDROLOGY_CONFIG.precipFlowW;
-      const baseRain = waterInfluence[cellIndex] * HYDROLOGY_CONFIG.precipWaterW;
+      const latitudeRain =
+        getLatitudeFactor(cell.site[1], height) * PRECIPITATION_MODEL.baseWeights.latitude;
+      const flowRain = Math.log2(flow[cellIndex] + 1) * PRECIPITATION_MODEL.baseWeights.flow;
+      const baseRain = waterInfluence[cellIndex] * PRECIPITATION_MODEL.baseWeights.water;
       const totalPrecipitation = clamp(
         baseRain + latitudeRain + flowRain + elevationRain + mountainRain - rainShadowIndex,
         0,
         1
       );
 
-      const consumed = cloudSource * HYDROLOGY_CONFIG.microphysics.cloudDrawdown + leeDrying;
+      const consumed = cloudSource * PRECIPITATION_MODEL.microphysics.cloudDrawdown + leeDrying;
       nextMoisture[cellIndex] = clamp(
         localMoisture - consumed + totalPrecipitation * 0.08,
         0,
