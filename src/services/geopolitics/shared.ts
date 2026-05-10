@@ -1,6 +1,6 @@
-import { BORDER_CONFIG } from 'src/configs/mapConfig';
+import { BORDER_CONFIG } from 'src/configs/MapConfig';
 import { collectConnectedComponents } from 'src/services/core/graph';
-import { TBorderType, TCell, TTerrain, TZoneType } from 'src/types/map.types';
+import { TBorderType, TCell, TLandform, TZoneType } from 'src/types/map.types';
 import Cost from './cost';
 import { createSeededRandom, hashSeed } from '../core/seededRandom';
 
@@ -195,14 +195,18 @@ export function isLand(cell: TCell) {
 
 function isRidgeBarrier(left: TCell, right: TCell) {
   const ruggedLeft =
-    left.terrain === 'mountains' || left.terrain === 'hills' || left.terrain === 'volcanic';
+    left.landform === 'mountain' || left.landform === 'hills' || left.landform === 'volcanic_field';
   const ruggedRight =
-    right.terrain === 'mountains' || right.terrain === 'hills' || right.terrain === 'volcanic';
+    right.landform === 'mountain' ||
+    right.landform === 'hills' ||
+    right.landform === 'volcanic_field';
   return ruggedLeft && ruggedRight;
 }
 
 function isRuggedTerrain(cell: TCell) {
-  return cell.terrain === 'mountains' || cell.terrain === 'hills' || cell.terrain === 'volcanic';
+  return (
+    cell.landform === 'mountain' || cell.landform === 'hills' || cell.landform === 'volcanic_field'
+  );
 }
 
 function getNaturalBarrierPenalty(left: TCell, right: TCell, borderType: TBorderType) {
@@ -228,10 +232,10 @@ function getNaturalBarrierPenalty(left: TCell, right: TCell, borderType: TBorder
 
 function isCoastalLand(cell: TCell, cells: TCell[]) {
   if (cell.isWater) return false;
-  if (cell.terrain === 'coast') return true;
+  if (cell.landform === 'coast') return true;
   for (const neighborId of cell.neighbors) {
     const neighbor = cells[neighborId];
-    if (neighbor.isWater || neighbor.isLake || neighbor.terrain === 'coast') return true;
+    if (neighbor.isWater || neighbor.isLake || neighbor.landform === 'coast') return true;
   }
   return false;
 }
@@ -256,7 +260,7 @@ export function getBoundaryStepCost(
   const profile = BORDER_CONFIG[borderType];
   const currentCell = cells[currentId];
   const neighbor = cells[neighborId];
-  let step = Cost.terrain(neighbor, borderType);
+  let step = Cost.border(neighbor, borderType);
   step += getNaturalBarrierPenalty(currentCell, neighbor, borderType);
   if (isCoastalLand(neighbor, cells)) step += profile.penalty.shorelineEdgeBias;
   const sameOwnerNeighbors = countOwnedNeighbors(cells, owner, neighborId, ownerId);
@@ -277,11 +281,11 @@ export function getNationNeighborCounts(cells: TCell[], owner: Int32Array, cellI
   return counts;
 }
 
-function collectTerrainClusters(cells: TCell[], terrain: TTerrain) {
+function collectTerrainClusters(cells: TCell[], landform: TLandform) {
   return collectConnectedComponents(
     cells,
-    (cell) => cell.terrain === terrain && !cell.isWater,
-    (_current, neighbor) => neighbor.terrain === terrain && !neighbor.isWater
+    (cell) => cell.landform === landform && !cell.isWater,
+    (_current, neighbor) => neighbor.landform === landform && !neighbor.isWater
   );
 }
 
@@ -292,7 +296,7 @@ export function limitMountainSplit(
   nationOwner?: Int32Array
 ) {
   const profile = BORDER_CONFIG[borderType];
-  const clusters = collectTerrainClusters(cells, 'mountains');
+  const clusters = collectTerrainClusters(cells, 'mountain');
   for (const cluster of clusters) {
     if (cluster.length < profile.fragmentation.largeMountainClusterMinCells) continue;
     const byOwner = new Map<number, number[]>();

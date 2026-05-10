@@ -1,6 +1,5 @@
 import Cost from 'src/services/geopolitics/cost';
 import { TCell } from 'src/types/map.types';
-import { logisticsRisk } from '../terrain/rules';
 
 type TLogisticsRouteResult = {
   pathCellIds: number[];
@@ -22,21 +21,31 @@ function edgeKey(a: number, b: number) {
 }
 
 function stepCost(from: TCell, to: TCell, hasRoad: boolean) {
-  let cost = (Cost.logistics(from.terrain) + Cost.logistics(to.terrain)) * 0.5;
+  let cost = (Cost.logistics(from) + Cost.logistics(to)) * 0.5;
 
   if (from.isRiver || to.isRiver) cost += 1.6;
   if (from.nationId !== to.nationId) cost += 1.2;
-  if (from.terrain === 'mountains' || to.terrain === 'mountains') cost += 1;
-  if (from.terrain === 'swamp' || to.terrain === 'swamp') cost += 0.8;
+  if (from.landform === 'mountain' || to.landform === 'mountain') cost += 1;
+  if (from.biome === 'wetland' || to.biome === 'wetland') cost += 0.8;
+  if (from.landform === 'coast' || to.landform === 'coast') cost += 0.15;
   if (hasRoad) cost *= 0.55;
   return Math.max(0.25, cost);
 }
 
 function estimateRisk(pathCellIds: number[], cells: TCell[]) {
+  function cellRisk(cell: TCell) {
+    if (cell.landform === 'mountain' || cell.landform === 'volcanic_field') return 1.4;
+    if (cell.biome === 'wetland') return 1.1;
+    if (cell.biome === 'desert_hot' || cell.biome === 'desert_cold') return 0.7;
+    if (cell.landform === 'coast') return 0.25;
+    if (cell.landform === 'valley' || cell.landform === 'plain') return 0.2;
+    return 0.4;
+  }
+
   let risk = 0;
   for (let index = 0; index < pathCellIds.length; index += 1) {
     const cell = cells[pathCellIds[index]];
-    risk += logisticsRisk(cell.terrain);
+    risk += cellRisk(cell);
     if (index > 0) {
       const prev = cells[pathCellIds[index - 1]];
       if (prev.nationId !== cell.nationId) risk += 0.8;

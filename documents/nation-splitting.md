@@ -1,8 +1,8 @@
-# Nation Splitting Reimplementation Spec (Exact Behavior)
+# Nation Splitting Reimplementation Spec (Updated)
 
 ## Main File
 
-`src/services/buildGeopolitics/nations.ts`
+`src/services/geopolitics/nations.ts`
 
 ## Inputs / Outputs
 

@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
+import { DEFAULT_CONFIG } from 'src/configs/MapConfig';
 import { MapGenerator } from 'src/services/pipeline/MapGenerator';
 
 type TStage = 'mesh' | 'topography' | 'hydrology' | 'population' | 'geopolitics';

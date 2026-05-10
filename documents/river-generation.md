@@ -1,4 +1,4 @@
-# River Generation Reimplementation Spec (Exact Behavior)
+# River Generation Reimplementation Spec (Updated)
 
 ## Scope
 
@@ -6,24 +6,25 @@ This document is an implementation-level specification for reproducing the curre
 
 Primary sources:
 
-- `src/services/buildHydrology.ts`
-- `src/services/hydrology/riverGeneration.ts`
-- `src/services/hydrology/rivers.ts`
-- `src/configs/mapConfig.ts` (`HYDROLOGY_CONFIG`, `RIVER_GEN_CONFIG`)
+- `src/services/hydrology/index.ts`
+- `src/services/hydrology/river.ts`
+- `src/services/hydrology/lakes.ts`
+- `src/configs/MapConfig/hydrology.config.ts`
+- `src/configs/MapConfig/index.ts` (`RIVER_CONFIG`)
 
 ## Required Constants and Sentinels
 
 You must keep these exactly:
 
-- Coast outlet sentinel: `T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutlet` (currently `-2`).
-- Land mask threshold: `RIVER_GEN_CONFIG.landWaterThreshold`.
-- Depression settings: `RIVER_GEN_CONFIG.depression.{maxIterations, epsilon, coastLift}`.
-- Candidate flux threshold: `RIVER_GEN_CONFIG.minFluxToFormRiver * pow(cells.length / 10000, RIVER_GEN_CONFIG.cellsNumberModifierExp)`.
-- Minimum raw river chain length: `RIVER_GEN_CONFIG.minRiverCells`.
+- Coast outlet sentinel: `T_COAST_OUTLET = CORE.coastOutletId` (currently `-2`).
+- Land mask threshold: `RIVER_CONFIG.landWaterThreshold`.
+- Depression settings: `RIVER_CONFIG.depression.{maxIterations, epsilon, coastLift}`.
+- Candidate flux threshold: `RIVER_CONFIG.minFluxToFormRiver * pow(cells.length / 10000, RIVER_CONFIG.cellsNumberModifierExp)`.
+- Minimum raw river chain length: `RIVER_CONFIG.minRiverCells`.
 
 ## Global Order (Must Not Change)
 
-Within `buildHydrology(...)`:
+Within `buildHydrology(...)` in `src/services/hydrology/index.ts`:
 
 1. `expandLakes(cells, flow, downstream)`
 2. `filterAndLimitLakes(cells, flow)`
@@ -219,7 +220,10 @@ Else build `TRiver`:
   - two smoothing passes over `channelOffsets`
   - monotonic non-decreasing offset enforcement
 
-## Stage E: `validateRivers(...)` in `rivers.ts`
+## Stage E: `validateRivers(...)` (legacy note)
+
+Current codebase consolidates river logic in `src/services/hydrology/river.ts`.
+If a `validateRivers(...)` pass is reintroduced, keep ordering and deterministic rules unchanged.
 
 This is a second selection layer that can disable river flags if chains are not good enough.
 

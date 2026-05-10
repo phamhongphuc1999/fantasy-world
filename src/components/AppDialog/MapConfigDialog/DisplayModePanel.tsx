@@ -29,14 +29,24 @@ export default function DisplayModePanel() {
   return (
     <div className="flex flex-wrap gap-2">
       <LayerToggle
-        label="Terrain"
-        checked={displaySettings.terrain}
-        onChange={(checked) => setDisplayLayer('terrain', checked)}
+        label="Landform"
+        checked={displaySettings.landform}
+        onChange={(checked) => setDisplayLayer('landform', checked)}
       />
       <LayerToggle
-        label="Terrain 2.5D"
-        checked={displaySettings.terrainRelief}
-        onChange={(checked) => setDisplayLayer('terrainRelief', checked)}
+        label="Landform 2.5D"
+        checked={displaySettings.landformRelief}
+        onChange={(checked) => setDisplayLayer('landformRelief', checked)}
+      />
+      <LayerToggle
+        label="Biome"
+        checked={displaySettings.biome}
+        onChange={(checked) => setDisplayLayer('biome', checked)}
+      />
+      <LayerToggle
+        label="Biome 2.5D"
+        checked={displaySettings.biomeRelief}
+        onChange={(checked) => setDisplayLayer('biomeRelief', checked)}
       />
       <LayerToggle
         label="Population"
@@ -69,19 +79,19 @@ export default function DisplayModePanel() {
         onChange={(checked) => setDisplayLayer('rivers', checked)}
       />
       <LayerToggle
-        label="Country Borders"
-        checked={displaySettings.countryBorders}
-        onChange={(checked) => setDisplayLayer('countryBorders', checked)}
+        label="Nation Borders"
+        checked={displaySettings.nationBorders}
+        onChange={(checked) => setDisplayLayer('nationBorders', checked)}
       />
       <LayerToggle
-        label="Country Fill"
-        checked={displaySettings.countryFill}
-        onChange={(checked) => setDisplayLayer('countryFill', checked)}
+        label="Nation Fill"
+        checked={displaySettings.nationFill}
+        onChange={(checked) => setDisplayLayer('nationFill', checked)}
       />
       <LayerToggle
         label="Province Borders"
         checked={displaySettings.provinceBorders}
-        disabled={!displaySettings.countryBorders}
+        disabled={!displaySettings.nationBorders}
         onChange={(checked) => setDisplayLayer('provinceBorders', checked)}
       />
       <LayerToggle

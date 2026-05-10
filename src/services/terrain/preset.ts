@@ -1,5 +1,5 @@
-import { PRESET_CONFIG } from 'src/configs/mapConfig';
-import { TMesh, TTerrainPreset } from 'src/types/map.types';
+import { PRESET_CONFIG } from 'src/configs/MapConfig';
+import { TMesh, TTopography } from 'src/types/map.types';
 import { createSeededRandom, hashSeed } from '../core/seededRandom';
 import { clamp } from '../utils/math';
 import {
@@ -11,10 +11,10 @@ import {
   smoothElevations,
 } from './shape';
 
-interface TApplyTerrainPresetOptions {
+interface TApplyTopographyParams {
   mesh: TMesh;
   seed: string;
-  preset: TTerrainPreset;
+  topography: TTopography;
   elevations: Float32Array;
 }
 
@@ -24,24 +24,24 @@ function applyGlobalScale(elevations: Float32Array, offset: number, scale: numbe
   }
 }
 
-export function applyTerrainPreset({ mesh, seed, preset, elevations }: TApplyTerrainPresetOptions) {
-  const random = createSeededRandom(`${seed}:${preset}:terrain-tools`);
+export function applyTopography({ mesh, seed, topography, elevations }: TApplyTopographyParams) {
+  const random = createSeededRandom(`${seed}:${topography}:terrain-tools`);
   const nextElevations = Float32Array.from(elevations);
 
-  if (preset === 'balanced') {
+  if (topography === 'balanced') {
     applyRangeBands(mesh, random, nextElevations, PRESET_CONFIG.balanced.rangeBands);
     applyValleyBands(mesh, random, nextElevations, PRESET_CONFIG.balanced.valleyBands);
     applyEdgeShelf(
       mesh,
       nextElevations,
       PRESET_CONFIG.balanced.edgeShelfStrength,
-      hashSeed(`${seed}:${preset}:shelf`)
+      hashSeed(`${seed}:${topography}:shelf`)
     );
     smoothElevations(mesh, nextElevations, PRESET_CONFIG.balanced.smoothFactor);
     return nextElevations;
   }
 
-  if (preset === 'ranges') {
+  if (topography === 'ranges') {
     applyRangeChains(mesh, random, nextElevations, PRESET_CONFIG.ranges.rangeBands);
     applyRangeBands(mesh, random, nextElevations, {
       ...PRESET_CONFIG.ranges.rangeBands,
@@ -59,13 +59,13 @@ export function applyTerrainPreset({ mesh, seed, preset, elevations }: TApplyTer
       mesh,
       nextElevations,
       PRESET_CONFIG.ranges.edgeShelfStrength,
-      hashSeed(`${seed}:${preset}:shelf`)
+      hashSeed(`${seed}:${topography}:shelf`)
     );
     smoothElevations(mesh, nextElevations, PRESET_CONFIG.ranges.smoothFactor);
     return nextElevations;
   }
 
-  if (preset === 'rifted') {
+  if (topography === 'rifted') {
     applyRangeBands(mesh, random, nextElevations, PRESET_CONFIG.rifted.rangeBands);
     applyValleyBands(mesh, random, nextElevations, PRESET_CONFIG.rifted.valleyBands);
     applyGlobalScale(
@@ -77,7 +77,7 @@ export function applyTerrainPreset({ mesh, seed, preset, elevations }: TApplyTer
       mesh,
       nextElevations,
       PRESET_CONFIG.rifted.edgeShelfStrength,
-      hashSeed(`${seed}:${preset}:shelf`)
+      hashSeed(`${seed}:${topography}:shelf`)
     );
     smoothElevations(mesh, nextElevations, PRESET_CONFIG.rifted.smoothFactor);
     return nextElevations;
@@ -103,7 +103,7 @@ export function applyTerrainPreset({ mesh, seed, preset, elevations }: TApplyTer
     mesh,
     nextElevations,
     PRESET_CONFIG.archipelago.edgeShelfStrength,
-    hashSeed(`${seed}:${preset}:shelf`)
+    hashSeed(`${seed}:${topography}:shelf`)
   );
   smoothElevations(mesh, nextElevations, PRESET_CONFIG.archipelago.smoothFactor);
 

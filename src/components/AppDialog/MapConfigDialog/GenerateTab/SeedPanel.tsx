@@ -1,12 +1,10 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import { Button } from 'src/components/ui/button';
 import { Input } from 'src/components/ui/input';
-import { createSeededRandom } from 'src/services/core/seededRandom';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
 export default function SeedPanel() {
-  const randomizeCountRef = useRef(0);
   const { seed, setSeed } = useMapExplorerStore();
   const [seedDraft, setSeedDraft] = useState(seed);
 
@@ -15,12 +13,20 @@ export default function SeedPanel() {
     setSeed(normalizedSeed);
   }
 
+  function generateRandomSeed() {
+    const cryptoApi = globalThis.crypto;
+    if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') {
+      const values = new Uint32Array(1);
+      cryptoApi.getRandomValues(values);
+      const randomNumber = (values[0] as number) % 1_000_000;
+      return `world${randomNumber.toString().padStart(6, '0')}`;
+    }
+    const fallback = Math.floor(Math.random() * 1_000_000);
+    return `world${fallback.toString().padStart(6, '0')}`;
+  }
+
   function applyRandomSeed() {
-    randomizeCountRef.current += 1;
-    const random = createSeededRandom(`${seed}:${randomizeCountRef.current}:seed-randomize`);
-    const nextSeed = `world${Math.floor(random() * 1_000_000)
-      .toString()
-      .padStart(6, '0')}`;
+    const nextSeed = generateRandomSeed();
     setSeedDraft(nextSeed);
     setSeed(nextSeed);
   }

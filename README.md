@@ -52,13 +52,13 @@ The app generates a world through a staged pipeline:
 - Canvas visualization layers:
   - Terrain
   - Rivers
-  - Country border / country fill (independent)
+  - Nation border / nation fill (independent)
   - Ethnic border / ethnic fill (independent)
   - Province border
   - Labels
 - Detail dialogs:
   - Nation detail
-  - Ethnic detail (when ethnic layers are active without country layers)
+  - Ethnic detail (when ethnic layers are active without nation layers)
 - Logistics route overlay mode
 
 ## Tech Stack

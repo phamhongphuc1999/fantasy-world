@@ -1,70 +1,48 @@
-import { TERRAIN_CONFIG } from 'src/configs/constance';
 import { buildDistanceMap } from 'src/services/core/graph';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
 import { TCell, TDelaunayMesh } from 'src/types/map.types';
 import { clamp } from '../utils/math';
 import { createSeededRandom } from '../core/seededRandom';
-import { isWaterOrRiverCell } from '../terrain/rules';
+import { isWaterOrRiverCell } from '../cell/rules';
 
 interface TBuildPopulationOptions {
   mesh: TDelaunayMesh;
   seed: string;
 }
 
-function calcPopMultiplier(cell: TCell, cells: TCell[]) {
-  const isNearWater = cell.neighbors.some((neighborId) => {
-    const n = cells[neighborId];
-    return (
-      n?.terrain === 'lake' ||
-      n?.terrain === 'shallow-water' ||
-      n?.terrain === 'inland-sea' ||
-      n?.isRiver
-    );
-  });
+const POP_MODEL = {
+  climate: {
+    tempIdeal: 0.58,
+    tempTolerance: 0.22,
+    precipIdeal: 0.52,
+    precipTolerance: 0.26,
+  },
+  water: {
+    distanceDecay: 18,
+    riverBonus: 0.22,
+    nearLakeOrSeaBonus: 0.14,
+    nearWaterNeighborBonus: 0.08,
+    min: 0.15,
+    max: 1.35,
+  },
+  noise: { min: 0.9, range: 0.2 },
+  urban: {
+    cityCountDivisor: 900,
+    minCityCount: 4,
+    maxCityCount: 18,
+    minSeedDistance: 55,
+    minRadius: 95,
+    radiusRange: 55,
+    minBoost: 0.9,
+    boostRange: 0.7,
+  },
+};
 
-  const riverBonus = cell.isRiver ? 3 : 0;
-  const waterProximityBonus = isNearWater ? 2 : 0;
-
-  switch (cell.terrain) {
-    case 'valley':
-      return 10 + riverBonus + waterProximityBonus;
-    case 'plains':
-      return 6 + riverBonus + waterProximityBonus;
-    case 'coast':
-      return 9 + riverBonus;
-    case 'lake':
-      return 7;
-    case 'forest':
-      return 4 + (isNearWater ? 2 : 0);
-    case 'plateau':
-      return 4 + riverBonus;
-    case 'hills':
-      return 3 + (isNearWater ? 1 : 0);
-    case 'volcanic':
-      return 5;
-    case 'tundra':
-      return 1.2;
-    case 'swamp':
-      return 0.8;
-    case 'desert':
-      return cell.isRiver ? 4 : 0.4;
-    case 'badlands':
-    case 'mountains':
-      return 0.5;
-    case 'inland-sea':
-    case 'shallow-water':
-      return 0.2;
-    case 'deep-water':
-      return 0;
-    default:
-      return 0.5;
-  }
-}
-
-function calcWaterAccess(cells: TCell[]) {
+function calcWaterAccessBase(cells: TCell[]) {
   const distances = buildDistanceMap(cells, {
     isSeed: (cellId) => {
-      const terrain = cells[cellId].terrain;
-      return terrain === 'deep-water' || terrain === 'shallow-water' || terrain === 'inland-sea';
+      const landform = cells[cellId].landform;
+      return landform === 'marine_deep' || landform === 'marine_shallow';
     },
   });
 
@@ -75,55 +53,117 @@ function calcWaterAccess(cells: TCell[]) {
       accessibility[cellId] = 0.2;
       continue;
     }
-    accessibility[cellId] = clamp(Math.exp(-distance / 22), 0.12, 1);
+    accessibility[cellId] = clamp(
+      Math.exp(-distance / POP_MODEL.water.distanceDecay),
+      POP_MODEL.water.min,
+      1
+    );
   }
   return accessibility;
+}
+
+function climateSuitability(cell: TCell) {
+  const tScore = clamp(
+    1 - Math.abs(cell.temperature - POP_MODEL.climate.tempIdeal) / POP_MODEL.climate.tempTolerance,
+    0,
+    1
+  );
+  const pScore = clamp(
+    1 -
+      Math.abs(cell.precipitation - POP_MODEL.climate.precipIdeal) /
+        POP_MODEL.climate.precipTolerance,
+    0,
+    1
+  );
+  return Math.max(0.08, tScore * 0.55 + pScore * 0.45);
+}
+
+function isNearLakeOrSea(cell: TCell, cells: TCell[]) {
+  return cell.neighbors.some((neighborId) => {
+    const neighbor = cells[neighborId];
+    return neighbor?.landform === 'lake' || neighbor?.landform === 'marine_shallow';
+  });
+}
+
+function adjustedWaterAccess(cell: TCell, cells: TCell[], baseWaterAccess: number) {
+  let value = baseWaterAccess;
+  if (cell.isRiver) value += POP_MODEL.water.riverBonus;
+  if (isNearLakeOrSea(cell, cells)) value += POP_MODEL.water.nearLakeOrSeaBonus;
+  if (cell.neighbors.some((neighborId) => isWaterOrRiverCell(cells[neighborId] as TCell))) {
+    value += POP_MODEL.water.nearWaterNeighborBonus;
+  }
+  return clamp(value, POP_MODEL.water.min, POP_MODEL.water.max);
+}
+
+function humanSettlementBoost(cell: TCell) {
+  if (cell.biome === 'plain') return 1.35;
+  if (cell.biome === 'wetland') return 0.85;
+  if (cell.biome === 'desert_hot' || cell.biome === 'desert_cold') return 0.75;
+  return 1;
+}
+
+function economyFactor(cell: TCell) {
+  let factor = 1;
+  if (cell.landform === 'coast') factor += 0.8;
+  if (cell.landform === 'valley') factor += 0.3;
+  if (cell.landform === 'mountain') factor -= 0.25;
+  if (cell.landform === 'volcanic_field') factor += 0.05;
+  if (cell.biome === 'wetland') factor -= 0.15;
+  if (cell.biome === 'temperate_forest' || cell.biome === 'tropical_forest') factor += 0.1;
+  if (cell.biome === 'desert_hot' || cell.biome === 'desert_cold') factor -= 0.25;
+  return Math.max(0.2, factor);
 }
 
 export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelaunayMesh {
   const cells = mesh.cells;
   const random = createSeededRandom(`${seed}:population`);
   const score = new Float64Array(cells.length);
-  const waterAccessScore = calcWaterAccess(cells);
+  const waterAccessScore = calcWaterAccessBase(cells);
   let landCellCount = 0;
 
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     const cell = cells[cellId];
-    const terrainConfig = TERRAIN_CONFIG[cell.terrain];
     if (cell.isWater) {
       score[cellId] = 0;
       continue;
     }
     landCellCount += 1;
 
-    let value = terrainConfig.baseWeight;
-    if (cell.isRiver) value += 0.24;
-    if (cell.isLake) value += 0.2;
-
-    let waterAdj = 0;
-    let riverAdj = 0;
-    for (const neighborId of cell.neighbors) {
-      const neighbor = cells[neighborId];
-      if (neighbor.isWater) waterAdj += 0.08;
-      if (neighbor.isRiver || neighbor.isLake) riverAdj += 0.06;
-    }
-
-    value += Math.min(0.34, waterAdj) + Math.min(0.24, riverAdj);
-    value *= 0.75 + cell.suitability * 0.55;
-    value *= 0.86 + random() * 0.28;
+    const base = LANDFORM_CONFIG[cell.landform].populationFactor;
+    const biome = BIOME_CONFIG[cell.biome].populationFactor;
+    const climate = climateSuitability(cell);
+    const water = adjustedWaterAccess(cell, cells, waterAccessScore[cell.id] as number);
+    const human = humanSettlementBoost(cell);
+    const noise = POP_MODEL.noise.min + random() * POP_MODEL.noise.range;
+    let value = base * biome * climate * water * human * noise;
+    value *= 0.8 + cell.suitability * 0.35;
     score[cellId] = Math.max(0, value);
   }
 
   const urbanCandidates: Array<{ id: number; score: number }> = [];
   for (const cell of cells) {
-    if (cell.isWater || cell.terrain === 'mountains' || cell.terrain === 'desert') continue;
+    if (
+      cell.isWater ||
+      cell.landform === 'mountain' ||
+      cell.biome === 'desert_hot' ||
+      cell.biome === 'desert_cold' ||
+      cell.biome === 'ice'
+    ) {
+      continue;
+    }
     const candidateScore = score[cell.id] + cell.suitability * 0.6;
     if (candidateScore <= 0.25) continue;
     urbanCandidates.push({ id: cell.id, score: candidateScore });
   }
   urbanCandidates.sort((a, b) => b.score - a.score);
 
-  const cityCount = Math.max(4, Math.min(18, Math.floor(landCellCount / 900)));
+  const cityCount = Math.max(
+    POP_MODEL.urban.minCityCount,
+    Math.min(
+      POP_MODEL.urban.maxCityCount,
+      Math.floor(landCellCount / POP_MODEL.urban.cityCountDivisor)
+    )
+  );
   const citySeeds: number[] = [];
 
   for (const candidate of urbanCandidates) {
@@ -131,7 +171,10 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelau
     const point = cells[candidate.id].site;
     const tooClose = citySeeds.some((seedId) => {
       const seedPoint = cells[seedId].site;
-      return Math.hypot(point[0] - seedPoint[0], point[1] - seedPoint[1]) < 55;
+      return (
+        Math.hypot(point[0] - seedPoint[0], point[1] - seedPoint[1]) <
+        POP_MODEL.urban.minSeedDistance
+      );
     });
     if (tooClose) continue;
     citySeeds.push(candidate.id);
@@ -139,8 +182,8 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelau
 
   for (const seedId of citySeeds) {
     const seedPoint = cells[seedId].site;
-    const radius = 95 + random() * 55;
-    const boost = 0.9 + random() * 0.7;
+    const radius = POP_MODEL.urban.minRadius + random() * POP_MODEL.urban.radiusRange;
+    const boost = POP_MODEL.urban.minBoost + random() * POP_MODEL.urban.boostRange;
 
     for (let cellId = 0; cellId < cells.length; cellId += 1) {
       const cell = cells[cellId];
@@ -148,8 +191,9 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelau
       const distance = Math.hypot(cell.site[0] - seedPoint[0], cell.site[1] - seedPoint[1]);
       if (distance > radius) continue;
       const distanceFactor = 1 - distance / radius;
-      const terrainFactor = TERRAIN_CONFIG[cell.terrain].cityFactor;
-      score[cellId] += distanceFactor * boost * terrainFactor;
+      const suitability = climateSuitability(cell);
+      const settlement = humanSettlementBoost(cell);
+      score[cellId] += distanceFactor * boost * (0.45 + suitability * 0.55) * settlement;
     }
   }
 
@@ -165,7 +209,7 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelau
         sum += score[neighborId];
       }
       const avg = sum / (cells[cellId].neighbors.length + 1);
-      next[cellId] = score[cellId] * 0.58 + avg * 0.42;
+      next[cellId] = score[cellId] * 0.62 + avg * 0.38;
     }
     score.set(next);
   }
@@ -173,14 +217,14 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelau
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     const cell = cells[cellId];
     if (cell.isWater) continue;
-    if (cell.terrain !== 'mountains' && cell.terrain !== 'desert' && cell.terrain !== 'badlands')
+    if (cell.landform !== 'mountain' && cell.biome !== 'desert_hot' && cell.biome !== 'desert_cold')
       continue;
     let neighborAvg = 0;
     for (const neighborId of cell.neighbors) {
       neighborAvg += score[neighborId];
     }
     neighborAvg /= Math.max(1, cell.neighbors.length);
-    score[cellId] = Math.min(score[cellId], neighborAvg * 1.35);
+    score[cellId] = Math.min(score[cellId], neighborAvg * 1.1);
   }
 
   let maxScore = 0;
@@ -200,36 +244,20 @@ export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelau
       };
     const density = clamp(score[cell.id] / normalizedMax, 0, 1);
     const shaped = Math.pow(density, 1.08);
-    const basePopulation = Math.round(shaped * 2500);
-    const population = Math.round(
-      basePopulation * calcPopMultiplier(cell, cells) * waterAccessScore[cell.id]
-    );
+    const basePopulation = Math.round(shaped * 15000);
+    const adjustedWater = adjustedWaterAccess(cell, cells, waterAccessScore[cell.id] as number);
+    const population = Math.round(basePopulation * adjustedWater);
 
-    const terrainFactor = TERRAIN_CONFIG[cell.terrain].economyFactor;
-    const riverWaterBonus = cell.isRiver ? 0.08 : 0;
-    const lakeWaterBonus = cell.isLake ? 0.06 : 0;
-    const coastWaterBonus = cell.terrain === 'coast' ? 0.09 : 0;
-    const nearWaterNeighborBonus = cell.neighbors.some((neighborId) => {
-      const neighbor = cells[neighborId];
-      return isWaterOrRiverCell(neighbor);
-    })
-      ? 0.16
-      : 0;
-    const waterFactor =
-      0.72 +
-      waterAccessScore[cell.id] * 1.34 +
-      riverWaterBonus +
-      lakeWaterBonus +
-      coastWaterBonus +
-      nearWaterNeighborBonus;
+    const terrainFactor = economyFactor(cell);
+    const waterFactor = 0.7 + adjustedWater * 1.1;
     const popNorm = clamp(population / 120000, 0, 1);
-    const waterNorm = clamp(waterAccessScore[cell.id], 0, 1);
+    const waterNorm = clamp(adjustedWater, 0, 1);
     const synergyMultiplier = 1 + popNorm * waterNorm * 1.35;
     const economy = Math.round(
       Math.pow(Math.max(0, population), 1.12) * terrainFactor * waterFactor * synergyMultiplier
     );
 
-    return { ...cell, population, economy, waterAccessScore: waterAccessScore[cell.id] };
+    return { ...cell, population, economy, waterAccessScore: adjustedWater };
   });
   return { ...mesh, cells: nextCells };
 }

@@ -1,23 +1,25 @@
 'use client';
 
-import { DEFAULT_CONFIG } from 'src/configs/mapConfig';
-import { normalizeTerrainRatios } from 'src/services/terrain/ratios';
-import {
-  TDisplaySettings,
-  TTerrainPreset,
-  TTerrainRatioKey,
-  TTerrainRatioMap,
-} from 'src/types/map.types';
+import { DEFAULT_CONFIG } from 'src/configs/MapConfig';
+import { TDisplaySettings, TTopography } from 'src/types/map.types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
+type TClimateControl = {
+  temperatureOffset: number;
+  temperatureContrast: number;
+  precipitationScale: number;
+  precipitationOffset: number;
+  humanImpact: number;
+};
 
 interface TMapExplorerState {
   seed: string;
   cellCount: number;
   seaLevel: number;
-  terrainPreset: TTerrainPreset;
+  topography: TTopography;
   nationCount: number;
-  terrainRatios: TTerrainRatioMap;
+  climateControl: TClimateControl;
   displaySettings: TDisplaySettings;
   hoverIndex: number | null;
   hoverClientPoint: { x: number; y: number } | null;
@@ -27,9 +29,13 @@ type TMapExplorerActions = {
   setSeed: (seed: string) => void;
   setCellCount: (cellCount: number) => void;
   setSeaLevel: (seaLevel: number) => void;
-  setTerrainPreset: (terrainPreset: TTerrainPreset) => void;
+  setTopography: (topography: TTopography) => void;
   setNationCount: (nationCount: number) => boolean;
-  applyTerrainRatios: (terrainRatiosDraft: TTerrainRatioMap) => void;
+  setClimateControl: (climateControl: TClimateControl) => void;
+  setClimateControlField: <K extends keyof TClimateControl>(
+    field: K,
+    value: TClimateControl[K]
+  ) => void;
   setDisplaySettings: (displaySettings: TDisplaySettings) => void;
   setDisplayLayer: <K extends keyof TDisplaySettings>(layer: K, enabled: boolean) => void;
   setHoverIndex: (hoverIndex: number | null) => void;
@@ -44,29 +50,13 @@ const DEFAULT_STATE: TMapExplorerState = {
   seed: DEFAULT_CONFIG.seed,
   cellCount: DEFAULT_CONFIG.cellCount,
   seaLevel: DEFAULT_CONFIG.seaLevel,
-  terrainPreset: DEFAULT_CONFIG.terrainPreset,
+  topography: DEFAULT_CONFIG.topography,
   nationCount: DEFAULT_CONFIG.nationCount,
-  terrainRatios: DEFAULT_CONFIG.terrainRatios,
+  climateControl: DEFAULT_CONFIG.climateControl,
   displaySettings: DEFAULT_CONFIG.displaySettings,
   hoverIndex: null,
   hoverClientPoint: null,
 };
-
-function migrateTerrainRatios(raw?: Partial<Record<string, number>>) {
-  if (!raw) return DEFAULT_CONFIG.terrainRatios;
-  const plainValue = raw.plains ?? raw.plain;
-  return normalizeTerrainRatios({
-    plains: plainValue,
-    forest: raw.forest,
-    swamp: raw.swamp,
-    desert: raw.desert,
-    badlands: raw.badlands,
-    volcanic: raw.volcanic,
-    hills: raw.hills,
-    mountains: raw.mountains,
-    plateau: raw.plateau,
-  });
-}
 
 export const useMapExplorerStore = create<TMapExplorerStore>()(
   persist(
@@ -83,26 +73,26 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         if (seaLevel === seaLevelDraft) return;
         set({ seaLevel: seaLevelDraft, hoverIndex: null });
       },
-      setTerrainPreset(terrainPreset: TTerrainPreset) {
-        set({ terrainPreset, hoverIndex: null });
+      setTopography(topography: TTopography) {
+        set({ topography, hoverIndex: null });
       },
       setNationCount(nationCount: number) {
         if (nationCount < 2 || nationCount > 40) return false;
         set({ nationCount, hoverIndex: null });
         return true;
       },
-      applyTerrainRatios(terrainRatiosDraft: TTerrainRatioMap) {
-        const terrainRatios = normalizeTerrainRatios(get().terrainRatios);
-        const changed = Object.keys(terrainRatios).some((key) => {
-          const terrainKey = key as TTerrainRatioKey;
-          return Math.abs(terrainRatios[terrainKey] - terrainRatiosDraft[terrainKey]) > 0.0001;
-        });
-        if (!changed) return;
-        set({ terrainRatios: terrainRatiosDraft, hoverIndex: null });
+      setClimateControl(climateControl: TClimateControl) {
+        set({ climateControl, hoverIndex: null });
+      },
+      setClimateControlField<K extends keyof TClimateControl>(field: K, value: TClimateControl[K]) {
+        set((state) => ({
+          climateControl: { ...state.climateControl, [field]: value },
+          hoverIndex: null,
+        }));
       },
       setDisplaySettings(displaySettings: TDisplaySettings) {
         const normalizedBase = { ...DEFAULT_CONFIG.displaySettings, ...displaySettings };
-        const normalizedSettings = normalizedBase.countryBorders
+        const normalizedSettings = normalizedBase.nationBorders
           ? normalizedBase
           : { ...normalizedBase, provinceBorders: false };
         set({ displaySettings: normalizedSettings });
@@ -110,7 +100,7 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
       setDisplayLayer<K extends keyof TDisplaySettings>(layer: K, enabled: boolean) {
         const current = get().displaySettings;
         const nextSettings = { ...current, [layer]: enabled };
-        if (!nextSettings.countryBorders) nextSettings.provinceBorders = false;
+        if (!nextSettings.nationBorders) nextSettings.provinceBorders = false;
         set({ displaySettings: nextSettings });
       },
       setHoverIndex(hoverIndex: number | null) {
@@ -133,23 +123,21 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         seed: state.seed,
         cellCount: state.cellCount,
         seaLevel: state.seaLevel,
-        terrainPreset: state.terrainPreset,
+        topography: state.topography,
         nationCount: state.nationCount,
-        terrainRatios: state.terrainRatios,
+        climateControl: state.climateControl,
         displaySettings: state.displaySettings,
       }),
-      version: 4,
+      version: 8,
       migrate: (persistedState) => {
         const state = persistedState as Partial<TMapExplorerState> | undefined;
         if (!state) return DEFAULT_STATE;
-        const terrainRatios = migrateTerrainRatios(
-          state.terrainRatios as unknown as Partial<Record<string, number>> | undefined
-        );
         const persistedDisplaySettings = state.displaySettings as TDisplaySettings | undefined;
         return {
           ...DEFAULT_STATE,
           ...state,
-          terrainRatios,
+          topography: state.topography || DEFAULT_CONFIG.topography,
+          climateControl: { ...DEFAULT_CONFIG.climateControl, ...state.climateControl },
           displaySettings: { ...DEFAULT_CONFIG.displaySettings, ...persistedDisplaySettings },
         };
       },

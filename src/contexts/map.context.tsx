@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { MAP_VIEWPORT_CONFIG } from 'src/configs/mapConfig';
+import { MAP_VIEWPORT_CONFIG } from 'src/configs/MapConfig';
 import { MapGenerator } from 'src/services/pipeline/MapGenerator';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import { TDelaunayMesh, TExportSnapshot } from 'src/types/map.types';
@@ -54,9 +54,9 @@ export default function MapProvider({ children }: TProps) {
     seed,
     cellCount,
     seaLevel,
-    terrainPreset,
-    terrainRatios,
+    topography,
     nationCount,
+    climateControl,
     setCellCount,
     setHoverIndex,
   } = useMapExplorerStore();
@@ -105,9 +105,9 @@ export default function MapProvider({ children }: TProps) {
         seed,
         cellCount,
         seaLevel,
-        terrainPreset,
-        terrainRatios,
+        topography,
         nationCount,
+        climateControl,
       });
       const nextMesh = generator.generate();
       if (generationId !== generationIdRef.current) return;
@@ -118,7 +118,7 @@ export default function MapProvider({ children }: TProps) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [cellCount, nationCount, seaLevel, seed, terrainPreset, terrainRatios]);
+  }, [cellCount, climateControl, nationCount, seaLevel, seed, topography]);
 
   const handlePointerMove = useCallback(
     (x: number, y: number) => {

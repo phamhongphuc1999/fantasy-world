@@ -1,20 +1,20 @@
-# Ethnic Splitting Reimplementation Spec (Exact Behavior)
+# Ethnic Splitting Reimplementation Spec (Updated)
 
 ## Main File
 
-`src/services/buildGeopolitics/ethnic.ts`
+`src/services/geopolitics/ethnic.ts`
 
 ## Constants and Configuration
 
 - `T_MIN_ETHNIC_POPULATION = 1000`
 - `GEOPOLITICAL_CONFIG.ethnic` fields:
-  - `majorGroupCountMin`
+  - `majorGroupMin`
   - `majorGroupCountMax`
   - `dominantShareMin`, `dominantShareMax`
   - `secondaryShareMin`, `secondaryShareMax`
   - `crossBorderBlend`
   - `fragmentationLevel`
-  - `terrainInfluenceStrength`
+  - `terrainInfluenceStrength` (landform-aware step cost via `Cost.ethnic`)
   - `distancePenalty`
   - `smoothingPasses`
   - `minorityClusterMinCells`
@@ -49,7 +49,7 @@ Pass order is part of behavior.
 `getEthnicGroupCount(landCellCount, nationCount, config)`:
 
 - `byLand = floor(landCellCount / 1300)`
-- return `clamp(max(nationCount, byLand), majorGroupCountMin, majorGroupCountMax)`
+- return `clamp(max(nationCount, byLand), majorGroupMin, majorGroupCountMax)`
 
 ### Seed Picking
 

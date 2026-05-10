@@ -39,6 +39,14 @@ export default function Population({ provinces }: TProps) {
       cellCount: province.cellCount,
     })
   );
+  const cellPieData: Array<TPieChartData & { cellCount: number }> = provinces.map(
+    (province, index) => ({
+      label: `P#${province.provinceId}`,
+      value: province.cellCount,
+      color: colorByIndex(index),
+      cellCount: province.cellCount,
+    })
+  );
 
   const averagePopulationBarData: TBarChartData[] = provinces.map((province, index) => ({
     label: `P#${province.provinceId}`,
@@ -111,6 +119,25 @@ export default function Population({ provinces }: TProps) {
                     </div>
                     <div>
                       <span className="font-bold">Cells</span>: {tooltip.datum.cellCount}
+                    </div>
+                  </>
+                )}
+              />
+            </div>
+            <div className="rounded-xl border border-white/10 bg-slate-950/45 p-3">
+              <p className="mb-2 text-center text-xs font-bold text-slate-300">Cells (%)</p>
+              <PieChart
+                width={320}
+                height={320}
+                data={cellPieData}
+                renderTooltip={(tooltip) => (
+                  <>
+                    <div className="font-bold">{tooltip.label}</div>
+                    <div>
+                      <span className="font-bold">Cells</span>: {tooltip.datum.cellCount}
+                    </div>
+                    <div>
+                      <span className="font-bold">Percent</span>: {tooltip.percent}%
                     </div>
                   </>
                 )}

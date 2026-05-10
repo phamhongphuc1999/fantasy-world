@@ -1,7 +1,7 @@
 'use client';
 
 import { RefObject, useEffect } from 'react';
-import { TERRAIN_CONFIG } from 'src/configs/constance';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
 import {
   drawCountryFill,
   drawEthnicBorders,
@@ -76,29 +76,44 @@ export default function useMapCanvas(params: TProps) {
 
     for (const cell of cells) {
       if (isLandCell(cell)) continue;
-      drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 1, 'transparent', 0);
+      drawCellShape(context, cell, LANDFORM_CONFIG[cell.landform].color, 1, 'transparent', 0);
     }
 
     const showUniformLand =
-      !displaySettings.terrain &&
-      !displaySettings.terrainRelief &&
+      !displaySettings.landform &&
+      !displaySettings.landformRelief &&
+      !displaySettings.biome &&
+      !displaySettings.biomeRelief &&
       !displaySettings.population &&
       !displaySettings.temperature &&
       !displaySettings.precipitation &&
       !displaySettings.rainShadow &&
       !displaySettings.economy &&
-      !displaySettings.countryFill &&
+      !displaySettings.nationFill &&
       !displaySettings.ethnicFill;
 
-    const showTerrainReliefBase =
-      displaySettings.terrainRelief &&
-      !displaySettings.terrain &&
+    const showLandformReliefBase =
+      displaySettings.landformRelief &&
+      !displaySettings.landform &&
+      !displaySettings.biome &&
       !displaySettings.population &&
       !displaySettings.temperature &&
       !displaySettings.precipitation &&
       !displaySettings.rainShadow &&
       !displaySettings.economy &&
-      !displaySettings.countryFill &&
+      !displaySettings.nationFill &&
+      !displaySettings.ethnicFill;
+
+    const showBiomeReliefBase =
+      displaySettings.biomeRelief &&
+      !displaySettings.biome &&
+      !displaySettings.landform &&
+      !displaySettings.population &&
+      !displaySettings.temperature &&
+      !displaySettings.precipitation &&
+      !displaySettings.rainShadow &&
+      !displaySettings.economy &&
+      !displaySettings.nationFill &&
       !displaySettings.ethnicFill;
 
     let minPopulation = Number.POSITIVE_INFINITY;
@@ -132,17 +147,31 @@ export default function useMapCanvas(params: TProps) {
       }
     }
 
-    if (displaySettings.terrain) {
+    if (displaySettings.landform) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 1, 'transparent', 0);
+        drawCellShape(context, cell, LANDFORM_CONFIG[cell.landform].color, 1, 'transparent', 0);
       }
     }
 
-    if (showTerrainReliefBase) {
+    if (displaySettings.biome) {
       for (const cell of cells) {
         if (!isLandCell(cell)) continue;
-        drawCellShape(context, cell, TERRAIN_CONFIG[cell.terrain].color, 1, 'transparent', 0);
+        drawCellShape(context, cell, BIOME_CONFIG[cell.biome].color, 1, 'transparent', 0);
+      }
+    }
+
+    if (showLandformReliefBase) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        drawCellShape(context, cell, LANDFORM_CONFIG[cell.landform].color, 1, 'transparent', 0);
+      }
+    }
+
+    if (showBiomeReliefBase) {
+      for (const cell of cells) {
+        if (!isLandCell(cell)) continue;
+        drawCellShape(context, cell, BIOME_CONFIG[cell.biome].color, 1, 'transparent', 0);
       }
     }
 
@@ -217,8 +246,11 @@ export default function useMapCanvas(params: TProps) {
     }
 
     const showShadedRelief =
-      displaySettings.terrainRelief &&
-      (displaySettings.terrain || showTerrainReliefBase) &&
+      (displaySettings.landformRelief || displaySettings.biomeRelief) &&
+      (displaySettings.landform ||
+        displaySettings.biome ||
+        showLandformReliefBase ||
+        showBiomeReliefBase) &&
       !displaySettings.population &&
       !displaySettings.temperature &&
       !displaySettings.precipitation &&
@@ -228,8 +260,9 @@ export default function useMapCanvas(params: TProps) {
       applyShadedRelief(context, cells, { intensity: 0.62, verticalExaggeration: 10.5 });
     }
 
-    if (displaySettings.countryFill) drawCountryFill(context, cells);
-    if (displaySettings.ethnicFill) drawEthnicFill(context, cells, displaySettings.terrain);
+    if (displaySettings.nationFill) drawCountryFill(context, cells);
+    if (displaySettings.ethnicFill)
+      drawEthnicFill(context, cells, displaySettings.landform || displaySettings.biome);
 
     if (displaySettings.rivers) {
       for (const cell of cells) {
@@ -249,13 +282,13 @@ export default function useMapCanvas(params: TProps) {
       }
     }
 
-    if (displaySettings.countryBorders) {
+    if (displaySettings.nationBorders) {
       drawGrayBorders(context, cells);
       drawUrbanHierarchy(context, cells);
     }
 
     if (displaySettings.ethnicBorders) drawEthnicBorders(context, cells);
-    if (displaySettings.countryBorders && displaySettings.provinceBorders)
+    if (displaySettings.nationBorders && displaySettings.provinceBorders)
       drawProvinceBorders(context, cells);
 
     if (displaySettings.ethnicLabels) {
@@ -263,13 +296,13 @@ export default function useMapCanvas(params: TProps) {
     } else if (displaySettings.labels) {
       if (displaySettings.ethnicFill || displaySettings.ethnicBorders) {
         drawRegionNames(context, cells, nations, ethnics, 'ethnic');
-      } else if (displaySettings.countryBorders) {
+      } else if (displaySettings.nationBorders) {
         drawRegionNames(context, cells, nations, ethnics, 'nation');
       }
     }
 
     if (
-      displaySettings.terrain &&
+      (displaySettings.landform || displaySettings.biome) &&
       !displaySettings.population &&
       !displaySettings.temperature &&
       !displaySettings.precipitation &&

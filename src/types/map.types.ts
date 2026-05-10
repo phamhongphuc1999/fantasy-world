@@ -2,26 +2,6 @@ import type { Delaunay } from 'd3-delaunay';
 
 export type TPoint = [number, number];
 
-export type TTerrainConfig = {
-  label: string;
-  color: string;
-  icon: string;
-  isWater?: boolean;
-  isHydrologyWater: boolean;
-  isMarineWater: boolean;
-  isRenderWater: boolean;
-  sizeFactor: number;
-  logisticsCost: number;
-  logisticsRisk: number;
-  baseSuitability: number | null;
-  clusterMin?: number;
-  baseWeight: number;
-  cityFactor: number;
-  economyFactor: number;
-  flatness: number;
-  safetyScore: number;
-};
-
 export interface TVertex {
   id: number;
   point: TPoint;
@@ -34,27 +14,43 @@ export interface TEdge {
   isBoundary: boolean;
 }
 
-export type TSoilTerrain =
+export type TNumRecordLandform = Record<TLandform, number>;
+export type TNumRecordBiome = Record<TBiome, number>;
+
+export type TLandform =
+  | 'marine_deep'
+  | 'marine_shallow'
   | 'coast'
-  | 'plains'
-  | 'plateau'
-  | 'forest'
-  | 'desert'
-  | 'badlands'
-  | 'swamp'
+  | 'lake'
+  | 'plain'
   | 'valley'
   | 'hills'
-  | 'mountains'
-  | 'volcanic'
-  | 'tundra';
+  | 'mountain'
+  | 'plateau'
+  | 'volcanic_field';
 
-export type TTerrain = TSoilTerrain | 'lake' | 'deep-water' | 'shallow-water' | 'inland-sea';
+export type TBiome =
+  | 'unknown'
+  | 'plain'
+  | 'ice'
+  | 'tundra'
+  | 'boreal_forest'
+  | 'temperate_forest'
+  | 'tropical_forest'
+  | 'grassland'
+  | 'savanna'
+  | 'steppe'
+  | 'desert_hot'
+  | 'desert_cold'
+  | 'wetland'
+  | 'montane_shrub'
+  | 'freshwater'
+  | 'marine';
 
-export type TNumRecordTerrain = Record<TTerrain, number>;
-
-export type TBorderType = 'country' | 'province';
+export type TBorderType = 'nation' | 'province';
 export type TBorderConfig = {
-  cost: TNumRecordTerrain;
+  landformCost: TNumRecordLandform;
+  biomeCost: TNumRecordBiome;
   penalty: { riverCross: number; lakeCross: number; ridgeCross: number; shorelineEdgeBias: number };
   fragmentation: {
     maxMountainOwnersPerCluster: number;
@@ -64,12 +60,11 @@ export type TBorderConfig = {
   smoothness: { edgeNoiseWeight: number; jaggedPenalty: number };
 };
 
-export type TTerrainPreset = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
+export type TTopography = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
 
 export interface TTopographyCell {
   elevation: number;
   isWater: boolean;
-  terrain: TTerrain;
 }
 
 export type TZoneType = 'land' | 'internal-waters' | 'territorial-waters' | 'international-waters';
@@ -100,8 +95,6 @@ export interface TNation {
   name: string;
   populationMultiplier: number;
   economyMultiplier: number;
-  terrainPopMods: TNumRecordTerrain;
-  terrainEcoMods: TNumRecordTerrain;
   capitalCellId: number | null;
   capitalCoords: TPoint | null;
   economicHubIds: number[];
@@ -123,7 +116,6 @@ export interface TCell {
   neighbors: number[];
   elevation: number;
   isWater: boolean;
-  terrain: TTerrain;
   flow: number;
   effectiveFlow: number;
   riverWidth: number;
@@ -135,11 +127,16 @@ export interface TCell {
   isRiverSource: boolean;
   isRiverMouth: boolean;
   isLake: boolean;
-  biome: string;
+  landform: TLandform;
+  biome: TBiome;
   suitability: number;
   temperature: number;
   precipitation: number;
   rainShadow: number;
+  petProxy: number;
+  aridityIndex: number;
+  temperatureSeasonality: number;
+  precipitationSeasonality: number;
   population: number;
   economy: number;
   waterAccessScore: number;
@@ -167,16 +164,18 @@ export type TDelaunayMesh = TMesh & {
 };
 
 export interface TDisplaySettings {
-  terrain: boolean;
-  terrainRelief: boolean;
+  landform: boolean;
+  landformRelief: boolean;
+  biome: boolean;
+  biomeRelief: boolean;
   population: boolean;
   temperature: boolean;
   precipitation: boolean;
   rainShadow: boolean;
   economy: boolean;
   rivers: boolean;
-  countryBorders: boolean;
-  countryFill: boolean;
+  nationBorders: boolean;
+  nationFill: boolean;
   provinceBorders: boolean;
   ethnicBorders: boolean;
   ethnicFill: boolean;
@@ -185,22 +184,9 @@ export interface TDisplaySettings {
   cellData: boolean;
 }
 
-export type TTerrainRatioKey =
-  | 'plains'
-  | 'forest'
-  | 'swamp'
-  | 'desert'
-  | 'badlands'
-  | 'volcanic'
-  | 'hills'
-  | 'mountains'
-  | 'plateau';
-
-export type TTerrainRatioMap = Record<TTerrainRatioKey, number>;
-
-export interface TTerrainPresetOption {
+export interface TTopographyOption {
   label: string;
-  value: TTerrainPreset;
+  value: TTopography;
 }
 
 export interface TGenerationConfig {
@@ -209,9 +195,15 @@ export interface TGenerationConfig {
   seed: string;
   cellCount: number;
   seaLevel: number;
-  terrainPreset: TTerrainPreset;
-  terrainRatios: TTerrainRatioMap;
+  topography: TTopography;
   nationCount: number;
+  climateControl: {
+    temperatureOffset: number;
+    temperatureContrast: number;
+    precipitationScale: number;
+    precipitationOffset: number;
+    humanImpact: number;
+  };
 }
 
 export interface TGenerationStages {
@@ -220,18 +212,6 @@ export interface TGenerationStages {
   hydrology: TDelaunayMesh;
   population: TDelaunayMesh;
   geopolitics: TDelaunayMesh;
-}
-
-export interface THydrology {
-  initDownstreamMs: number;
-  flowAccumulationMs: number;
-  erosionAdjustmentMs: number;
-  climateAndTerrainMs: number;
-  lakesMs: number;
-  riversMs: number;
-  terrainPostProcessMs: number;
-  finalizeBiomeMs: number;
-  totalMs: number;
 }
 
 export interface TCellDescription {

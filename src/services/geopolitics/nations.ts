@@ -1,10 +1,11 @@
-import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/MapConfig';
+import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
 import { findNearestCell } from 'src/services/utils/geometry';
 import { clamp } from 'src/services/utils/math';
 import { sortDescStable } from 'src/services/utils/stats';
-import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
 import { TBorderType, TCell } from 'src/types/map.types';
-import { getNationSeedSuitability } from './costPolicies';
+import { createSeededRandom } from '../core/seededRandom';
+import { getNationSeedSuitability } from './cost';
 import {
   getBoundaryStepCost,
   getNationCount,
@@ -12,7 +13,6 @@ import {
   isLand,
   makeFrontierHash,
 } from './shared';
-import { createSeededRandom } from '../core/seededRandom';
 
 const LARGE_LAND_COMPONENT_MIN_CELLS = 200;
 
@@ -426,7 +426,7 @@ function selectNationSeeds(
 }
 
 type TNationFrontierState = { cellId: number; nationId: number; cost: number };
-const T_COUNTRY_REASSIGN_HASH = makeFrontierHash('postprocess', 'country-reassign');
+const T_COUNTRY_REASSIGN_HASH = makeFrontierHash('postprocess', 'nation-reassign');
 
 function pickBestNationForCell(
   cells: TCell[],
@@ -449,7 +449,7 @@ function pickBestNationForCell(
         cellId,
         nationId,
         T_COUNTRY_REASSIGN_HASH,
-        'country'
+        'nation'
       );
       if (step < minStep) minStep = step;
     }
@@ -484,7 +484,7 @@ function getNationStepCost(
     borderType
   );
   stepCost *= nationExpansionBias[current.nationId] || 1;
-  stepCost += GEOPOLITICAL_CONFIG.frontierNoiseWeight * 0.15;
+  stepCost += GEOPOLITICAL_CONFIG.frontierNoise * 0.15;
   return Math.max(0.2, stepCost);
 }
 
@@ -495,7 +495,7 @@ function runFloorExpansion(
   nationExpansionBias: number[],
   seedHash: number
 ) {
-  const minNationCells = GEOPOLITICAL_CONFIG.minNationLandCells;
+  const minNationCells = GEOPOLITICAL_CONFIG.minLandCells;
   if (minNationCells <= 1) return;
 
   const nationCount = nationExpansionBias.length;
@@ -533,7 +533,7 @@ function runFloorExpansion(
               currentState,
               neighborId,
               seedHash,
-              'country',
+              'nation',
               nationExpansionBias
             );
 
@@ -569,7 +569,7 @@ export function buildLandNations(cells: TCell[], seed: string, nationCount: numb
   const landCellCount = cells.filter(isLand).length;
   const numOfNation = getNationCount(nationCount, landCellCount);
   const connectivity = buildConnectivityContext(cells);
-  const minSeedComponentSize = GEOPOLITICAL_CONFIG.minNationLandCells + 6;
+  const minSeedComponentSize = GEOPOLITICAL_CONFIG.minLandCells + 6;
   const seeds = selectNationSeeds(cells, numOfNation, seed, connectivity, minSeedComponentSize);
   const owner = new Int32Array(cells.length);
   const cost = new Float64Array(cells.length);
@@ -614,7 +614,7 @@ export function buildLandNations(cells: TCell[], seed: string, nationCount: numb
             current,
             neighborId,
             seedHash,
-            'country',
+            'nation',
             nationExpansionBias
           );
 
@@ -630,7 +630,7 @@ export function buildLandNations(cells: TCell[], seed: string, nationCount: numb
 }
 
 export function alignNaturalTerrainClusters(cells: TCell[], owner: Int32Array) {
-  const targetTerrains = new Set(['mountains', 'hills', 'forest', 'swamp', 'tundra']);
+  const targetLandforms = new Set(['mountain', 'hills', 'plateau', 'valley']);
   const passes = 2;
 
   for (let pass = 0; pass < passes; pass += 1) {
@@ -639,7 +639,7 @@ export function alignNaturalTerrainClusters(cells: TCell[], owner: Int32Array) {
     for (let cellId = 0; cellId < cells.length; cellId += 1) {
       const cell = cells[cellId];
       if (!isLand(cell)) continue;
-      if (!targetTerrains.has(cell.terrain)) continue;
+      if (!targetLandforms.has(cell.landform)) continue;
       if (owner[cellId] < 0) continue;
 
       const nationCounts = new Map<number, number>();
@@ -647,7 +647,7 @@ export function alignNaturalTerrainClusters(cells: TCell[], owner: Int32Array) {
       for (const neighborId of cell.neighbors) {
         const neighbor = cells[neighborId];
         if (!isLand(neighbor)) continue;
-        if (neighbor.terrain !== cell.terrain) continue;
+        if (neighbor.landform !== cell.landform) continue;
         sameTerrainNeighbors += 1;
         const nationId = owner[neighborId];
         if (nationId < 0) continue;
@@ -668,8 +668,8 @@ export function alignNaturalTerrainClusters(cells: TCell[], owner: Int32Array) {
 export function enforceMinNationArea(cells: TCell[], owner: Int32Array, minNationCount = 0) {
   const landCellIds = cells.filter(isLand).map((cell) => cell.id);
   const minNationCells = Math.max(
-    GEOPOLITICAL_CONFIG.minNationLandCells,
-    Math.floor(landCellIds.length * GEOPOLITICAL_CONFIG.minNationLandRatio)
+    GEOPOLITICAL_CONFIG.minLandCells,
+    Math.floor(landCellIds.length * GEOPOLITICAL_CONFIG.minLandRatio)
   );
 
   const sizeByNation = buildLandNationSizeMap(landCellIds, owner);
@@ -736,7 +736,7 @@ export function enforceMinNationArea(cells: TCell[], owner: Int32Array, minNatio
 }
 
 export function diversifySmallNationSizes(cells: TCell[], owner: Int32Array, seed: string) {
-  const minNationCells = GEOPOLITICAL_CONFIG.minNationLandCells;
+  const minNationCells = GEOPOLITICAL_CONFIG.minLandCells;
   const sizeByNation = new Map<number, number>();
   for (const cell of cells) {
     if (!isLand(cell)) continue;
@@ -925,8 +925,8 @@ function getUnclaimedLandCount(cells: TCell[], owner: Int32Array) {
 function getSmallNationCount(cells: TCell[], owner: Int32Array) {
   const landCellIds = cells.filter(isLand).map((cell) => cell.id);
   const minNationCells = Math.max(
-    GEOPOLITICAL_CONFIG.minNationLandCells,
-    Math.floor(landCellIds.length * GEOPOLITICAL_CONFIG.minNationLandRatio)
+    GEOPOLITICAL_CONFIG.minLandCells,
+    Math.floor(landCellIds.length * GEOPOLITICAL_CONFIG.minLandRatio)
   );
   const sizeByNation = buildLandNationSizeMap(landCellIds, owner);
   return getSmallNationIds(sizeByNation, minNationCells).length;

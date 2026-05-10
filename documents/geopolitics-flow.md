@@ -1,8 +1,8 @@
-# Geopolitics Reimplementation Spec (Exact Behavior)
+# Geopolitics Reimplementation Spec (Updated)
 
 ## Main File
 
-`src/services/buildGeopolitics/index.ts`
+`src/services/geopolitics/index.ts`
 
 ## Exact Pipeline Order
 
@@ -28,7 +28,7 @@ Changing order changes results.
 - Enumerate nation ids from `owner` where `nationId >= 0`.
 - For each nation id:
   - RNG seed: `${seed}:nation-profile:${nationId}`
-  - Build terrain modifiers from configured ranges (`mapConfig.ts`) with `randomBetween(min, max)`.
+  - Build landform/biome modifiers from configured ranges (`src/configs/MapConfig/index.ts`) with `randomBetween(min, max)`.
   - Build two multipliers:
     - `populationMultiplier` in `T_NATION_POPULATION_MULTIPLIER_RANGE`
     - `economyMultiplier` in `T_NATION_ECONOMY_MULTIPLIER_RANGE`
@@ -38,8 +38,8 @@ Changing order changes results.
 - `if !isLand(cell)`: return cell unchanged.
 - `nationId = owner[cell.id]`; `if nationId < 0`: unchanged.
 - `if no profile`: unchanged.
-- `terrainPopulationModifier = profile.terrainPopMods[cell.terrain] ?? 1`
-- `terrainEconomyModifier = profile.terrainEcoMods[cell.terrain] ?? 1`
+- `landformPopulationModifier = profile.landformPopMods[cell.landform] ?? 1`
+- `landformEconomyModifier = profile.landformEcoMods[cell.landform] ?? 1`
 - `population = round(cell.population * populationMultiplier * terrainPopulationModifier)`
 - `economy = round(cell.economy * economyMultiplier * terrainEconomyModifier)`
 - Clamp both to `>= 0`.
@@ -72,7 +72,7 @@ Changing order changes results.
 `runNationStabilityPass(...)` internals:
 
 1. `alignNaturalTerrainClusters(cells, owner)`
-2. `limitMountainSplit(cells, owner, 'country')`
+2. `limitMountainSplit(cells, owner, 'nation')`
 3. `enforceMinNationArea(cells, owner, preserveNationCount)`
 
 ## Province Stage

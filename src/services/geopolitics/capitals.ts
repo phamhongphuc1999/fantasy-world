@@ -1,36 +1,14 @@
-import { TERRAIN_CONFIG } from 'src/configs/constance';
-import { GEOPOLITICAL_CONFIG } from 'src/configs/mapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/MapConfig';
+import { LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
 import { getMetricRange } from 'src/services/utils/stats';
 import { normalize } from 'src/services/utils/math';
 import { buildDistanceMap, collectConnectedComponents } from 'src/services/core/graph';
 import { TCell, TNation } from 'src/types/map.types';
 import { createSeededRandom } from '../core/seededRandom';
-import { isWaterOrRiverCell } from '../terrain/rules';
+import { isWaterOrRiverCell } from '../cell/rules';
 import { CAPITAL_VIEWPORT_MARGIN, createRegionalName, isLand } from './shared';
 
-type TNationProfile = Pick<
-  TNation,
-  'populationMultiplier' | 'economyMultiplier' | 'terrainPopMods' | 'terrainEcoMods'
->;
-
-const defaultTerrainConfig = {
-  'deep-water': 0,
-  'shallow-water': 0,
-  'inland-sea': 0,
-  coast: 1,
-  lake: 1,
-  plains: 1,
-  plateau: 1,
-  forest: 1,
-  desert: 1,
-  badlands: 1,
-  swamp: 1,
-  valley: 1,
-  hills: 1,
-  mountains: 1,
-  volcanic: 1,
-  tundra: 1,
-};
+type TNationProfile = Pick<TNation, 'populationMultiplier' | 'economyMultiplier'>;
 
 const T_COMPONENT_SHARE_THRESHOLD = 0.3;
 const T_MIN_WEIGHT = 1e-6;
@@ -139,10 +117,10 @@ function scoreCapital(
       : edgeDistance >= CAPITAL_VIEWPORT_MARGIN + 6
         ? 0.1
         : 0;
-  const safetyScore = TERRAIN_CONFIG[cell.terrain].safetyScore;
-  const terrainFlatness = TERRAIN_CONFIG[cell.terrain].flatness;
+  const safetyScore = LANDFORM_CONFIG[cell.landform].safetyScore;
+  const terrainFlatness = LANDFORM_CONFIG[cell.landform].terrainFlatness;
   const terrainBias =
-    terrainFlatness * 0.65 + (cell.terrain === 'plains' || cell.terrain === 'valley' ? 0.35 : 0);
+    terrainFlatness * 0.65 + (cell.landform === 'plain' || cell.landform === 'valley' ? 0.35 : 0);
   const adjustedSafety = safetyScore * 0.6 + terrainBias * 0.4 + edgeSafety * 0.15;
 
   return (
@@ -155,7 +133,14 @@ function scoreCapital(
 }
 
 function economicHubScore(cell: TCell, cells: TCell[], population: number, economy: number) {
-  const geoScore = TERRAIN_CONFIG[cell.terrain].flatness;
+  const geoScore =
+    cell.landform === 'plain' || cell.landform === 'valley'
+      ? 0.95
+      : cell.landform === 'hills' || cell.landform === 'plateau'
+        ? 0.68
+        : cell.landform === 'coast'
+          ? 0.8
+          : 0.38;
   const waterScore = waterProximityScore(cell, cells);
   return population * 0.35 + economy * 0.4 + geoScore * 0.15 + waterScore * 0.1;
 }
@@ -189,9 +174,9 @@ export function pickEconomicAndCapital(
     const random = createSeededRandom(`${seed}:capital:${nationId}`);
 
     let hubCount = 1;
-    if (landSize >= GEOPOLITICAL_CONFIG.hubCount.mediumNationMinLand) hubCount = 3;
-    else if (landSize >= GEOPOLITICAL_CONFIG.hubCount.smallNationMinLand) hubCount = 2;
-    hubCount = Math.min(hubCount, GEOPOLITICAL_CONFIG.hubCount.maxHubsPerNation);
+    if (landSize >= GEOPOLITICAL_CONFIG.hubs.mediumNationMinLand) hubCount = 3;
+    else if (landSize >= GEOPOLITICAL_CONFIG.hubs.smallNationMinLand) hubCount = 2;
+    hubCount = Math.min(hubCount, GEOPOLITICAL_CONFIG.hubs.maxHubsPerNation);
 
     const borderDistanceMap = getDistanceMap(cells, nationLand, (cellId) => {
       for (const neighborId of cells[cellId].neighbors) {
@@ -308,7 +293,6 @@ export function pickEconomicAndCapital(
           if (distToCapital < 45) score -= 0.12;
           else if (distToCapital < 70) score -= 0.05;
         }
-
         return { cellId: cell.id, score };
       })
       .sort((a, b) => b.score - a.score);
@@ -338,8 +322,6 @@ export function pickEconomicAndCapital(
       name: nationName,
       populationMultiplier: profile?.populationMultiplier ?? 1,
       economyMultiplier: profile?.economyMultiplier ?? 1,
-      terrainPopMods: profile?.terrainPopMods ?? defaultTerrainConfig,
-      terrainEcoMods: profile?.terrainEcoMods ?? defaultTerrainConfig,
       capitalCellId,
       capitalCoords: capitalCellId !== null ? cells[capitalCellId].site : null,
       economicHubIds: hubCellIds,

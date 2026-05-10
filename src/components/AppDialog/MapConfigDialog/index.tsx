@@ -23,13 +23,13 @@ import EthnicPanel from './EthnicPanel';
 import ExportTab from './ExportTab';
 import GenerateTab from './GenerateTab';
 import NationsPanel from './NationsPanel';
-import TerrainTab from './TerrainTab';
+import PalettePanel from './PalettePanel';
 
 const T_MAP_CONFIG_ACTIVE_PANEL_KEY = 'map-config-active-panel';
 const T_ALLOWED_PANELS = new Set([
-  'terrain',
   'generation',
   'display',
+  'palette',
   'nations',
   'ethnic',
   'export',
@@ -37,7 +37,7 @@ const T_ALLOWED_PANELS = new Set([
 
 export default function MapConfigDialog() {
   const { resetToDefaults } = useMapExplorerStore();
-  const [activePanel, setActivePanel] = useState('terrain');
+  const [activePanel, setActivePanel] = useState('generation');
 
   useEffect(() => {
     const stored = window.localStorage.getItem(T_MAP_CONFIG_ACTIVE_PANEL_KEY);
@@ -74,12 +74,12 @@ export default function MapConfigDialog() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="border border-white/15 bg-slate-950 text-slate-100">
-              <SelectItem value="terrain">Terrain</SelectItem>
               <SelectItem value="generation">Generation</SelectItem>
               <SelectItem value="display">Display</SelectItem>
               <SelectItem value="nations">Nations</SelectItem>
               <SelectItem value="ethnic">Ethnic</SelectItem>
               <SelectItem value="export">Export</SelectItem>
+              <SelectItem value="palette">Palette</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -90,24 +90,12 @@ export default function MapConfigDialog() {
             Reset to Default Config
           </Button>
           <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-            {activePanel === 'terrain' && <TerrainTab />}
             {activePanel === 'generation' && <GenerateTab />}
-            {activePanel === 'display' && (
-              <div className="space-y-4">
-                <DisplayModePanel />
-              </div>
-            )}
-            {activePanel === 'nations' && (
-              <div className="space-y-4">
-                <NationsPanel />
-              </div>
-            )}
-            {activePanel === 'ethnic' && (
-              <div className="space-y-4">
-                <EthnicPanel />
-              </div>
-            )}
+            {activePanel === 'display' && <DisplayModePanel />}
+            {activePanel === 'nations' && <NationsPanel />}
+            {activePanel === 'ethnic' && <EthnicPanel />}
             {activePanel === 'export' && <ExportTab />}
+            {activePanel === 'palette' && <PalettePanel />}
           </div>
         </div>
       </DialogContent>
