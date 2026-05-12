@@ -1,8 +1,8 @@
-import { PRECIPITATION_MODEL } from 'src/configs/MapConfig/hydrology.config';
+import { PRECIPITATION_CONFIG } from 'src/configs/map/hydrology';
 import { TCell } from 'src/types/map.types';
 import { hashSeed } from '../core/seededRandom';
 
-const WIND_MODEL = PRECIPITATION_MODEL.wind;
+const WIND_MODEL = PRECIPITATION_CONFIG.wind;
 
 export type TWindVector = {
   x: number;

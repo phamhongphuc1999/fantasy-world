@@ -1,4 +1,5 @@
-import { CORE, ELEVATION_CONFIG, TERRAIN_RULES } from 'src/configs/MapConfig/hydrology.config';
+import { HYDROLOGY_CONFIG } from 'src/configs/map/hydrology';
+import { LANDFORM_ELEVATION_BANDS, TERRAIN_CLASSIFICATION_RULES } from 'src/configs/map/terrain';
 import { TBiome, TCell, TLandform } from 'src/types/map.types';
 import { clamp } from '../utils/math';
 
@@ -27,7 +28,7 @@ export function buildWaterInfluence(cells: TCell[]): Float32Array {
     waterInfluence[cellIndex] = cells[cellIndex].isWater ? 1 : 0;
   }
 
-  for (let iteration = 0; iteration < CORE.waterInfluence.iterations; iteration += 1) {
+  for (let iteration = 0; iteration < HYDROLOGY_CONFIG.waterInfluence.iterations; iteration += 1) {
     for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
       const cell = cells[cellIndex];
       if (cell.neighbors.length === 0) {
@@ -35,12 +36,13 @@ export function buildWaterInfluence(cells: TCell[]): Float32Array {
         continue;
       }
 
-      let total = waterInfluence[cellIndex] * CORE.waterInfluence.selfWeight;
+      let total = waterInfluence[cellIndex] * HYDROLOGY_CONFIG.waterInfluence.selfWeight;
       for (const neighborId of cell.neighbors) {
         total += waterInfluence[neighborId];
       }
 
-      nextInfluence[cellIndex] = total / (cell.neighbors.length + CORE.waterInfluence.selfWeight);
+      nextInfluence[cellIndex] =
+        total / (cell.neighbors.length + HYDROLOGY_CONFIG.waterInfluence.selfWeight);
     }
     const tmp = waterInfluence;
     waterInfluence = nextInfluence;
@@ -49,10 +51,10 @@ export function buildWaterInfluence(cells: TCell[]): Float32Array {
   return waterInfluence;
 }
 
-const RELIEF = TERRAIN_RULES.relief;
-const AIRD = TERRAIN_RULES.arid;
-const SEA = TERRAIN_RULES.sea;
-const WET = TERRAIN_RULES.wet;
+const RELIEF = TERRAIN_CLASSIFICATION_RULES.relief;
+const AIRD = TERRAIN_CLASSIFICATION_RULES.arid;
+const SEA = TERRAIN_CLASSIFICATION_RULES.sea;
+const WET = TERRAIN_CLASSIFICATION_RULES.wet;
 export function getTerrain(
   cell: TCell,
   seaLevel: number,
@@ -67,11 +69,12 @@ export function getTerrain(
   if (cell.elevation < seaLevel + SEA.coastBand) return 'coast';
 
   const inValley =
-    cell.isRiver || (relief < RELIEF.valleyMax && precipitation > RELIEF.valleyPrecipMin);
+    cell.isRiver ||
+    (relief < RELIEF.valleyReliefMax && precipitation > RELIEF.valleyPrecipitationMin);
 
   if (
-    temperature < TERRAIN_RULES.cold.tundraMaxTemp ||
-    cell.elevation > TERRAIN_RULES.cold.tundraElevMin
+    temperature < TERRAIN_CLASSIFICATION_RULES.cold.tundraMaxTemp ||
+    cell.elevation > TERRAIN_CLASSIFICATION_RULES.cold.tundraAbsElevationMin
   ) {
     return 'tundra';
   }
@@ -79,68 +82,81 @@ export function getTerrain(
   const elevationAboveSea = cell.elevation - seaLevel;
   const isNewLand = elevationAboveSea < SEA.newLandWidth;
 
-  if (relief > RELIEF.mountainMin && (cell.elevation > RELIEF.mountainElevMin || isNewLand)) {
+  if (
+    relief > RELIEF.mountainReliefMin &&
+    (cell.elevation > RELIEF.mountainAbsElevationMin || isNewLand)
+  ) {
     return 'mountains';
   }
 
-  if (relief > RELIEF.hillMin && (cell.elevation > RELIEF.hillElevMin || isNewLand)) {
+  if (relief > RELIEF.hillReliefMin && (cell.elevation > RELIEF.hillAbsElevationMin || isNewLand)) {
     return 'hills';
   }
 
   if (
-    cell.elevation > RELIEF.plateauElevMin &&
-    relief < RELIEF.plateauCap &&
-    precipitation > RELIEF.plateauPrecipMin &&
-    precipitation < RELIEF.plateauPrecipMax
+    cell.elevation > RELIEF.plateauAbsElevationMin &&
+    relief < RELIEF.plateauReliefCap &&
+    precipitation > RELIEF.plateauPrecipitationMin &&
+    precipitation < RELIEF.plateauPrecipitationMax
   ) {
     return 'plateau';
   }
 
-  if (cell.elevation > RELIEF.mountainElevMin) return 'mountains';
-  if (cell.elevation > RELIEF.hillElevMin) return 'hills';
+  if (cell.elevation > RELIEF.mountainAbsElevationMin) return 'mountains';
+  if (cell.elevation > RELIEF.hillAbsElevationMin) return 'hills';
   if (inValley) return 'valley';
 
   if (
-    temperature > AIRD.desertTempMin &&
-    precipitation < AIRD.desertPrecipMax &&
+    temperature > AIRD.desertTemperatureMin &&
+    precipitation < AIRD.desertPrecipitationMax &&
     rainShadow > AIRD.desertRainShadowMin
   ) {
-    if (cell.elevation > seaLevel + ELEVATION_CONFIG.minBadland && relief > RELIEF.badlandsMin) {
+    if (
+      cell.elevation > seaLevel + LANDFORM_ELEVATION_BANDS.badlandAboveSeaMin &&
+      relief > RELIEF.badlandsReliefMin
+    ) {
       return 'badlands';
     }
     return 'desert';
   }
 
   if (
-    precipitation > WET.swampPrecipMin &&
-    cell.elevation < WET.swampElevMax &&
+    precipitation > WET.swampPrecipitationMin &&
+    cell.elevation < WET.swampAbsElevationMax &&
     relief < WET.swampReliefCap
   ) {
     return 'swamp';
   }
 
-  if (precipitation > WET.forestPrecipMin && temperature > WET.forestTempMin) {
+  if (precipitation > WET.forestPrecipitationMin && temperature > WET.forestTemperatureMin) {
     return 'forest';
   }
   if (
-    precipitation < AIRD.aridDesertPrecipMax &&
-    temperature > AIRD.aridDesertTempMin &&
+    precipitation < AIRD.aridDesertPrecipitationMax &&
+    temperature > AIRD.aridDesertTemperatureMin &&
     rainShadow > AIRD.aridDesertRainShadowMin
   ) {
     return 'desert';
   }
   if (
     cell.elevation >
-      RELIEF.mountainElevMin - TERRAIN_RULES.volcanic.elevationDeltaFromMountainMin &&
-    precipitation < TERRAIN_RULES.volcanic.precipMax &&
-    temperature > TERRAIN_RULES.volcanic.tempMin
+      RELIEF.mountainAbsElevationMin -
+        TERRAIN_CLASSIFICATION_RULES.volcanic.elevationDeltaFromMountainAbsMin &&
+    precipitation < TERRAIN_CLASSIFICATION_RULES.volcanic.precipitationMax &&
+    temperature > TERRAIN_CLASSIFICATION_RULES.volcanic.temperatureMin
   ) {
     return 'volcanic';
   }
-  if (relief < RELIEF.valley2Max && precipitation > RELIEF.valley2PrecipMin) {
+  if (
+    relief < RELIEF.valleyFallbackReliefMax &&
+    precipitation > RELIEF.valleyFallbackPrecipitationMin
+  ) {
     return 'valley';
   }
-  if (relief > RELIEF.hills2Min && cell.elevation > seaLevel + ELEVATION_CONFIG.minHill) {
+  if (
+    relief > RELIEF.hillsFallbackReliefMin &&
+    cell.elevation > seaLevel + LANDFORM_ELEVATION_BANDS.hillAboveSeaMin
+  ) {
     return 'hills';
   }
   return 'plains';

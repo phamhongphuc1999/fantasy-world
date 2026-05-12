@@ -1,4 +1,4 @@
-import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
 import { TPieChartData } from 'src/types/global';
 import { TBiome, TLandform } from 'src/types/map.types';
 import BlurCard from './BlurCard';

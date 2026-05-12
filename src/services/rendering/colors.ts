@@ -1,4 +1,4 @@
-import { NATION_COLORS } from 'src/configs/MapConfig';
+import { NATION_COLORS } from 'src/configs/map/common';
 
 export function getNationColor(nationId: number | null) {
   if (nationId === null) return '#334155';

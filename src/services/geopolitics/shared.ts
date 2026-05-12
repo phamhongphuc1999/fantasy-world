@@ -1,8 +1,8 @@
-import { BORDER_CONFIG } from 'src/configs/MapConfig';
+import { BORDER_CONFIG } from 'src/configs/map/geopolitics';
 import { collectConnectedComponents } from 'src/services/core/graph';
 import { TBorderType, TCell, TLandform, TZoneType } from 'src/types/map.types';
-import Cost from './cost';
 import { createSeededRandom, hashSeed } from '../core/seededRandom';
+import Cost from './cost';
 
 export const CAPITAL_VIEWPORT_MARGIN = 14;
 

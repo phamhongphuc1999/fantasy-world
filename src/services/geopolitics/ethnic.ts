@@ -1,12 +1,12 @@
-import { GEOPOLITICAL_CONFIG } from 'src/configs/MapConfig';
-import { findNearestCell } from 'src/services/utils/geometry';
-import { sortDescStable } from 'src/services/utils/stats';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/map/geopolitics';
 import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
 import { collectConnectedComponents } from 'src/services/core/graph';
 import { TFifoQueue } from 'src/services/core/queue';
+import { findNearestCell } from 'src/services/utils/geometry';
+import { sortDescStable } from 'src/services/utils/stats';
 import { TCell, TEthnic } from 'src/types/map.types';
-import Cost from './cost';
 import { createSeededRandom, hashSeed } from '../core/seededRandom';
+import Cost from './cost';
 import { createRegionalName, edgeNoise, isLand } from './shared';
 
 type TEthnicConfig = typeof GEOPOLITICAL_CONFIG.ethnic;

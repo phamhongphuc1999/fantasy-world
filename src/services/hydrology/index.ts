@@ -1,4 +1,4 @@
-import { CORE, EROSION, LAKES } from 'src/configs/MapConfig/hydrology.config';
+import { EROSION_CONFIG, HYDROLOGY_CONFIG, LAKE_CONFIG } from 'src/configs/map/hydrology';
 import {
   buildWaterInfluence,
   getSuitabilityByLandformBiome,
@@ -33,7 +33,7 @@ interface TBuildHydrologyOptions {
   };
 }
 
-const T_COAST_OUTLET = CORE.coastOutletId;
+const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 
 function sortIndicesByElevation(elevations: Float32Array) {
   const indices = Array.from({ length: elevations.length }, (_, index) => index);
@@ -121,17 +121,18 @@ function runHydrologyInternal({
       cell.isWater || isSink
         ? 0
         : Math.min(
-            EROSION.maxAmount,
-            slope * EROSION.slopeWeight + Math.log2(flow[cellIndex] + 1) * EROSION.flowWeight
+            EROSION_CONFIG.maxAmount,
+            slope * EROSION_CONFIG.slopeWeight +
+              Math.log2(flow[cellIndex] + 1) * EROSION_CONFIG.flowWeight
           );
 
     erosion[cellIndex] = erosionAmount;
 
     if (downstreamId >= 0) {
-      deposit[downstreamId] += erosionAmount * EROSION.depositRate;
+      deposit[downstreamId] += erosionAmount * EROSION_CONFIG.depositRate;
     }
 
-    if (isSink && flow[cellIndex] > LAKES.sinkFlowMin) {
+    if (isSink && flow[cellIndex] > LAKE_CONFIG.sinkFlowMin) {
       isLake[cellIndex] = 1;
     }
   }

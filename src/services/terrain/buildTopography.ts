@@ -1,5 +1,5 @@
-import { TOPOGRAPHY_CONFIG } from 'src/configs/MapConfig';
-import { TDelaunayMesh, TLine, TTopographyCell, TTopography } from 'src/types/map.types';
+import { TOPOGRAPHY_CONFIG } from 'src/configs/map/topography';
+import { TDelaunayMesh, TLine, TTopography, TTopographyCell } from 'src/types/map.types';
 import { createSeededRandom, hashSeed } from '../core/seededRandom';
 import { distanceToSegment } from '../utils/geometry';
 import { clamp, smoothStep } from '../utils/math';

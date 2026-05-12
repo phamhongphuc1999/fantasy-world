@@ -1,6 +1,6 @@
 'use client';
 
-import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
 
 type TProps = Record<string, never>;
 

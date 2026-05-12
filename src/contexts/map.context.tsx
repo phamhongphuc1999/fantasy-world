@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { MAP_VIEWPORT_CONFIG } from 'src/configs/MapConfig';
+import { DEFAULT_CONFIG } from 'src/configs/map/common';
 import { MapGenerator } from 'src/services/pipeline/MapGenerator';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 import { TDelaunayMesh, TExportSnapshot } from 'src/types/map.types';
@@ -26,8 +26,8 @@ interface TMapContextType {
 
 const mapContextDefault: TMapContextType = {
   mesh: {
-    width: MAP_VIEWPORT_CONFIG.width,
-    height: MAP_VIEWPORT_CONFIG.height,
+    width: DEFAULT_CONFIG.width,
+    height: DEFAULT_CONFIG.height,
     cells: [],
     edges: [],
     vertices: [],
@@ -100,8 +100,8 @@ export default function MapProvider({ children }: TProps) {
 
     const timer = window.setTimeout(() => {
       const generator = new MapGenerator({
-        width: MAP_VIEWPORT_CONFIG.width,
-        height: MAP_VIEWPORT_CONFIG.height,
+        width: DEFAULT_CONFIG.width,
+        height: DEFAULT_CONFIG.height,
         seed,
         cellCount,
         seaLevel,
@@ -131,9 +131,7 @@ export default function MapProvider({ children }: TProps) {
 
   const handleCellCountChange = useCallback(
     (nextValue: number) => {
-      setCellCount(
-        Math.min(MAP_VIEWPORT_CONFIG.maxCells, Math.max(MAP_VIEWPORT_CONFIG.minCells, nextValue))
-      );
+      setCellCount(Math.min(DEFAULT_CONFIG.maxCells, Math.max(DEFAULT_CONFIG.minCells, nextValue)));
     },
     [setCellCount]
   );

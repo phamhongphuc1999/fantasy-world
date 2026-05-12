@@ -1,4 +1,4 @@
-import { BIOME_MODEL } from 'src/configs/MapConfig/hydrology.config';
+import { BIOME_CONFIG } from 'src/configs/map/terrain';
 import { TBiome, TLandform } from 'src/types/map.types';
 import { clamp } from '../utils/math';
 
@@ -36,7 +36,7 @@ function classifyLandBiome(
   elevSea: number,
   flow: number
 ): TBiome {
-  const model = BIOME_MODEL.desert;
+  const model = BIOME_CONFIG.desert;
   if (landform === 'marine_deep' || landform === 'marine_shallow') return 'marine';
   if (landform === 'lake') return 'freshwater';
 
@@ -116,7 +116,7 @@ function postProcessDesertNoise(
   landforms: TLandform[],
   neighborsByCell: number[][]
 ) {
-  const model = BIOME_MODEL.desert;
+  const model = BIOME_CONFIG.desert;
   const next = [...biomes];
   const drySet = new Set<TBiome>(['desert_hot', 'desert_cold', 'steppe']);
 
@@ -153,7 +153,7 @@ function postProcessHumanPlain(
   isLakeByCell: Uint8Array,
   humanImpact: number
 ) {
-  const model = BIOME_MODEL.humanPlain;
+  const model = BIOME_CONFIG.humanPlain;
   const sourceBiomes = new Set<TBiome>([
     'temperate_forest',
     'tropical_forest',

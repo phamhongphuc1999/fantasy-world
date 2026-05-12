@@ -1,5 +1,5 @@
 import { buildDistanceMap } from 'src/services/core/graph';
-import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
 import { TCell, TDelaunayMesh } from 'src/types/map.types';
 import { clamp } from '../utils/math';
 import { createSeededRandom } from '../core/seededRandom';

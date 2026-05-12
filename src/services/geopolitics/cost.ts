@@ -1,4 +1,4 @@
-import { BORDER_CONFIG } from 'src/configs/MapConfig';
+import { BORDER_CONFIG } from 'src/configs/map/geopolitics';
 import { TBorderType, TCell } from 'src/types/map.types';
 import { isLand } from './shared';
 

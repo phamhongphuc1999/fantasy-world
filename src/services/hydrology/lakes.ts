@@ -1,9 +1,9 @@
-import { CORE, LAKES } from 'src/configs/MapConfig/hydrology.config';
+import { HYDROLOGY_CONFIG, LAKE_CONFIG } from 'src/configs/map/hydrology';
 import { collectConnectedComponents, floodFromSeeds } from 'src/services/core/graph';
 import { TFifoQueue } from 'src/services/core/queue';
 import { TCell } from 'src/types/map.types';
 
-const T_COAST_OUTLET = CORE.coastOutletId;
+const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 function expandLakes(cells: TCell[], flow: Float32Array, downstream: Int32Array) {
   const candidateLakeSeeds: number[] = [];
   const visitMark = new Uint32Array(cells.length);
@@ -12,15 +12,15 @@ function expandLakes(cells: TCell[], flow: Float32Array, downstream: Int32Array)
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     const cell = cells[cellIndex];
     if (!cell.isLake) continue;
-    if (cell.rainShadow > LAKES.expansion.rainShadowMax) continue;
-    if (cell.precipitation < LAKES.expansion.precipMin) continue;
+    if (cell.rainShadow > LAKE_CONFIG.expansion.rainShadowMax) continue;
+    if (cell.precipitation < LAKE_CONFIG.expansion.precipMin) continue;
     candidateLakeSeeds.push(cellIndex);
   }
 
   for (const seedId of candidateLakeSeeds) {
     const seedCell = cells[seedId];
     const targetMax = Math.min(
-      LAKES.expansion.maxCells,
+      LAKE_CONFIG.expansion.maxCells,
       2 + Math.floor(Math.log2(flow[seedId] + 1) * 2)
     );
     let expanded = 1;
@@ -39,9 +39,9 @@ function expandLakes(cells: TCell[], flow: Float32Array, downstream: Int32Array)
 
         const neighbor = cells[neighborId];
         if (neighbor.isWater || neighbor.isLake) continue;
-        if (neighbor.rainShadow > LAKES.expansion.rainShadowMax) continue;
-        if (neighbor.precipitation < LAKES.expansion.precipMin) continue;
-        if (neighbor.elevation > seedCell.elevation + LAKES.expansion.elevationSlack) {
+        if (neighbor.rainShadow > LAKE_CONFIG.expansion.rainShadowMax) continue;
+        if (neighbor.precipitation < LAKE_CONFIG.expansion.precipMin) continue;
+        if (neighbor.elevation > seedCell.elevation + LAKE_CONFIG.expansion.elevationSlack) {
           continue;
         }
         if (downstream[neighborId] === T_COAST_OUTLET) continue;
@@ -109,7 +109,7 @@ function classifyInlandWater(
   downstream: Int32Array
 ) {
   const oceanConnected = buildOceanWaterMask(cells, width, height);
-  const threshold = seaLevel + LAKES.enclosedWater.elevationBuffer;
+  const threshold = seaLevel + LAKE_CONFIG.enclosedWater.elevationBuffer;
   const visited = new Uint8Array(cells.length);
   const stack: number[] = [];
 
@@ -145,13 +145,13 @@ function classifyInlandWater(
 
     const basinDepth = seaLevel - minElevation;
     const shouldPersistWater =
-      basinDepth >= LAKES.enclosedWater.depthMin || component.some((id) => cells[id].isWater);
+      basinDepth >= LAKE_CONFIG.enclosedWater.depthMin || component.some((id) => cells[id].isWater);
     if (!shouldPersistWater) continue;
 
-    const isLake = component.length <= LAKES.enclosedWater.maxLakeCells;
+    const isLake = component.length <= LAKE_CONFIG.enclosedWater.maxLakeCells;
     const shorelineRise = Math.min(
-      LAKES.enclosedWater.shoreRiseMax,
-      basinDepth * LAKES.enclosedWater.shoreRiseFactor
+      LAKE_CONFIG.enclosedWater.shoreRiseMax,
+      basinDepth * LAKE_CONFIG.enclosedWater.shoreRiseFactor
     );
     const waterSurface = seaLevel + Math.max(0, shorelineRise);
 
@@ -209,7 +209,9 @@ function filterAndLimitLakes(cells: TCell[], flow: Float32Array) {
   });
 
   regionScore.sort((a, b) => b.score - a.score);
-  const keptRegions = new Set(regionScore.slice(0, LAKES.limits.maxCount).map((v) => v.region));
+  const keptRegions = new Set(
+    regionScore.slice(0, LAKE_CONFIG.limits.maxCount).map((v) => v.region)
+  );
 
   for (const entry of regionScore) {
     if (keptRegions.has(entry.region)) continue;
@@ -260,8 +262,8 @@ function buildHydrologyRegionMaps(cells: TCell[]): THydrologyRegionMaps {
 
   for (let cellId = 0; cellId < plainRegionSizeByCell.length; cellId += 1) {
     const size = plainRegionSizeByCell[cellId];
-    if (size >= LAKES.plains.largePlainMin) hasLargePlains = true;
-    if (size >= LAKES.plains.veryLargePlainMin) hasVeryLargePlains = true;
+    if (size >= LAKE_CONFIG.plains.largePlainMin) hasLargePlains = true;
+    if (size >= LAKE_CONFIG.plains.veryLargePlainMin) hasVeryLargePlains = true;
     if (hasLargePlains && hasVeryLargePlains) break;
   }
 

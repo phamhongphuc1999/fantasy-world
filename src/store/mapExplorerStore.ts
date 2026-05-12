@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_CONFIG } from 'src/configs/MapConfig';
+import { DEFAULT_CONFIG } from 'src/configs/map/common';
 import { TDisplaySettings, TTopography } from 'src/types/map.types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -32,10 +32,6 @@ type TMapExplorerActions = {
   setTopography: (topography: TTopography) => void;
   setNationCount: (nationCount: number) => boolean;
   setClimateControl: (climateControl: TClimateControl) => void;
-  setClimateControlField: <K extends keyof TClimateControl>(
-    field: K,
-    value: TClimateControl[K]
-  ) => void;
   setDisplaySettings: (displaySettings: TDisplaySettings) => void;
   setDisplayLayer: <K extends keyof TDisplaySettings>(layer: K, enabled: boolean) => void;
   setHoverIndex: (hoverIndex: number | null) => void;
@@ -83,12 +79,6 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
       },
       setClimateControl(climateControl: TClimateControl) {
         set({ climateControl, hoverIndex: null });
-      },
-      setClimateControlField<K extends keyof TClimateControl>(field: K, value: TClimateControl[K]) {
-        set((state) => ({
-          climateControl: { ...state.climateControl, [field]: value },
-          hoverIndex: null,
-        }));
       },
       setDisplaySettings(displaySettings: TDisplaySettings) {
         const normalizedBase = { ...DEFAULT_CONFIG.displaySettings, ...displaySettings };

@@ -1,4 +1,4 @@
-import { GEOPOLITICAL_CONFIG } from 'src/configs/MapConfig';
+import { GEOPOLITICAL_CONFIG } from 'src/configs/map/geopolitics';
 import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
 import { findNearestCell } from 'src/services/utils/geometry';
 import { clamp } from 'src/services/utils/math';

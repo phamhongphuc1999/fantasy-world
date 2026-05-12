@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, MAP_VIEWPORT_CONFIG } from 'src/configs/MapConfig';
+import { DEFAULT_CONFIG } from 'src/configs/map/common';
 import { TDelaunayMesh, TGenerationConfig, TGenerationStages } from 'src/types/map.types';
 import { describe, expect, it } from 'vitest';
 import { MapGenerator } from './pipeline/MapGenerator';
@@ -112,8 +112,8 @@ function toPipelineSignature(config: TGenerationConfig): TPipelineSignature {
 
 function makeConfig(seed: string): TGenerationConfig {
   return {
-    width: MAP_VIEWPORT_CONFIG.width,
-    height: MAP_VIEWPORT_CONFIG.height,
+    width: DEFAULT_CONFIG.width,
+    height: DEFAULT_CONFIG.height,
     seed,
     cellCount: 2000,
     seaLevel: DEFAULT_CONFIG.seaLevel,

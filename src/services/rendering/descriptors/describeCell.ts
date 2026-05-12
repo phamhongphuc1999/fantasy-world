@@ -1,4 +1,4 @@
-import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
 import { clamp } from 'src/services/utils/math';
 import { TCell, TCellDescription } from 'src/types/map.types';
 

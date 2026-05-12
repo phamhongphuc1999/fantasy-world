@@ -2,7 +2,7 @@ import { getNationColor } from 'src/services/rendering/colors';
 import { getRiverStrokeWidth } from 'src/services/rendering/rivers';
 import { TDelaunayMesh, TDisplaySettings, TPoint } from 'src/types/map.types';
 import { getRiverSegmentEndPoint } from 'src/services/rendering/canvas/primitives';
-import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/MapConfig/landform-biome.config';
+import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
 
 function toPolygonPath(points: TPoint[]) {
   if (points.length === 0) return '';
