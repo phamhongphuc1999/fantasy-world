@@ -66,9 +66,8 @@ export default function MapProvider({ children }: TProps) {
 
   const importFromSnapshot = useCallback(
     (snapshot: TExportSnapshot) => {
-      if (snapshot.schemaVersion !== 1) {
+      if (snapshot.schemaVersion !== 1)
         return { ok: false as const, error: 'Unsupported schema version' };
-      }
 
       if (
         !snapshot.mesh ||
@@ -109,9 +108,9 @@ export default function MapProvider({ children }: TProps) {
         nationCount,
         climateControl,
       });
-      const nextMesh = generator.generate();
+      const { geopolitics } = generator.generate();
       if (generationId !== generationIdRef.current) return;
-      setMesh(nextMesh);
+      setMesh(geopolitics);
       setIsGenerating(false);
     }, 0);
 

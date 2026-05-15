@@ -1,24 +1,7 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/map/hydrology';
 import { LANDFORM_ELEVATION_BANDS, TERRAIN_CLASSIFICATION_RULES } from 'src/configs/map/terrain';
-import { TBiome, TCell, TLandform } from 'src/types/map.types';
+import { TBiome, TCell, TLandform, TTerrain } from 'src/types/map.types';
 import { clamp } from '../utils/math';
-
-export type TClimateTerrainTag =
-  | 'lake'
-  | 'deep-water'
-  | 'shallow-water'
-  | 'coast'
-  | 'tundra'
-  | 'mountains'
-  | 'hills'
-  | 'plateau'
-  | 'valley'
-  | 'badlands'
-  | 'desert'
-  | 'swamp'
-  | 'forest'
-  | 'volcanic'
-  | 'plains';
 
 export function buildWaterInfluence(cells: TCell[]): Float32Array {
   let waterInfluence = new Float32Array(cells.length);
@@ -62,7 +45,7 @@ export function getTerrain(
   precipitation: number,
   rainShadow: number,
   relief: number
-): TClimateTerrainTag {
+): TTerrain {
   if (cell.isLake) return 'lake';
   if (cell.elevation < seaLevel - SEA.deepSeaLevel) return 'deep-water';
   if (cell.elevation < seaLevel) return 'shallow-water';

@@ -1,6 +1,6 @@
 import { PRECIPITATION_CONFIG } from 'src/configs/map/hydrology';
 import { TCell } from 'src/types/map.types';
-import { clamp } from '../utils/math';
+import { clamp, dot } from '../utils/math';
 import { TWindVector } from './wind';
 
 type TPrecipitationParams = {
@@ -16,10 +16,6 @@ type TAdvancedPrecipitationOutput = {
   precipitation: Float32Array;
   rainShadow: Float32Array;
 };
-
-function dot(x1: number, y1: number, x2: number, y2: number) {
-  return x1 * x2 + y1 * y2;
-}
 
 function getLatitudeFactor(y: number, height: number) {
   const latitude = Math.abs((y / Math.max(1, height)) * 2 - 1);

@@ -5,7 +5,7 @@ import { clamp } from '../utils/math';
 import { createSeededRandom } from '../core/seededRandom';
 import { isWaterOrRiverCell } from '../cell/rules';
 
-interface TBuildPopulationOptions {
+interface TPopulationParams {
   mesh: TDelaunayMesh;
   seed: string;
 }
@@ -114,7 +114,7 @@ function economyFactor(cell: TCell) {
   return Math.max(0.2, factor);
 }
 
-export function buildPopulation({ mesh, seed }: TBuildPopulationOptions): TDelaunayMesh {
+export function buildPopulation({ mesh, seed }: TPopulationParams): TDelaunayMesh {
   const cells = mesh.cells;
   const random = createSeededRandom(`${seed}:population`);
   const score = new Float64Array(cells.length);

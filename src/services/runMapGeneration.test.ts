@@ -26,7 +26,7 @@ type TPipelineSignature = {
 
 function runMapGenerationStages(config: TGenerationConfig): TGenerationStages {
   const generator = new MapGenerator(config);
-  return generator.generateStages();
+  return generator.generate();
 }
 
 function fnv1a64Hex(parts: readonly string[]) {

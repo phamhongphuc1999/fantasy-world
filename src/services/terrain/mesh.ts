@@ -1,22 +1,10 @@
 import { Delaunay } from 'd3-delaunay';
-import { TCell, TDelaunayMesh, TEdge, TPoint, TVertex } from 'src/types/map.types';
+import { TCell, TDelaunayMesh, TEdge, TMeshParams, TPoint, TVertex } from 'src/types/map.types';
+import { createSeededRandom } from '../core/seededRandom';
 import { toPointKey } from '../utils/geometry';
 import { clamp } from '../utils/math';
-import { createSeededRandom } from '../core/seededRandom';
 
-interface TBuildMeshOptions {
-  width: number;
-  height: number;
-  seed: string;
-  cellCount: number;
-}
-
-function genJitteredPoints(
-  width: number,
-  height: number,
-  cellCount: number,
-  seed: string
-): TPoint[] {
+function genPoints({ width, height, seed, cellCount }: TMeshParams): TPoint[] {
   const random = createSeededRandom(seed);
   const columns = Math.max(1, Math.ceil(Math.sqrt((cellCount * width) / height)));
   const rows = Math.max(1, Math.ceil(cellCount / columns));
@@ -55,8 +43,8 @@ function createEdgeKey(vertexAId: number, vertexBId: number) {
   return vertexAId < vertexBId ? `${vertexAId}:${vertexBId}` : `${vertexBId}:${vertexAId}`;
 }
 
-export function buildMesh({ width, height, seed, cellCount }: TBuildMeshOptions): TDelaunayMesh {
-  const points = genJitteredPoints(width, height, cellCount, seed);
+export function buildMesh({ width, height, seed, cellCount }: TMeshParams): TDelaunayMesh {
+  const points = genPoints({ width, height, cellCount, seed });
   const delaunay = Delaunay.from(points);
   const voronoi = delaunay.voronoi([0, 0, width, height]);
   const vertexIdByKey = new Map<string, number>();

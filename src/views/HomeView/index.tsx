@@ -1,5 +1,3 @@
-'use client';
-
 import MapConfigDialog from 'src/components/AppDialog/MapConfigDialog';
 import MapCanvasPanel from 'src/views/HomeView/MapCanvasPanel';
 

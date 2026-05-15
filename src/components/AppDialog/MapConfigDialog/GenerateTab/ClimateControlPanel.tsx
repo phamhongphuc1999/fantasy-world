@@ -12,6 +12,14 @@ type TDraft = {
   humanImpact: string;
 };
 
+const T_CLIMATE_LIMITS = {
+  temperatureOffset: { min: -0.45, max: 0.45, step: 0.01 },
+  temperatureContrast: { min: 0.35, max: 1.9, step: 0.01 },
+  precipitationScale: { min: 0.3, max: 2.2, step: 0.01 },
+  precipitationOffset: { min: -0.45, max: 0.45, step: 0.01 },
+  humanImpact: { min: 0, max: 1, step: 0.01 },
+} as const;
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -56,11 +64,31 @@ export default function ClimateControlPanel() {
     const nextHumanImpact = parseNumber(draft.humanImpact, climateControl.humanImpact);
 
     setClimateControl({
-      temperatureOffset: clamp(nextTemperatureOffset, -0.45, 0.45),
-      temperatureContrast: clamp(nextTemperatureContrast, 0.35, 1.9),
-      precipitationScale: clamp(nextPrecipitationScale, 0.3, 2.2),
-      precipitationOffset: clamp(nextPrecipitationOffset, -0.45, 0.45),
-      humanImpact: clamp(nextHumanImpact, 0, 1),
+      temperatureOffset: clamp(
+        nextTemperatureOffset,
+        T_CLIMATE_LIMITS.temperatureOffset.min,
+        T_CLIMATE_LIMITS.temperatureOffset.max
+      ),
+      temperatureContrast: clamp(
+        nextTemperatureContrast,
+        T_CLIMATE_LIMITS.temperatureContrast.min,
+        T_CLIMATE_LIMITS.temperatureContrast.max
+      ),
+      precipitationScale: clamp(
+        nextPrecipitationScale,
+        T_CLIMATE_LIMITS.precipitationScale.min,
+        T_CLIMATE_LIMITS.precipitationScale.max
+      ),
+      precipitationOffset: clamp(
+        nextPrecipitationOffset,
+        T_CLIMATE_LIMITS.precipitationOffset.min,
+        T_CLIMATE_LIMITS.precipitationOffset.max
+      ),
+      humanImpact: clamp(
+        nextHumanImpact,
+        T_CLIMATE_LIMITS.humanImpact.min,
+        T_CLIMATE_LIMITS.humanImpact.max
+      ),
     });
   }
 
@@ -69,8 +97,10 @@ export default function ClimateControlPanel() {
       <div className="space-y-2">
         <label className="text-xs text-slate-300">Temperature Offset (-0.45 to 0.45)</label>
         <Input
-          type="text"
-          inputMode="decimal"
+          type="number"
+          step={T_CLIMATE_LIMITS.temperatureOffset.step}
+          min={T_CLIMATE_LIMITS.temperatureOffset.min}
+          max={T_CLIMATE_LIMITS.temperatureOffset.max}
           value={draft.temperatureOffset}
           onChange={(event) => setDraftField('temperatureOffset', event.target.value)}
           className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none"
@@ -78,8 +108,10 @@ export default function ClimateControlPanel() {
 
         <label className="text-xs text-slate-300">Temperature Contrast (0.35 to 1.9)</label>
         <Input
-          type="text"
-          inputMode="decimal"
+          type="number"
+          step={T_CLIMATE_LIMITS.temperatureContrast.step}
+          min={T_CLIMATE_LIMITS.temperatureContrast.min}
+          max={T_CLIMATE_LIMITS.temperatureContrast.max}
           value={draft.temperatureContrast}
           onChange={(event) => setDraftField('temperatureContrast', event.target.value)}
           className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none"
@@ -87,8 +119,10 @@ export default function ClimateControlPanel() {
 
         <label className="text-xs text-slate-300">Precipitation Scale (0.3 to 2.2)</label>
         <Input
-          type="text"
-          inputMode="decimal"
+          type="number"
+          step={T_CLIMATE_LIMITS.precipitationScale.step}
+          min={T_CLIMATE_LIMITS.precipitationScale.min}
+          max={T_CLIMATE_LIMITS.precipitationScale.max}
           value={draft.precipitationScale}
           onChange={(event) => setDraftField('precipitationScale', event.target.value)}
           className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none"
@@ -96,8 +130,10 @@ export default function ClimateControlPanel() {
 
         <label className="text-xs text-slate-300">Precipitation Offset (-0.45 to 0.45)</label>
         <Input
-          type="text"
-          inputMode="decimal"
+          type="number"
+          step={T_CLIMATE_LIMITS.precipitationOffset.step}
+          min={T_CLIMATE_LIMITS.precipitationOffset.min}
+          max={T_CLIMATE_LIMITS.precipitationOffset.max}
           value={draft.precipitationOffset}
           onChange={(event) => setDraftField('precipitationOffset', event.target.value)}
           className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none"
@@ -105,8 +141,10 @@ export default function ClimateControlPanel() {
 
         <label className="text-xs text-slate-300">Human Impact (0 to 1)</label>
         <Input
-          type="text"
-          inputMode="decimal"
+          type="number"
+          step={T_CLIMATE_LIMITS.humanImpact.step}
+          min={T_CLIMATE_LIMITS.humanImpact.min}
+          max={T_CLIMATE_LIMITS.humanImpact.max}
           value={draft.humanImpact}
           onChange={(event) => setDraftField('humanImpact', event.target.value)}
           className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none"

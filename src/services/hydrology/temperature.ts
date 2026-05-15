@@ -1,7 +1,7 @@
 import { TEMPERATURE_CONFIG } from 'src/configs/map/hydrology';
 import { TCell } from 'src/types/map.types';
 import { hashSeed } from '../core/seededRandom';
-import { clamp } from '../utils/math';
+import { clamp, dot } from '../utils/math';
 import { TWindVector } from './wind';
 
 type TComputeTemperatureParams = {
@@ -15,10 +15,6 @@ type TComputeTemperatureParams = {
   windField: TWindVector[];
   height: number;
 };
-
-function dot(x1: number, y1: number, x2: number, y2: number) {
-  return x1 * x2 + y1 * y2;
-}
 
 function buildMarineDistance(cells: TCell[]) {
   const distance = new Int16Array(cells.length);

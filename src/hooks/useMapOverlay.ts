@@ -1,22 +1,23 @@
 'use client';
 
 import { RefObject, useEffect } from 'react';
+import { useMapContext } from 'src/contexts/map.context';
 import {
   drawCellShape,
   drawSiteMarker,
   setupCanvas,
 } from 'src/services/rendering/canvas/primitives';
-import { TCell } from 'src/types/map.types';
+import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
 type TProps = {
   canvasRef: RefObject<HTMLCanvasElement | null>;
-  cells: TCell[];
-  width: number;
-  height: number;
-  hoverIndex: number | null;
 };
 
-export default function useMapOverlay({ canvasRef, cells, width, height, hoverIndex }: TProps) {
+export default function useMapOverlay({ canvasRef }: TProps) {
+  const { hoverIndex } = useMapExplorerStore();
+  const { mesh } = useMapContext();
+  const { cells, width, height } = mesh;
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;

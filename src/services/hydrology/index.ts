@@ -3,7 +3,6 @@ import {
   buildWaterInfluence,
   getSuitabilityByLandformBiome,
   getTerrain,
-  TClimateTerrainTag,
 } from 'src/services/hydrology/climate';
 import {
   classifyInlandWater,
@@ -14,24 +13,11 @@ import { computePrecipitation } from 'src/services/hydrology/precipitation';
 import { runRiverGeneration } from 'src/services/hydrology/river';
 import { computeTemperature } from 'src/services/hydrology/temperature';
 import { buildWindField } from 'src/services/hydrology/wind';
-import { TCell, TDelaunayMesh } from 'src/types/map.types';
+import { TCell, TDelaunayMesh, THydrologyParams, TTerrain } from 'src/types/map.types';
 import { classifyBiomes } from '../terrain/biomeClassifier';
 import { classifyLandforms } from '../terrain/landformClassifier';
 import { clamp } from '../utils/math';
 import { getAvgNeighbor } from '../utils/topology';
-
-interface TBuildHydrologyOptions {
-  mesh: TDelaunayMesh;
-  seaLevel: number;
-  seed: string;
-  climateControl: {
-    temperatureOffset: number;
-    temperatureContrast: number;
-    precipitationScale: number;
-    precipitationOffset: number;
-    humanImpact: number;
-  };
-}
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 
@@ -54,7 +40,7 @@ function runHydrologyInternal({
   seaLevel,
   seed,
   climateControl,
-}: TBuildHydrologyOptions): TDelaunayMesh {
+}: THydrologyParams): TDelaunayMesh {
   const cellCount = mesh.cells.length;
   const elevations = new Float32Array(cellCount);
   const adjustedElevations = new Float32Array(cellCount);
@@ -214,7 +200,7 @@ function runHydrologyInternal({
     windField,
     height: mesh.height,
   });
-  const climateTerrainByCell = new Array<TClimateTerrainTag>(cells.length);
+  const terrains = new Array<TTerrain>(cells.length);
   const aridityIndexByCell = new Float32Array(cells.length);
   const petByCell = new Float32Array(cells.length);
   const tempSeasonalityByCell = new Float32Array(cells.length);
@@ -241,7 +227,7 @@ function runHydrologyInternal({
 
     const relief = reliefByCell[cellIndex];
     const terrainTag = getTerrain(cell, seaLevel, temperature, precipitation, rainShadow, relief);
-    climateTerrainByCell[cellIndex] = terrainTag;
+    terrains[cellIndex] = terrainTag;
     const petProxy = clamp(
       0.22 + temperature * 0.78 + Math.max(0, 1 - waterInfluence[cellIndex]) * 0.1,
       0.05,
@@ -288,7 +274,7 @@ function runHydrologyInternal({
     seaLevel,
     reliefByCell,
     flow,
-    climateTerrainByCell,
+    terrains,
   });
   const biomes = classifyBiomes({
     landforms,
@@ -380,6 +366,6 @@ export function buildHydrology({
   seaLevel,
   seed,
   climateControl,
-}: TBuildHydrologyOptions): TDelaunayMesh {
+}: THydrologyParams): TDelaunayMesh {
   return runHydrologyInternal({ mesh, seaLevel, seed, climateControl });
 }

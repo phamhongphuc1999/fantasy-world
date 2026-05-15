@@ -1,4 +1,10 @@
-import { TCell, TCellOwnerParams, TDelaunayMesh, TEthnic } from 'src/types/map.types';
+import {
+  TCell,
+  TCellOwnerParams,
+  TDelaunayMesh,
+  TEthnic,
+  TGeopoliticsParams,
+} from 'src/types/map.types';
 import { createSeededRandom } from '../core/seededRandom';
 import { pickEconomicAndCapital } from './capitals';
 import { buildEthnicRegions } from './ethnic';
@@ -17,12 +23,6 @@ import {
   minProvinceArea,
 } from './provinces';
 import { assignMaritimeZones, getNationCount, isLand, limitMountainSplit } from './shared';
-
-type TBuildGeopoliticsOptions = {
-  mesh: TDelaunayMesh;
-  seed: string;
-  nationCount: number;
-};
 
 const T_NATION_POPULATION_MULTIPLIER_RANGE: [number, number] = [0.1, 5.0];
 const T_NATION_ECONOMY_MULTIPLIER_RANGE: [number, number] = [0.1, 20];
@@ -227,7 +227,7 @@ function finalizeOwnershipProjection(
   return { ...mesh, cells, nations, ethnics };
 }
 
-export function buildGeopolitics(params: TBuildGeopoliticsOptions): TDelaunayMesh {
+export function buildGeopolitics(params: TGeopoliticsParams): TDelaunayMesh {
   const { mesh, seed, nationCount } = params;
   const { owner, preserveNationCount } = assignNations(mesh, seed, nationCount);
   postProcessNations(mesh.cells, owner, preserveNationCount, seed);

@@ -1,14 +1,13 @@
 import { LANDFORM_CLASSIFIER_CONFIG, LANDFORM_ELEVATION_BANDS } from 'src/configs/map/terrain';
-import { TCell, TLandform } from 'src/types/map.types';
-import { TClimateTerrainTag } from '../hydrology/climate';
+import { TCell, TLandform, TTerrain } from 'src/types/map.types';
 import { clamp } from '../utils/math';
 
-type TClassifyLandformsInput = {
+type TClassifyLandformsParams = {
   cells: TCell[];
   seaLevel: number;
   reliefByCell: Float32Array;
   flow: Float32Array;
-  climateTerrainByCell: TClimateTerrainTag[];
+  terrains: TTerrain[];
 };
 
 function hasMarineNeighbor(cell: TCell, cells: TCell[]) {
@@ -66,7 +65,7 @@ function classifyLandformForCell(
   relief: number,
   localFlow: number,
   seaLevel: number,
-  climateTerrain: TClimateTerrainTag,
+  terrain: TTerrain,
   cells: TCell[]
 ): TLandform {
   const model = LANDFORM_CLASSIFIER_CONFIG;
@@ -79,7 +78,7 @@ function classifyLandformForCell(
 
   if (
     cell.elevation <= seaLevel + LANDFORM_ELEVATION_BANDS.coastAboveSeaMax ||
-    climateTerrain === 'coast' ||
+    terrain === 'coast' ||
     hasMarineNeighbor(cell, cells)
   ) {
     return 'coast';
@@ -98,7 +97,7 @@ function classifyLandformForCell(
   const scorePlain =
     Math.max(0, 0.8 - Math.abs(slopeSignal)) * 0.9 + Math.max(0, 0.6 - elevationAboveSea) * 0.5;
   const scoreVolcanic =
-    (climateTerrain === 'volcanic' ? 1 : 0) * 1.3 +
+    (terrain === 'volcanic' ? 1 : 0) * 1.3 +
     Math.max(0, elevationAboveSea - 0.22) * 0.8 +
     Math.max(0, slopeSignal - 0.12) * 0.5;
 
@@ -115,8 +114,7 @@ function classifyLandformForCell(
   const allowPlateau = true;
   const allowMountain = inMountainBand || slopeSignal >= model.mountainMinSlope;
   const allowVolcanic =
-    climateTerrain === 'volcanic' &&
-    elevationAboveSea >= LANDFORM_ELEVATION_BANDS.volcanicAboveSeaMin;
+    terrain === 'volcanic' && elevationAboveSea >= LANDFORM_ELEVATION_BANDS.volcanicAboveSeaMin;
 
   let best: TLandform = inHighland ? 'plateau' : 'plain';
   let bestScore = allowPlain ? scorePlain : Number.NEGATIVE_INFINITY;
@@ -158,20 +156,15 @@ function classifyLandformForCell(
   return best;
 }
 
-export function classifyLandforms({
-  cells,
-  seaLevel,
-  reliefByCell,
-  flow,
-  climateTerrainByCell,
-}: TClassifyLandformsInput): TLandform[] {
+export function classifyLandforms(params: TClassifyLandformsParams): TLandform[] {
+  const { cells, seaLevel, reliefByCell, flow, terrains } = params;
   return cells.map((cell, cellIndex) =>
     classifyLandformForCell(
       cell,
       reliefByCell[cellIndex] as number,
       flow[cellIndex] as number,
       seaLevel,
-      climateTerrainByCell[cellIndex] as TClimateTerrainTag,
+      terrains[cellIndex] as TTerrain,
       cells
     )
   );

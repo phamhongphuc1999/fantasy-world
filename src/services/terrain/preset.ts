@@ -26,6 +26,8 @@ function applyGlobalScale(elevations: Float32Array, offset: number, scale: numbe
 
 const ranges = TOPOGRAPHY_PRESET_CONFIG.ranges;
 const balanced = TOPOGRAPHY_PRESET_CONFIG.balanced;
+const rifted = TOPOGRAPHY_PRESET_CONFIG.rifted;
+const archipelago = TOPOGRAPHY_PRESET_CONFIG.archipelago;
 export function applyTopography({ mesh, seed, topography, elevations }: TApplyTopographyParams) {
   const random = createSeededRandom(`${seed}:${topography}:terrain-tools`);
   const nextElevations = Float32Array.from(elevations);
@@ -51,11 +53,12 @@ export function applyTopography({ mesh, seed, topography, elevations }: TApplyTo
       amplitude: ranges.rangeBands.amplitude * 0.62,
       width: ranges.rangeBands.width * 0.82,
     });
+    const { count, depth, width } = ranges.valleyBands;
     applyValleyBands(mesh, random, nextElevations, {
       ...ranges.valleyBands,
-      count: ranges.valleyBands.count + 4,
-      depth: ranges.valleyBands.depth * 1.28,
-      width: ranges.valleyBands.width * 0.84,
+      count: count + 4,
+      depth: depth * 1.28,
+      width: width * 0.84,
     });
     applyEdgeShelf(
       mesh,
@@ -68,48 +71,37 @@ export function applyTopography({ mesh, seed, topography, elevations }: TApplyTo
   }
 
   if (topography === 'rifted') {
-    applyRangeBands(mesh, random, nextElevations, TOPOGRAPHY_PRESET_CONFIG.rifted.rangeBands);
-    applyValleyBands(mesh, random, nextElevations, TOPOGRAPHY_PRESET_CONFIG.rifted.valleyBands);
-    applyGlobalScale(
-      nextElevations,
-      TOPOGRAPHY_PRESET_CONFIG.rifted.globalScale.offset,
-      TOPOGRAPHY_PRESET_CONFIG.rifted.globalScale.scale
-    );
+    applyRangeBands(mesh, random, nextElevations, rifted.rangeBands);
+    applyValleyBands(mesh, random, nextElevations, rifted.valleyBands);
+    applyGlobalScale(nextElevations, rifted.globalScale.offset, rifted.globalScale.scale);
     applyEdgeShelf(
       mesh,
       nextElevations,
-      TOPOGRAPHY_PRESET_CONFIG.rifted.edgeShelfStrength,
+      rifted.edgeShelfStrength,
       hashSeed(`${seed}:${topography}:shelf`)
     );
-    smoothElevations(mesh, nextElevations, TOPOGRAPHY_PRESET_CONFIG.rifted.smoothFactor);
+    smoothElevations(mesh, nextElevations, rifted.smoothFactor);
     return nextElevations;
   }
 
   // Archipelago / island chain preset: many separated islands with varied sizes.
   applyArchipelagoSeeds(mesh, random, nextElevations, {
     majorIslandCount:
-      TOPOGRAPHY_PRESET_CONFIG.archipelago.majorIslandMin +
-      Math.floor(
-        random() *
-          (TOPOGRAPHY_PRESET_CONFIG.archipelago.majorIslandMax -
-            TOPOGRAPHY_PRESET_CONFIG.archipelago.majorIslandMin +
-            1)
-      ),
+      archipelago.majorIslandMin +
+      Math.floor(random() * (archipelago.majorIslandMax - archipelago.majorIslandMin + 1)),
     mediumIslandCount:
-      TOPOGRAPHY_PRESET_CONFIG.archipelago.mediumIslandBase +
-      Math.floor(random() * TOPOGRAPHY_PRESET_CONFIG.archipelago.mediumIslandExtra),
+      archipelago.mediumIslandBase + Math.floor(random() * archipelago.mediumIslandExtra),
     smallIslandCount:
-      TOPOGRAPHY_PRESET_CONFIG.archipelago.smallIslandBase +
-      Math.floor(random() * TOPOGRAPHY_PRESET_CONFIG.archipelago.smallIslandExtra),
+      archipelago.smallIslandBase + Math.floor(random() * archipelago.smallIslandExtra),
   });
-  applyValleyBands(mesh, random, nextElevations, TOPOGRAPHY_PRESET_CONFIG.archipelago.valleyBands);
+  applyValleyBands(mesh, random, nextElevations, archipelago.valleyBands);
   applyEdgeShelf(
     mesh,
     nextElevations,
-    TOPOGRAPHY_PRESET_CONFIG.archipelago.edgeShelfStrength,
+    archipelago.edgeShelfStrength,
     hashSeed(`${seed}:${topography}:shelf`)
   );
-  smoothElevations(mesh, nextElevations, TOPOGRAPHY_PRESET_CONFIG.archipelago.smoothFactor);
+  smoothElevations(mesh, nextElevations, archipelago.smoothFactor);
 
   return nextElevations;
 }

@@ -17,6 +17,23 @@ export interface TEdge {
 export type TNumRecordLandform = Record<TLandform, number>;
 export type TNumRecordBiome = Record<TBiome, number>;
 
+export type TTerrain =
+  | 'lake'
+  | 'deep-water'
+  | 'shallow-water'
+  | 'coast'
+  | 'tundra'
+  | 'mountains'
+  | 'hills'
+  | 'plateau'
+  | 'valley'
+  | 'badlands'
+  | 'desert'
+  | 'swamp'
+  | 'forest'
+  | 'volcanic'
+  | 'plains';
+
 export type TLandform =
   | 'marine_deep'
   | 'marine_shallow'
@@ -189,14 +206,24 @@ export interface TTopographyOption {
   value: TTopography;
 }
 
-export interface TGenerationConfig {
+export interface TMeshParams {
   width: number;
   height: number;
   seed: string;
   cellCount: number;
+}
+
+export interface TTopographyParams {
+  mesh: TDelaunayMesh;
+  seed: string;
   seaLevel: number;
   topography: TTopography;
-  nationCount: number;
+}
+
+export interface THydrologyParams {
+  mesh: TDelaunayMesh;
+  seed: string;
+  seaLevel: number;
   climateControl: {
     temperatureOffset: number;
     temperatureContrast: number;
@@ -205,6 +232,17 @@ export interface TGenerationConfig {
     humanImpact: number;
   };
 }
+
+export type TGeopoliticsParams = {
+  mesh: TDelaunayMesh;
+  seed: string;
+  nationCount: number;
+};
+
+export type TGenerationConfig = TMeshParams &
+  Omit<TTopographyParams, 'mesh'> &
+  Omit<THydrologyParams, 'mesh'> &
+  Omit<TGeopoliticsParams, 'mesh'>;
 
 export interface TGenerationStages {
   mesh: TDelaunayMesh;
@@ -250,4 +288,13 @@ export type TCellOwnerParams = {
   cells: TCell[];
   owner: Int32Array;
   provinceOwner: Int32Array;
+};
+
+export type TCellStats = {
+  minPopulation: number;
+  maxPopulation: number;
+  minTemperature: number;
+  maxTemperature: number;
+  minEconomy: number;
+  maxEconomy: number;
 };

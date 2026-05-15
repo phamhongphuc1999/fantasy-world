@@ -1,16 +1,9 @@
 import { TOPOGRAPHY_CONFIG } from 'src/configs/map/topography';
-import { TDelaunayMesh, TLine, TTopography, TTopographyCell } from 'src/types/map.types';
+import { TDelaunayMesh, TLine, TTopographyCell, TTopographyParams } from 'src/types/map.types';
 import { createSeededRandom, hashSeed } from '../core/seededRandom';
 import { distanceToSegment } from '../utils/geometry';
 import { clamp, smoothStep } from '../utils/math';
 import { applyTopography } from './preset';
-
-interface TBuildTopographyOptions {
-  mesh: TDelaunayMesh;
-  seed: string;
-  seaLevel: number;
-  topography: TTopography;
-}
 
 type TBoundaryLine = TLine & {
   kind: 'collision' | 'rift';
@@ -92,7 +85,6 @@ function sampleRidgedNoise(x: number, y: number, seedHash: number) {
     amplitude *= persistence;
     frequency *= lacunarity;
   }
-
   return weight > 0 ? total / weight : 0;
 }
 
@@ -224,12 +216,8 @@ function reinforceHighMountains(elevations: Float32Array, seaLevel: number) {
 const BLEND = TOPOGRAPHY_CONFIG.blend;
 const WARP = TOPOGRAPHY_CONFIG.warp;
 const NOISE = TOPOGRAPHY_CONFIG.noise;
-export function buildTopography({
-  mesh,
-  seed,
-  seaLevel,
-  topography,
-}: TBuildTopographyOptions): TDelaunayMesh {
+export function buildTopography(params: TTopographyParams): TDelaunayMesh {
+  const { mesh, seed, seaLevel, topography } = params;
   const noise = createNoiseSampler();
   const macroHash = hashSeed(`${seed}:macro`);
   const warpHash = hashSeed(`${seed}:warp`);
