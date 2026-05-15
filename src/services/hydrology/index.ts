@@ -16,8 +16,8 @@ import { buildWindField } from 'src/services/hydrology/wind';
 import { TCell, TDelaunayMesh, THydrologyParams, TTerrain } from 'src/types/map.types';
 import { classifyBiomes } from '../terrain/biomeClassifier';
 import { classifyLandforms } from '../terrain/landformClassifier';
-import { clamp } from '../utils/math';
-import { getAvgNeighbor } from '../utils/topology';
+import { clamp } from 'src/services/utils/math';
+import { getAvgNeighbor } from 'src/services/utils/cell';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 
@@ -170,6 +170,7 @@ function runHydrologyInternal({
 
     return nextCell;
   });
+  const neighborsByCell = cells.map((cell) => cell.neighbors);
 
   const waterInfluence = buildWaterInfluence(cells);
   const reliefByCell = new Float32Array(cells.length);
@@ -206,6 +207,14 @@ function runHydrologyInternal({
   const tempSeasonalityByCell = new Float32Array(cells.length);
   const precipSeasonalityByCell = new Float32Array(cells.length);
   const elevationAboveSeaByCell = new Float32Array(cells.length);
+  const temperatureByCellExact = new Array<number>(cells.length);
+  const precipitationByCellExact = new Array<number>(cells.length);
+  const rainShadowByCellExact = new Array<number>(cells.length);
+  const petByCellExact = new Array<number>(cells.length);
+  const aridityByCellExact = new Array<number>(cells.length);
+  const tempSeasonalityByCellExact = new Array<number>(cells.length);
+  const precipSeasonalityByCellExact = new Array<number>(cells.length);
+  const rainShadowByCell = new Float32Array(cells.length);
   const temperatureAdjustedByCell = new Float32Array(cells.length);
   const precipitationAdjustedByCell = new Float32Array(cells.length);
 
@@ -247,19 +256,14 @@ function runHydrologyInternal({
     );
     const elevationAboveSea = Math.max(0, cell.elevation - seaLevel);
 
-    cell.suitability = getSuitabilityByLandformBiome(
-      cell.landform,
-      cell.biome,
-      precipitation,
-      temperature
-    );
-    cell.temperature = temperature;
-    cell.precipitation = precipitation;
-    cell.rainShadow = rainShadow;
-    cell.petProxy = petProxy;
-    cell.aridityIndex = aridityIndex;
-    cell.temperatureSeasonality = temperatureSeasonality;
-    cell.precipitationSeasonality = precipitationSeasonality;
+    temperatureByCellExact[cellIndex] = temperature;
+    precipitationByCellExact[cellIndex] = precipitation;
+    rainShadowByCellExact[cellIndex] = rainShadow;
+    petByCellExact[cellIndex] = petProxy;
+    aridityByCellExact[cellIndex] = aridityIndex;
+    tempSeasonalityByCellExact[cellIndex] = temperatureSeasonality;
+    precipSeasonalityByCellExact[cellIndex] = precipitationSeasonality;
+    rainShadowByCell[cellIndex] = rainShadow;
     temperatureAdjustedByCell[cellIndex] = temperature;
     precipitationAdjustedByCell[cellIndex] = precipitation;
     aridityIndexByCell[cellIndex] = aridityIndex;
@@ -285,7 +289,7 @@ function runHydrologyInternal({
     precipitationSeasonality: precipSeasonalityByCell,
     elevationAboveSea: elevationAboveSeaByCell,
     flow,
-    neighborsByCell: cells.map((cell) => cell.neighbors),
+    neighborsByCell,
     isRiverByCell: isRiver,
     isLakeByCell: isLake,
     humanImpact: climateControl.humanImpact,
@@ -296,16 +300,13 @@ function runHydrologyInternal({
     const biome = biomes[cellIndex] as NonNullable<(typeof biomes)[number]>;
     cell.landform = landform;
     cell.biome = biome;
-    cell.petProxy = petByCell[cellIndex] as number;
-    cell.aridityIndex = aridityIndexByCell[cellIndex] as number;
-    cell.temperatureSeasonality = tempSeasonalityByCell[cellIndex] as number;
-    cell.precipitationSeasonality = precipSeasonalityByCell[cellIndex] as number;
-    cell.suitability = getSuitabilityByLandformBiome(
-      landform,
-      biome,
-      cell.precipitation,
-      cell.temperature
-    );
+    cell.temperature = temperatureByCellExact[cellIndex] as number;
+    cell.precipitation = precipitationByCellExact[cellIndex] as number;
+    cell.rainShadow = rainShadowByCellExact[cellIndex] as number;
+    cell.petProxy = petByCellExact[cellIndex] as number;
+    cell.aridityIndex = aridityByCellExact[cellIndex] as number;
+    cell.temperatureSeasonality = tempSeasonalityByCellExact[cellIndex] as number;
+    cell.precipitationSeasonality = precipSeasonalityByCellExact[cellIndex] as number;
   }
 
   expandLakes(cells, flow, downstream);

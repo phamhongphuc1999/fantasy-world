@@ -1,10 +1,9 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/map/geopolitics';
-import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
+import { sortDescStable } from 'src/services/utils';
 import { findNearestCell } from 'src/services/utils/geometry';
-import { clamp } from 'src/services/utils/math';
-import { sortDescStable } from 'src/services/utils/stats';
+import { runMultiSourceExpansion } from 'src/services/utils/graph';
+import { clamp, createSeededRandom } from 'src/services/utils/math';
 import { TBorderType, TCell } from 'src/types/map.types';
-import { createSeededRandom } from '../core/seededRandom';
 import { getNationSeedSuitability } from './cost';
 import {
   getBoundaryStepCost,

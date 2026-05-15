@@ -1,9 +1,8 @@
-import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
+import { sortDescStable } from 'src/services/utils';
 import { findNearestCell } from 'src/services/utils/geometry';
-import { clamp } from 'src/services/utils/math';
-import { sortDescStable } from 'src/services/utils/stats';
+import { runMultiSourceExpansion } from 'src/services/utils/graph';
+import { clamp, hashSeed } from 'src/services/utils/math';
 import { TCell, TCellOwnerParams } from 'src/types/map.types';
-import { hashSeed } from '../core/seededRandom';
 import { getProvinceSeedScore } from './cost';
 import { getBoundaryStepCost, isLand } from './shared';
 

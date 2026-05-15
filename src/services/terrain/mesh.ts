@@ -1,8 +1,7 @@
 import { Delaunay } from 'd3-delaunay';
+import { toPointKey } from 'src/services/utils/geometry';
+import { clamp, createSeededRandom } from 'src/services/utils/math';
 import { TCell, TDelaunayMesh, TEdge, TMeshParams, TPoint, TVertex } from 'src/types/map.types';
-import { createSeededRandom } from '../core/seededRandom';
-import { toPointKey } from '../utils/geometry';
-import { clamp } from '../utils/math';
 
 function genPoints({ width, height, seed, cellCount }: TMeshParams): TPoint[] {
   const random = createSeededRandom(seed);

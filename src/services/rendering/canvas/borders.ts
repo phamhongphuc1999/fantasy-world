@@ -1,4 +1,4 @@
-import { getNationColor } from 'src/services/rendering/colors';
+import { getNationColor } from 'src/services/utils';
 import { toEdgeKey } from 'src/services/utils/geometry';
 import { TCell, TPoint } from 'src/types/map.types';
 import { drawPolygon, edgeNoiseValue } from './shared';

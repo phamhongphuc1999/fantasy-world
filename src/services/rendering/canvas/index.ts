@@ -1,6 +1,6 @@
-import { TCell, TCellStats, TDisplaySettings } from 'src/types/map.types';
-import { drawCellShape, drawRiverCurve } from './primitives';
 import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
+import { getRiverStrokeWidth } from 'src/services/utils';
+import { TCell, TCellStats, TDisplaySettings } from 'src/types/map.types';
 import {
   getEconomyColor,
   getPopulationColor,
@@ -8,7 +8,7 @@ import {
   getRainShadowColor,
   getTemperatureColor,
 } from './heatmap';
-import { getRiverStrokeWidth } from '../rivers';
+import { drawCellShape, drawRiverCurve } from './primitives';
 
 const T_SITE_MARKER_LIMIT = 4000;
 const T_UNIFORM_LAND_COLOR = '#3f3f46';

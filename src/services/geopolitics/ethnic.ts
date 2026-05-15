@@ -1,11 +1,10 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/map/geopolitics';
-import { runMultiSourceExpansion } from 'src/services/core/expansionEngine';
-import { collectConnectedComponents } from 'src/services/core/graph';
-import { TFifoQueue } from 'src/services/core/queue';
+import { sortDescStable } from 'src/services/utils';
+import { TFifoQueue } from 'src/services/utils/collections';
 import { findNearestCell } from 'src/services/utils/geometry';
-import { sortDescStable } from 'src/services/utils/stats';
+import { collectConnectedComponents, runMultiSourceExpansion } from 'src/services/utils/graph';
+import { createSeededRandom, hashSeed } from 'src/services/utils/math';
 import { TCell, TEthnic } from 'src/types/map.types';
-import { createSeededRandom, hashSeed } from '../core/seededRandom';
 import Cost from './cost';
 import { createRegionalName, edgeNoise, isLand } from './shared';
 

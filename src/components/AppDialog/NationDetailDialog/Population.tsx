@@ -1,7 +1,7 @@
 import BlurCard from 'src/components/BlurCard';
 import BarChart from 'src/components/charts/BarChart';
 import PieChart from 'src/components/charts/PieChart';
-import { formatPopulation } from 'src/services/utils/format';
+import { formatPopulation } from 'src/services/utils';
 import { TBarChartData, TPieChartData } from 'src/types/global';
 
 type TProvinceStatistic = {

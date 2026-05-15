@@ -1,14 +1,13 @@
 'use client';
 
+import { XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import PieChart from 'src/components/charts/PieChart';
 import TerrainStatistic from 'src/components/TerrainStatistic';
-import { XIcon } from 'lucide-react';
 import { Button } from 'src/components/ui/button';
 import useEthnicStatistic from 'src/hooks/useEthnicStatistic';
-import { getNationColor } from 'src/services/rendering/colors';
-import { formatPopulation } from 'src/services/utils/format';
+import { formatPopulation, getNationColor } from 'src/services/utils';
 import { TPieChartData } from 'src/types/global';
 import { TDelaunayMesh } from 'src/types/map.types';
 

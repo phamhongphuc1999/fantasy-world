@@ -1,3 +1,4 @@
+import { createSeededRandom } from 'src/services/utils/math';
 import {
   TCell,
   TCellOwnerParams,
@@ -5,7 +6,6 @@ import {
   TEthnic,
   TGeopoliticsParams,
 } from 'src/types/map.types';
-import { createSeededRandom } from '../core/seededRandom';
 import { pickEconomicAndCapital } from './capitals';
 import { buildEthnicRegions } from './ethnic';
 import {
@@ -37,6 +37,42 @@ type TNationProfile = {
   populationMultiplier: number;
   economyMultiplier: number;
 };
+
+const LAND_CODE = {
+  PLAIN: 1,
+  VALLEY: 2,
+  MOUNTAIN: 3,
+  VOLCANIC_FIELD: 4,
+  COAST: 5,
+} as const;
+
+const BIOME_CODE = {
+  WETLAND: 1,
+  DESERT_HOT: 2,
+  DESERT_COLD: 3,
+  TEMPERATE_FOREST: 4,
+  TROPICAL_FOREST: 5,
+  STEPPE: 6,
+} as const;
+
+function toLandformCode(cell: TCell) {
+  if (cell.landform === 'plain') return LAND_CODE.PLAIN;
+  if (cell.landform === 'valley') return LAND_CODE.VALLEY;
+  if (cell.landform === 'mountain') return LAND_CODE.MOUNTAIN;
+  if (cell.landform === 'volcanic_field') return LAND_CODE.VOLCANIC_FIELD;
+  if (cell.landform === 'coast') return LAND_CODE.COAST;
+  return 0;
+}
+
+function toBiomeCode(cell: TCell) {
+  if (cell.biome === 'wetland') return BIOME_CODE.WETLAND;
+  if (cell.biome === 'desert_hot') return BIOME_CODE.DESERT_HOT;
+  if (cell.biome === 'desert_cold') return BIOME_CODE.DESERT_COLD;
+  if (cell.biome === 'temperate_forest') return BIOME_CODE.TEMPERATE_FOREST;
+  if (cell.biome === 'tropical_forest') return BIOME_CODE.TROPICAL_FOREST;
+  if (cell.biome === 'steppe') return BIOME_CODE.STEPPE;
+  return 0;
+}
 
 function randomBetween(random: () => number, min: number, max: number) {
   return min + (max - min) * random();
@@ -71,23 +107,33 @@ function mapNationsToCells(
   owner: Int32Array,
   nationProfiles: Map<number, TNationProfile>
 ) {
-  function populationModifier(cell: TCell) {
+  const landCodeByCell = new Uint8Array(cells.length);
+  const biomeCodeByCell = new Uint8Array(cells.length);
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+    const cell = cells[cellIndex] as TCell;
+    landCodeByCell[cellIndex] = toLandformCode(cell);
+    biomeCodeByCell[cellIndex] = toBiomeCode(cell);
+  }
+
+  function populationModifier(landCode: number, biomeCode: number) {
     let factor = 1;
-    if (cell.landform === 'plain' || cell.landform === 'valley') factor += 0.18;
-    if (cell.landform === 'mountain' || cell.landform === 'volcanic_field') factor -= 0.28;
-    if (cell.biome === 'wetland') factor -= 0.14;
-    if (cell.biome === 'desert_hot' || cell.biome === 'desert_cold') factor -= 0.2;
-    if (cell.biome === 'temperate_forest' || cell.biome === 'tropical_forest') factor += 0.08;
+    if (landCode === LAND_CODE.PLAIN || landCode === LAND_CODE.VALLEY) factor += 0.18;
+    if (landCode === LAND_CODE.MOUNTAIN || landCode === LAND_CODE.VOLCANIC_FIELD) factor -= 0.28;
+    if (biomeCode === BIOME_CODE.WETLAND) factor -= 0.14;
+    if (biomeCode === BIOME_CODE.DESERT_HOT || biomeCode === BIOME_CODE.DESERT_COLD) factor -= 0.2;
+    if (biomeCode === BIOME_CODE.TEMPERATE_FOREST || biomeCode === BIOME_CODE.TROPICAL_FOREST) {
+      factor += 0.08;
+    }
     return Math.max(0.2, factor);
   }
 
-  function economyModifier(cell: TCell) {
+  function economyModifier(landCode: number, biomeCode: number) {
     let factor = 1;
-    if (cell.landform === 'coast' || cell.landform === 'valley') factor += 0.22;
-    if (cell.landform === 'mountain') factor -= 0.1;
-    if (cell.landform === 'volcanic_field') factor += 0.08;
-    if (cell.biome === 'steppe') factor += 0.05;
-    if (cell.biome === 'desert_hot') factor -= 0.08;
+    if (landCode === LAND_CODE.COAST || landCode === LAND_CODE.VALLEY) factor += 0.22;
+    if (landCode === LAND_CODE.MOUNTAIN) factor -= 0.1;
+    if (landCode === LAND_CODE.VOLCANIC_FIELD) factor += 0.08;
+    if (biomeCode === BIOME_CODE.STEPPE) factor += 0.05;
+    if (biomeCode === BIOME_CODE.DESERT_HOT) factor -= 0.08;
     return Math.max(0.25, factor);
   }
 
@@ -98,8 +144,14 @@ function mapNationsToCells(
     const profile = nationProfiles.get(nationId);
     if (!profile) return cell;
 
-    const terrainPopulationModifier = populationModifier(cell);
-    const terrainEconomyModifier = economyModifier(cell);
+    const terrainPopulationModifier = populationModifier(
+      landCodeByCell[cell.id] as number,
+      biomeCodeByCell[cell.id] as number
+    );
+    const terrainEconomyModifier = economyModifier(
+      landCodeByCell[cell.id] as number,
+      biomeCodeByCell[cell.id] as number
+    );
     const population = Math.round(
       cell.population * profile.populationMultiplier * terrainPopulationModifier
     );

@@ -1,9 +1,8 @@
-import { buildDistanceMap } from 'src/services/core/graph';
 import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
+import { isWaterOrRiverCell } from 'src/services/utils/cell';
+import { buildDistanceMap } from 'src/services/utils/graph';
+import { clamp, createSeededRandom } from 'src/services/utils/math';
 import { TCell, TDelaunayMesh } from 'src/types/map.types';
-import { clamp } from '../utils/math';
-import { createSeededRandom } from '../core/seededRandom';
-import { isWaterOrRiverCell } from '../cell/rules';
 
 interface TPopulationParams {
   mesh: TDelaunayMesh;
@@ -119,12 +118,22 @@ export function buildPopulation({ mesh, seed }: TPopulationParams): TDelaunayMes
   const random = createSeededRandom(`${seed}:population`);
   const score = new Float64Array(cells.length);
   const waterAccessScore = calcWaterAccessBase(cells);
+  const climateSuitabilityByCell = new Float64Array(cells.length);
+  const adjustedWaterAccessByCell = new Float64Array(cells.length);
+  const humanSettlementByCell = new Float64Array(cells.length);
+  const economyFactorByCell = new Float64Array(cells.length);
+  const urbanEligibilityByCell = new Uint8Array(cells.length);
   let landCellCount = 0;
 
   for (let cellId = 0; cellId < cells.length; cellId += 1) {
     const cell = cells[cellId];
     if (cell.isWater) {
       score[cellId] = 0;
+      climateSuitabilityByCell[cellId] = 0;
+      adjustedWaterAccessByCell[cellId] = waterAccessScore[cell.id] as number;
+      humanSettlementByCell[cellId] = 0;
+      economyFactorByCell[cellId] = 0;
+      urbanEligibilityByCell[cellId] = 0;
       continue;
     }
     landCellCount += 1;
@@ -134,6 +143,18 @@ export function buildPopulation({ mesh, seed }: TPopulationParams): TDelaunayMes
     const climate = climateSuitability(cell);
     const water = adjustedWaterAccess(cell, cells, waterAccessScore[cell.id] as number);
     const human = humanSettlementBoost(cell);
+    const terrainEconomyFactor = economyFactor(cell);
+    climateSuitabilityByCell[cellId] = climate;
+    adjustedWaterAccessByCell[cellId] = water;
+    humanSettlementByCell[cellId] = human;
+    economyFactorByCell[cellId] = terrainEconomyFactor;
+    urbanEligibilityByCell[cellId] =
+      cell.landform === 'mountain' ||
+      cell.biome === 'desert_hot' ||
+      cell.biome === 'desert_cold' ||
+      cell.biome === 'ice'
+        ? 0
+        : 1;
     const noise = POP_MODEL.noise.min + random() * POP_MODEL.noise.range;
     let value = base * biome * climate * water * human * noise;
     value *= 0.8 + cell.suitability * 0.35;
@@ -142,15 +163,7 @@ export function buildPopulation({ mesh, seed }: TPopulationParams): TDelaunayMes
 
   const urbanCandidates: Array<{ id: number; score: number }> = [];
   for (const cell of cells) {
-    if (
-      cell.isWater ||
-      cell.landform === 'mountain' ||
-      cell.biome === 'desert_hot' ||
-      cell.biome === 'desert_cold' ||
-      cell.biome === 'ice'
-    ) {
-      continue;
-    }
+    if (urbanEligibilityByCell[cell.id] === 0) continue;
     const candidateScore = score[cell.id] + cell.suitability * 0.6;
     if (candidateScore <= 0.25) continue;
     urbanCandidates.push({ id: cell.id, score: candidateScore });
@@ -191,8 +204,8 @@ export function buildPopulation({ mesh, seed }: TPopulationParams): TDelaunayMes
       const distance = Math.hypot(cell.site[0] - seedPoint[0], cell.site[1] - seedPoint[1]);
       if (distance > radius) continue;
       const distanceFactor = 1 - distance / radius;
-      const suitability = climateSuitability(cell);
-      const settlement = humanSettlementBoost(cell);
+      const suitability = climateSuitabilityByCell[cellId] as number;
+      const settlement = humanSettlementByCell[cellId] as number;
       score[cellId] += distanceFactor * boost * (0.45 + suitability * 0.55) * settlement;
     }
   }
@@ -245,10 +258,10 @@ export function buildPopulation({ mesh, seed }: TPopulationParams): TDelaunayMes
     const density = clamp(score[cell.id] / normalizedMax, 0, 1);
     const shaped = Math.pow(density, 1.08);
     const basePopulation = Math.round(shaped * 15000);
-    const adjustedWater = adjustedWaterAccess(cell, cells, waterAccessScore[cell.id] as number);
+    const adjustedWater = adjustedWaterAccessByCell[cell.id] as number;
     const population = Math.round(basePopulation * adjustedWater);
 
-    const terrainFactor = economyFactor(cell);
+    const terrainFactor = economyFactorByCell[cell.id] as number;
     const waterFactor = 0.7 + adjustedWater * 1.1;
     const popNorm = clamp(population / 120000, 0, 1);
     const waterNorm = clamp(adjustedWater, 0, 1);

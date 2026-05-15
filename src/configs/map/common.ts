@@ -1,4 +1,4 @@
-import { TDisplaySettings, TTopography } from 'src/types/map.types';
+import { TClimateControl, TDisplaySettings, TTopography } from 'src/types/map.types';
 
 export const NATION_COLORS = [
   '#e6194b',
@@ -53,13 +53,7 @@ type TConfig = {
   seaLevel: number;
   topography: TTopography;
   nationCount: number;
-  climateControl: {
-    temperatureOffset: number;
-    temperatureContrast: number;
-    precipitationScale: number;
-    precipitationOffset: number;
-    humanImpact: number;
-  };
+  climateControl: TClimateControl;
   displaySettings: TDisplaySettings;
 };
 

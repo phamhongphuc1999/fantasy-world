@@ -1,17 +1,9 @@
 'use client';
 
 import { DEFAULT_CONFIG } from 'src/configs/map/common';
-import { TDisplaySettings, TTopography } from 'src/types/map.types';
+import { TClimateControl, TDisplaySettings, TTopography } from 'src/types/map.types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
-type TClimateControl = {
-  temperatureOffset: number;
-  temperatureContrast: number;
-  precipitationScale: number;
-  precipitationOffset: number;
-  humanImpact: number;
-};
 
 interface TMapExplorerState {
   seed: string;

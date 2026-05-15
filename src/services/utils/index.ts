@@ -1,3 +1,4 @@
+import { NATION_COLORS } from 'src/configs/map/common';
 import { TCell } from 'src/types/map.types';
 
 export function toPercent(count: number, total: number) {
@@ -26,4 +27,18 @@ export function sortDescStable<T extends { score: number; cellId: number }>(item
     return left.cellId - right.cellId;
   });
   return items;
+}
+
+export function formatPopulation(value: number) {
+  return new Intl.NumberFormat('en-US').format(Math.round(value));
+}
+
+export function getRiverStrokeWidth(cell: TCell) {
+  return Math.min(4.8, Math.max(0.75, cell.riverWidth || 0.9));
+}
+
+export function getNationColor(nationId: number | null) {
+  if (nationId === null) return '#334155';
+  const paletteIndex = Math.abs(nationId) % NATION_COLORS.length;
+  return NATION_COLORS[paletteIndex];
 }

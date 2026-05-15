@@ -6,7 +6,7 @@ type TPointKeyOptions = {
   separator?: string;
 };
 
-type TUndirectedEdgeKeyOptions = {
+type TEdgeKeyOptions = {
   precision?: number;
   pointSeparator?: string;
   edgeSeparator?: string;
@@ -32,11 +32,7 @@ export function toPointKey(point: TPoint, options?: TPointKeyOptions) {
   return `${point[0].toFixed(precision)}${separator}${point[1].toFixed(precision)}`;
 }
 
-export function toEdgeKey(
-  startPoint: TPoint,
-  endPoint: TPoint,
-  options?: TUndirectedEdgeKeyOptions
-) {
+export function toEdgeKey(startPoint: TPoint, endPoint: TPoint, options?: TEdgeKeyOptions) {
   const precision = options?.precision ?? 3;
   const pointSeparator = options?.pointSeparator ?? ':';
   const edgeSeparator = options?.edgeSeparator ?? '|';

@@ -1,12 +1,11 @@
 'use client';
 
+import { XIcon } from 'lucide-react';
 import BlurCard from 'src/components/BlurCard';
 import TerrainStatistic from 'src/components/TerrainStatistic';
-import { XIcon } from 'lucide-react';
 import { Button } from 'src/components/ui/button';
 import useNationStatistic from 'src/hooks/useNationStatistic';
-import { getNationColor } from 'src/services/rendering/colors';
-import { formatPopulation } from 'src/services/utils/format';
+import { formatPopulation, getNationColor } from 'src/services/utils';
 import { TDelaunayMesh } from 'src/types/map.types';
 import Ethnics from './Ethnics';
 import Population from './Population';

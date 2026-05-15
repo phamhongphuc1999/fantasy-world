@@ -1,9 +1,10 @@
 import { HYDROLOGY_CONFIG, LAKE_CONFIG } from 'src/configs/map/hydrology';
-import { collectConnectedComponents, floodFromSeeds } from 'src/services/core/graph';
-import { TFifoQueue } from 'src/services/core/queue';
+import { collectConnectedComponents, floodFromSeeds } from 'src/services/utils/graph';
+import { TFifoQueue } from 'src/services/utils/collections';
 import { TCell } from 'src/types/map.types';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
+const traversalWorkspace = {};
 const expansion = LAKE_CONFIG.expansion;
 function expandLakes(cells: TCell[], flow: Float32Array, downstream: Int32Array) {
   const candidateLakeSeeds: number[] = [];
@@ -70,7 +71,9 @@ function buildLakeRegions(cells: TCell[]) {
   return collectConnectedComponents(
     cells,
     (cell) => cell.isLake,
-    (_current, neighbor) => neighbor.isLake
+    (_current, neighbor) => neighbor.isLake,
+    false,
+    traversalWorkspace
   );
 }
 
@@ -96,7 +99,12 @@ function buildOceanWaterMask(cells: TCell[], width: number, height: number) {
     if (!touchesMapBoundary(cells[cellIndex], width, height)) continue;
     seedIds.push(cellIndex);
   }
-  return floodFromSeeds(cells, seedIds, (_current, neighbor) => neighbor.isWater);
+  return floodFromSeeds(
+    cells,
+    seedIds,
+    (_current, neighbor) => neighbor.isWater,
+    traversalWorkspace
+  );
 }
 
 const enclosedWater = LAKE_CONFIG.enclosedWater;
@@ -230,7 +238,9 @@ function buildPlainsRegionSizeMap(cells: TCell[]) {
   const plainsRegions = collectConnectedComponents(
     cells,
     (cell) => cell.landform === 'plain',
-    (_current, neighbor) => neighbor.landform === 'plain'
+    (_current, neighbor) => neighbor.landform === 'plain',
+    false,
+    traversalWorkspace
   );
 
   for (const region of plainsRegions) {

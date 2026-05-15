@@ -1,7 +1,6 @@
 import { TOPOGRAPHY_PRESET_CONFIG } from 'src/configs/map/topography';
+import { clamp, createSeededRandom, hashSeed } from 'src/services/utils/math';
 import { TMesh, TTopography } from 'src/types/map.types';
-import { createSeededRandom, hashSeed } from '../core/seededRandom';
-import { clamp } from '../utils/math';
 import {
   applyArchipelagoSeeds,
   applyEdgeShelf,

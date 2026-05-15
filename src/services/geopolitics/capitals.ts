@@ -1,11 +1,10 @@
 import { GEOPOLITICAL_CONFIG } from 'src/configs/map/geopolitics';
 import { LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
-import { buildDistanceMap, collectConnectedComponents } from 'src/services/core/graph';
-import { normalize } from 'src/services/utils/math';
-import { getMetricRange } from 'src/services/utils/stats';
+import { getMetricRange } from 'src/services/utils';
+import { isWaterOrRiverCell } from 'src/services/utils/cell';
+import { buildDistanceMap, collectConnectedComponents } from 'src/services/utils/graph';
+import { createSeededRandom, normalize } from 'src/services/utils/math';
 import { TCell, TNation } from 'src/types/map.types';
-import { isWaterOrRiverCell } from '../cell/rules';
-import { createSeededRandom } from '../core/seededRandom';
 import { CAPITAL_VIEWPORT_MARGIN, createRegionalName, isLand } from './shared';
 
 type TNationProfile = Pick<TNation, 'populationMultiplier' | 'economyMultiplier'>;

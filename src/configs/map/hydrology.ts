@@ -21,23 +21,12 @@ export const LAKE_CONFIG = {
     shoreRiseFactor: 0.7,
     shoreRiseMax: 0.09,
   },
-  plains: {
-    largePlainMin: 90,
-    veryLargePlainMin: 50,
-  },
+  plains: { largePlainMin: 90, veryLargePlainMin: 50 },
 };
 
 export const PRECIPITATION_CONFIG = {
-  baseWeights: {
-    water: 0.56,
-    latitude: 0.18,
-    flow: 0.08,
-  },
-  orographicSimple: {
-    elevationStart: 0.6,
-    weight: 0.25,
-    maxBonus: 0.25,
-  },
+  baseWeights: { water: 0.56, latitude: 0.18, flow: 0.08 },
+  orographicSimple: { elevationStart: 0.6, weight: 0.25, maxBonus: 0.25 },
   wind: {
     tradeLatMax: 0.23,
     westerlyLatMax: 0.7,

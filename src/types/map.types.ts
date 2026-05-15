@@ -220,17 +220,19 @@ export interface TTopographyParams {
   topography: TTopography;
 }
 
+export type TClimateControl = {
+  temperatureOffset: number;
+  temperatureContrast: number;
+  precipitationScale: number;
+  precipitationOffset: number;
+  humanImpact: number;
+};
+
 export interface THydrologyParams {
   mesh: TDelaunayMesh;
   seed: string;
   seaLevel: number;
-  climateControl: {
-    temperatureOffset: number;
-    temperatureContrast: number;
-    precipitationScale: number;
-    precipitationOffset: number;
-    humanImpact: number;
-  };
+  climateControl: TClimateControl;
 }
 
 export type TGeopoliticsParams = {

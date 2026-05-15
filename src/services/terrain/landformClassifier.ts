@@ -1,6 +1,7 @@
 import { LANDFORM_CLASSIFIER_CONFIG, LANDFORM_ELEVATION_BANDS } from 'src/configs/map/terrain';
+import { classifyLandformWater } from 'src/services/utils/cell';
 import { TCell, TLandform, TTerrain } from 'src/types/map.types';
-import { clamp } from '../utils/math';
+import { clamp } from 'src/services/utils/math';
 
 type TClassifyLandformsParams = {
   cells: TCell[];
@@ -10,14 +11,29 @@ type TClassifyLandformsParams = {
   terrains: TTerrain[];
 };
 
-function hasMarineNeighbor(cell: TCell, cells: TCell[]) {
-  for (const neighborId of cell.neighbors) {
-    const neighbor = cells[neighborId];
-    if (!neighbor.isWater) continue;
-    if (neighbor.isLake) continue;
-    return true;
+const TERRAIN_CODE = {
+  COAST: 1,
+  VOLCANIC: 2,
+} as const;
+
+function toTerrainCode(terrain: TTerrain) {
+  if (terrain === 'coast') return TERRAIN_CODE.COAST;
+  if (terrain === 'volcanic') return TERRAIN_CODE.VOLCANIC;
+  return 0;
+}
+
+function buildMarineNeighborMask(cells: TCell[]) {
+  const mask = new Uint8Array(cells.length);
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
+    const cell = cells[cellIndex];
+    for (const neighborId of cell.neighbors) {
+      const neighbor = cells[neighborId];
+      if (!neighbor.isWater || neighbor.isLake) continue;
+      mask[cellIndex] = 1;
+      break;
+    }
   }
-  return false;
+  return mask;
 }
 
 function getSlopeSignal(relief: number) {
@@ -63,30 +79,27 @@ function isValleyContext(
 function classifyLandformForCell(
   cell: TCell,
   relief: number,
-  localFlow: number,
+  flowSignal: number,
   seaLevel: number,
-  terrain: TTerrain,
-  cells: TCell[]
+  terrainCode: number,
+  cells: TCell[],
+  hasMarineNeighbor: boolean
 ): TLandform {
   const model = LANDFORM_CLASSIFIER_CONFIG;
+  const waterLandform = classifyLandformWater(cell, seaLevel, 0.12);
 
-  if (cell.isWater) {
-    if (cell.isLake) return 'lake';
-    if (cell.elevation < seaLevel - 0.12) return 'marine_deep';
-    return 'marine_shallow';
-  }
+  if (waterLandform !== null) return waterLandform;
 
   if (
     cell.elevation <= seaLevel + LANDFORM_ELEVATION_BANDS.coastAboveSeaMax ||
-    terrain === 'coast' ||
-    hasMarineNeighbor(cell, cells)
+    terrainCode === TERRAIN_CODE.COAST ||
+    hasMarineNeighbor
   ) {
     return 'coast';
   }
 
   const elevationAboveSea = Math.max(0, cell.elevation - seaLevel);
   const slopeSignal = getSlopeSignal(relief);
-  const flowSignal = getFlowSignal(localFlow);
   const inHighland = elevationAboveSea >= LANDFORM_ELEVATION_BANDS.highlandAboveSeaMin;
   const inMountainBand = elevationAboveSea >= LANDFORM_ELEVATION_BANDS.mountainAboveSeaMin;
 
@@ -97,7 +110,7 @@ function classifyLandformForCell(
   const scorePlain =
     Math.max(0, 0.8 - Math.abs(slopeSignal)) * 0.9 + Math.max(0, 0.6 - elevationAboveSea) * 0.5;
   const scoreVolcanic =
-    (terrain === 'volcanic' ? 1 : 0) * 1.3 +
+    (terrainCode === TERRAIN_CODE.VOLCANIC ? 1 : 0) * 1.3 +
     Math.max(0, elevationAboveSea - 0.22) * 0.8 +
     Math.max(0, slopeSignal - 0.12) * 0.5;
 
@@ -114,7 +127,8 @@ function classifyLandformForCell(
   const allowPlateau = true;
   const allowMountain = inMountainBand || slopeSignal >= model.mountainMinSlope;
   const allowVolcanic =
-    terrain === 'volcanic' && elevationAboveSea >= LANDFORM_ELEVATION_BANDS.volcanicAboveSeaMin;
+    terrainCode === TERRAIN_CODE.VOLCANIC &&
+    elevationAboveSea >= LANDFORM_ELEVATION_BANDS.volcanicAboveSeaMin;
 
   let best: TLandform = inHighland ? 'plateau' : 'plain';
   let bestScore = allowPlain ? scorePlain : Number.NEGATIVE_INFINITY;
@@ -158,14 +172,25 @@ function classifyLandformForCell(
 
 export function classifyLandforms(params: TClassifyLandformsParams): TLandform[] {
   const { cells, seaLevel, reliefByCell, flow, terrains } = params;
+  const flowSignalByCell = new Float32Array(flow.length);
+  const terrainCodeByCell = new Uint8Array(terrains.length);
+  const marineNeighborMask = buildMarineNeighborMask(cells);
+  for (let cellIndex = 0; cellIndex < terrains.length; cellIndex += 1) {
+    terrainCodeByCell[cellIndex] = toTerrainCode(terrains[cellIndex] as TTerrain);
+  }
+  for (let cellIndex = 0; cellIndex < flow.length; cellIndex += 1) {
+    flowSignalByCell[cellIndex] = getFlowSignal(flow[cellIndex] as number);
+  }
+
   return cells.map((cell, cellIndex) =>
     classifyLandformForCell(
       cell,
       reliefByCell[cellIndex] as number,
-      flow[cellIndex] as number,
+      flowSignalByCell[cellIndex] as number,
       seaLevel,
-      terrains[cellIndex] as TTerrain,
-      cells
+      terrainCodeByCell[cellIndex] as number,
+      cells,
+      marineNeighborMask[cellIndex] === 1
     )
   );
 }

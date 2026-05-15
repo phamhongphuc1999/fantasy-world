@@ -2,8 +2,7 @@
 
 import { useMemo } from 'react';
 import { useMapContext } from 'src/contexts/map.context';
-import { formatPopulation } from 'src/services/utils/format';
-import { getNationColor } from 'src/services/rendering/colors';
+import { formatPopulation, getNationColor } from 'src/services/utils';
 
 type TProps = Record<string, never>;
 

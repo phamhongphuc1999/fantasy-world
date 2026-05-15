@@ -1,8 +1,7 @@
 import { TOPOGRAPHY_CONFIG } from 'src/configs/map/topography';
+import { distanceToSegment } from 'src/services/utils/geometry';
+import { clamp, createSeededRandom, hashSeed, smoothStep } from 'src/services/utils/math';
 import { TDelaunayMesh, TLine, TTopographyCell, TTopographyParams } from 'src/types/map.types';
-import { createSeededRandom, hashSeed } from '../core/seededRandom';
-import { distanceToSegment } from '../utils/geometry';
-import { clamp, smoothStep } from '../utils/math';
 import { applyTopography } from './preset';
 
 type TBoundaryLine = TLine & {

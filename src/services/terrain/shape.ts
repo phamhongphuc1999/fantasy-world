@@ -1,6 +1,6 @@
 import { TMesh } from 'src/types/map.types';
-import { distanceToSegment } from '../utils/geometry';
-import { clamp, smoothStep } from '../utils/math';
+import { distanceToSegment } from 'src/services/utils/geometry';
+import { clamp, smoothStep } from 'src/services/utils/math';
 
 type TRangeBandOptions = {
   count: number;

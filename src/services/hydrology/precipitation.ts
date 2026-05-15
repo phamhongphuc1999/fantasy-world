@@ -1,6 +1,6 @@
 import { PRECIPITATION_CONFIG } from 'src/configs/map/hydrology';
 import { TCell } from 'src/types/map.types';
-import { clamp, dot } from '../utils/math';
+import { clamp, dot } from 'src/services/utils/math';
 import { TWindVector } from './wind';
 
 type TPrecipitationParams = {
@@ -12,7 +12,7 @@ type TPrecipitationParams = {
   windField: TWindVector[];
 };
 
-type TAdvancedPrecipitationOutput = {
+type TPrecipitationOutput = {
   precipitation: Float32Array;
   rainShadow: Float32Array;
 };
@@ -70,7 +70,7 @@ export function computePrecipitation({
   flow,
   waterInfluence,
   windField,
-}: TPrecipitationParams): TAdvancedPrecipitationOutput {
+}: TPrecipitationParams): TPrecipitationOutput {
   const cellCount = cells.length;
   const moisture = new Float32Array(cellCount);
   const nextMoisture = new Float32Array(cellCount);

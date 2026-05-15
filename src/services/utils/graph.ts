@@ -1,24 +1,46 @@
 import { TCell } from 'src/types/map.types';
-import { TFifoQueue } from './queue';
+import { TDeterministicMinHeap, TFifoQueue } from './collections';
+
+type TTraversalWorkspace = {
+  visitedStamp?: Uint32Array;
+  stack?: number[];
+  stamp?: number;
+};
+
+function prepareWorkspace(
+  cellCount: number,
+  workspace?: TTraversalWorkspace
+): { visitedStamp: Uint32Array; stack: number[]; stamp: number } {
+  if (!workspace) return { visitedStamp: new Uint32Array(cellCount), stack: [], stamp: 1 };
+
+  if (!workspace.visitedStamp || workspace.visitedStamp.length !== cellCount) {
+    workspace.visitedStamp = new Uint32Array(cellCount);
+    workspace.stamp = 1;
+  }
+  if (!workspace.stack) workspace.stack = [];
+  const nextStamp = (workspace.stamp ?? 1) + 1;
+  workspace.stamp = nextStamp;
+  return { visitedStamp: workspace.visitedStamp, stack: workspace.stack, stamp: nextStamp };
+}
 
 export function collectConnectedComponents(
   cells: TCell[],
   shouldInclude: (cell: TCell) => boolean,
   canTraverse: (current: TCell, neighbor: TCell) => boolean,
-  sortBySizeDesc = false
+  sortBySizeDesc = false,
+  workspace?: TTraversalWorkspace
 ) {
-  const visited = new Uint8Array(cells.length);
+  const { visitedStamp, stack, stamp } = prepareWorkspace(cells.length, workspace);
   const components: number[][] = [];
-  const stack: number[] = [];
 
   for (const cell of cells) {
-    if (visited[cell.id] === 1) continue;
+    if (visitedStamp[cell.id] === stamp) continue;
     if (!shouldInclude(cell)) continue;
 
     stack.length = 0;
     stack.push(cell.id);
     const component: number[] = [];
-    visited[cell.id] = 1;
+    visitedStamp[cell.id] = stamp;
 
     while (stack.length > 0) {
       const currentId = stack.pop() as number;
@@ -26,11 +48,11 @@ export function collectConnectedComponents(
       component.push(currentId);
 
       for (const neighborId of current.neighbors) {
-        if (visited[neighborId] === 1) continue;
+        if (visitedStamp[neighborId] === stamp) continue;
         const neighbor = cells[neighborId];
         if (!shouldInclude(neighbor)) continue;
         if (!canTraverse(current, neighbor)) continue;
-        visited[neighborId] = 1;
+        visitedStamp[neighborId] = stamp;
         stack.push(neighborId);
       }
     }
@@ -43,26 +65,29 @@ export function collectConnectedComponents(
 export function floodFromSeeds(
   cells: TCell[],
   seeds: number[],
-  canTraverse: (current: TCell, neighbor: TCell) => boolean
+  canTraverse: (current: TCell, neighbor: TCell) => boolean,
+  workspace?: TTraversalWorkspace
 ) {
+  const { visitedStamp, stack, stamp } = prepareWorkspace(cells.length, workspace);
   const visited = new Uint8Array(cells.length);
-  const stack: number[] = [];
+  stack.length = 0;
 
   for (const seedId of seeds) {
     if (seedId < 0 || seedId >= cells.length) continue;
-    if (visited[seedId] === 1) continue;
-    visited[seedId] = 1;
+    if (visitedStamp[seedId] === stamp) continue;
+    visitedStamp[seedId] = stamp;
     stack.push(seedId);
   }
 
   while (stack.length > 0) {
     const currentId = stack.pop() as number;
+    visited[currentId] = 1;
     const current = cells[currentId];
     for (const neighborId of current.neighbors) {
-      if (visited[neighborId] === 1) continue;
+      if (visitedStamp[neighborId] === stamp) continue;
       const neighbor = cells[neighborId];
       if (!canTraverse(current, neighbor)) continue;
-      visited[neighborId] = 1;
+      visitedStamp[neighborId] = stamp;
       stack.push(neighborId);
     }
   }
@@ -102,4 +127,33 @@ export function buildDistanceMap(
     }
   }
   return distances;
+}
+
+type TExpandOptions<TState> = {
+  seeds: TState[];
+  getPriority: (state: TState) => number;
+  isStale: (state: TState) => boolean;
+  expand: (state: TState, push: (next: TState) => void) => void;
+};
+
+export function runMultiSourceExpansion<TState>({
+  seeds,
+  getPriority,
+  isStale,
+  expand,
+}: TExpandOptions<TState>) {
+  const frontier = new TDeterministicMinHeap<TState>();
+
+  for (const seedState of seeds) {
+    frontier.push(seedState, getPriority(seedState));
+  }
+
+  while (frontier.size > 0) {
+    const current = frontier.pop();
+    if (current === undefined) break;
+    if (isStale(current)) continue;
+    expand(current, (next) => {
+      frontier.push(next, getPriority(next));
+    });
+  }
 }

@@ -1,7 +1,6 @@
 import { TEMPERATURE_CONFIG } from 'src/configs/map/hydrology';
+import { clamp, dot, hashSeed } from 'src/services/utils/math';
 import { TCell } from 'src/types/map.types';
-import { hashSeed } from '../core/seededRandom';
-import { clamp, dot } from '../utils/math';
 import { TWindVector } from './wind';
 
 type TComputeTemperatureParams = {
