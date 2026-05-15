@@ -575,7 +575,7 @@ export function buildLandNations(cells: TCell[], seed: string, nationCount: numb
   owner.fill(-1);
   cost.fill(Number.POSITIVE_INFINITY);
   const nationExpansionBias = Array.from({ length: seeds.length }, (_, nationId) => {
-    const random = createSeededRandom(`${seed}:nation-expansion-bias:${nationId}`);
+    const random = createSeededRandom(`${seed}:${nationId}:nation-expansion-bias`);
     const roll = random();
     if (roll < 0.2) return 0.7 + random() * 0.18;
     if (roll < 0.75) return 0.9 + random() * 0.22;

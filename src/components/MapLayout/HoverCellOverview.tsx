@@ -6,98 +6,128 @@ import { clamp } from 'src/services/utils/math';
 import { describeCell } from 'src/services/rendering/descriptors/describeCell';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
-const PANEL_OFFSET = 16;
+const PANEL_OFFSET = 14;
 const PANEL_PADDING = 10;
-const PANEL_ESTIMATED_WIDTH = 320;
-const PANEL_ESTIMATED_HEIGHT = 360;
+const PANEL_ESTIMATED_WIDTH = 280;
+const PANEL_ESTIMATED_HEIGHT = 300;
+const TOOLTIP_DELAY_MS = 300;
+
+type TGroupedRow = { label: string; value: string; accent?: boolean };
 
 export default function HoverCellOverview() {
-  const { hoverClientPoint, hoverIndex, displaySettings } = useMapExplorerStore();
+  const { hoverIndex, displaySettings } = useMapExplorerStore();
   const { mesh } = useMapContext();
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [delayedHoverIndex, setDelayedHoverIndex] = useState<number | null>(null);
+  const [canvasRect, setCanvasRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
     function handleResize() {
       setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+      const canvas = document.getElementById('map-base-canvas');
+      if (!(canvas instanceof HTMLCanvasElement)) return;
+      setCanvasRect(canvas.getBoundingClientRect());
     }
-
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    if (hoverIndex === null) {
+      setDelayedHoverIndex(null);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setDelayedHoverIndex(hoverIndex);
+    }, TOOLTIP_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [hoverIndex]);
+
+  useEffect(() => {
+    const canvas = document.getElementById('map-base-canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+    setCanvasRect(canvas.getBoundingClientRect());
+  }, [mesh.width, mesh.height]);
+
   const { cell, description } = useMemo(() => {
-    const nextCell = hoverIndex !== null ? mesh.cells[hoverIndex] : null;
+    const nextCell = delayedHoverIndex !== null ? mesh.cells[delayedHoverIndex] : null;
     if (nextCell) return { cell: nextCell, description: describeCell(nextCell) };
     return { cell: undefined, description: undefined };
-  }, [hoverIndex, mesh]);
+  }, [delayedHoverIndex, mesh]);
+
+  const rows = useMemo<TGroupedRow[]>(() => {
+    if (!description) return [];
+    return [
+      { label: 'Terrain', value: description.terrainType, accent: true },
+      { label: 'Elevation', value: description.elevation },
+      { label: 'Biome', value: description.biome, accent: true },
+      { label: 'Temp', value: description.temperature },
+      { label: 'Precip', value: description.precipitation },
+      { label: 'Rain Shadow', value: description.rainShadow },
+      { label: 'River', value: description.riverState },
+      { label: 'Flow', value: description.flow },
+      { label: 'Suitability', value: description.suitability },
+      { label: 'Population', value: description.population, accent: true },
+      { label: 'Nation', value: description.nationId },
+      { label: 'Province', value: description.provinceId },
+      { label: 'Ethnic', value: description.ethnicId },
+      { label: 'Zone', value: description.zoneType },
+    ];
+  }, [description]);
 
   const positionStyle = useMemo(() => {
-    if (!hoverClientPoint) return { left: PANEL_PADDING, top: PANEL_PADDING };
+    if (!cell || !canvasRect) return { left: PANEL_PADDING, top: PANEL_PADDING };
 
-    const shouldFlipX =
-      hoverClientPoint.x + PANEL_OFFSET + PANEL_ESTIMATED_WIDTH >
-      viewportSize.width - PANEL_PADDING;
-    const shouldFlipY =
-      hoverClientPoint.y + PANEL_OFFSET + PANEL_ESTIMATED_HEIGHT >
-      viewportSize.height - PANEL_PADDING;
+    const scaleX = canvasRect.width / Math.max(1, mesh.width);
+    const scaleY = canvasRect.height / Math.max(1, mesh.height);
+    const anchorX = canvasRect.left + cell.site[0] * scaleX;
+    const anchorY = canvasRect.top + cell.site[1] * scaleY;
 
-    const rawLeft = shouldFlipX
-      ? hoverClientPoint.x - PANEL_ESTIMATED_WIDTH - PANEL_OFFSET
-      : hoverClientPoint.x + PANEL_OFFSET;
-    const rawTop = shouldFlipY
-      ? hoverClientPoint.y - PANEL_ESTIMATED_HEIGHT - PANEL_OFFSET
-      : hoverClientPoint.y + PANEL_OFFSET;
+    const flipX =
+      anchorX + PANEL_OFFSET + PANEL_ESTIMATED_WIDTH > viewportSize.width - PANEL_PADDING;
+    const flipY =
+      anchorY + PANEL_OFFSET + PANEL_ESTIMATED_HEIGHT > viewportSize.height - PANEL_PADDING;
 
-    const left = clamp(
-      rawLeft,
-      PANEL_PADDING,
-      Math.max(PANEL_PADDING, viewportSize.width - PANEL_ESTIMATED_WIDTH - PANEL_PADDING)
-    );
-    const top = clamp(
-      rawTop,
-      PANEL_PADDING,
-      Math.max(PANEL_PADDING, viewportSize.height - PANEL_ESTIMATED_HEIGHT - PANEL_PADDING)
-    );
+    const rawLeft = flipX ? anchorX - PANEL_ESTIMATED_WIDTH - PANEL_OFFSET : anchorX + PANEL_OFFSET;
+    const rawTop = flipY ? anchorY - PANEL_ESTIMATED_HEIGHT - PANEL_OFFSET : anchorY + PANEL_OFFSET;
 
-    return { left, top };
-  }, [hoverClientPoint, viewportSize.height, viewportSize.width]);
+    return {
+      left: clamp(
+        rawLeft,
+        PANEL_PADDING,
+        viewportSize.width - PANEL_ESTIMATED_WIDTH - PANEL_PADDING
+      ),
+      top: clamp(
+        rawTop,
+        PANEL_PADDING,
+        viewportSize.height - PANEL_ESTIMATED_HEIGHT - PANEL_PADDING
+      ),
+    };
+  }, [canvasRect, cell, mesh.width, mesh.height, viewportSize]);
 
   if (!displaySettings.cellData || !description || !cell) return null;
 
   return (
     <div className="pointer-events-none fixed z-1000000" style={positionStyle}>
-      <div className="max-h-[42vh] w-[min(20rem,calc(100vw-1.25rem))] overflow-y-auto rounded-xl border border-white/10 bg-slate-950/60 p-3 text-white backdrop-blur-md">
-        <p className="text-base font-semibold text-white">#{cell.id}</p>
-        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-slate-200 sm:text-sm">
-          <span className="text-slate-400">Terrain</span>
-          <span className="font-medium text-white">{description.terrainType}</span>
-          <span className="text-slate-400">Elevation</span>
-          <span>{description.elevation}</span>
-          <span className="text-slate-400">Biome</span>
-          <span>{description.biome}</span>
-          <span className="text-slate-400">River</span>
-          <span>{description.riverState}</span>
-          <span className="text-slate-400">Flow</span>
-          <span>{description.flow}</span>
-          <span className="text-slate-400">Temperature</span>
-          <span>{description.temperature}</span>
-          <span className="text-slate-400">Precipitation</span>
-          <span>{description.precipitation}</span>
-          <span className="text-slate-400">Rain Shadow</span>
-          <span>{description.rainShadow}</span>
-          <span className="text-slate-400">Suitability</span>
-          <span>{description.suitability}</span>
-          <span className="text-slate-400">Population</span>
-          <span>{description.population}</span>
-          <span className="text-slate-400">Nation ID</span>
-          <span>{description.nationId}</span>
-          <span className="text-slate-400">Province ID</span>
-          <span>{description.provinceId}</span>
-          <span className="text-slate-400">Ethnic Group ID</span>
-          <span>{description.ethnicId}</span>
-          <span className="text-slate-400">Zone Type</span>
-          <span>{description.zoneType}</span>
+      <div className="w-72 rounded-xl border border-white/10 bg-slate-950/70 p-3 pb-2.5 text-white shadow-2xl backdrop-blur-md">
+        <p className="mb-2 text-xs font-bold tracking-wider text-white/50">CELL #{cell.id}</p>
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          {rows.map((row) => (
+            <span
+              key={row.label}
+              className="inline-flex items-baseline gap-1 text-xs leading-tight"
+            >
+              <span className="text-slate-500">{row.label}</span>
+              <span
+                className={
+                  row.accent ? 'font-semibold text-cyan-300' : 'font-medium text-slate-200'
+                }
+              >
+                {row.value}
+              </span>
+            </span>
+          ))}
         </div>
       </div>
     </div>

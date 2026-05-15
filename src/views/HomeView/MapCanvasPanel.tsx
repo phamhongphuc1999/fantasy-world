@@ -17,7 +17,7 @@ export default function MapCanvasPanel() {
   const [selectedEthnicId, setSelectedEthnicId] = useState<number | null>(null);
   const [nationDialogOpen, setNationDialogOpen] = useState(false);
   const [ethnicDialogOpen, setEthnicDialogOpen] = useState(false);
-  const { displaySettings, setHoverClientPoint, setHoverIndex } = useMapExplorerStore();
+  const { displaySettings, setHoverIndex, setHoverClientPoint } = useMapExplorerStore();
   const {
     enabled: logisticsEnabled,
     handleMapCellClick,
@@ -83,7 +83,6 @@ export default function MapCanvasPanel() {
           onPointerMove={(event) => {
             const point = getCanvasPoint(event, width, height);
             handlePointerMove(point.x, point.y);
-            setHoverClientPoint({ x: event.clientX, y: event.clientY });
           }}
           onPointerLeave={() => {
             setHoverIndex(null);

@@ -1,4 +1,4 @@
-import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
+import { BIOME_CONFIG } from 'src/configs/map/landform-biome';
 import { isWaterOrRiverCell } from 'src/services/utils/cell';
 import { buildDistanceMap } from 'src/services/utils/graph';
 import { clamp, createSeededRandom } from 'src/services/utils/math';
@@ -138,7 +138,6 @@ export function buildPopulation({ mesh, seed }: TPopulationParams): TDelaunayMes
     }
     landCellCount += 1;
 
-    const base = LANDFORM_CONFIG[cell.landform].populationFactor;
     const biome = BIOME_CONFIG[cell.biome].populationFactor;
     const climate = climateSuitability(cell);
     const water = adjustedWaterAccess(cell, cells, waterAccessScore[cell.id] as number);
@@ -156,7 +155,7 @@ export function buildPopulation({ mesh, seed }: TPopulationParams): TDelaunayMes
         ? 0
         : 1;
     const noise = POP_MODEL.noise.min + random() * POP_MODEL.noise.range;
-    let value = base * biome * climate * water * human * noise;
+    let value = biome * climate * water * human * noise;
     value *= 0.8 + cell.suitability * 0.35;
     score[cellId] = Math.max(0, value);
   }

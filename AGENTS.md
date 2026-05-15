@@ -39,15 +39,9 @@ The file is **atomic** (self-contained with a single clear responsibility) and f
 
 ### 2. File Placement Rules
 
-- **Components**:
-  - General/UI or share components → `src/components/` (group related components in subfolders when needed)
-  - Page-specific → `src/views/[page-name]/[component-name].tsx`
-
-- **Views (Recommended for Next.js)**:
-  - All pages must remain thin in the `app/` directory.
-  - `app/[route]/page.tsx` should **not** contain implementation logic.
-  - Instead, import and render a View component from `src/views/`.
-  - Example:
+- **Pages** (`app/`):
+  - Keep `app/[route]/page.tsx` **thin** — no implementation logic.
+  - Import and render a View component from `src/views/`.
 
     ```tsx
     // app/page.tsx
@@ -58,19 +52,34 @@ The file is **atomic** (self-contained with a single clear responsibility) and f
     }
     ```
 
-- **Logic & Services**:
-  - All non-hook business logic and core calculations → `src/services/`
-  - Example: Map generation logic → `src/services/map-service.ts`
+- **Views** (`src/views/[PageName]/`):
+  - Page compositions and layout orchestration.
+  - Example: `src/views/HomeView/index.tsx`, `src/views/HomeView/MapCanvasPanel.tsx`
 
-- **Hooks**:
-  - All custom React hooks → `src/hooks/`
+- **Components** (`src/components/`):
+  - General/reusable UI components, grouped in subfolders.
+  - Example: `src/components/AppDialog/MapConfigDialog.tsx`, `src/components/MapLayout/HoverCellOverview.tsx`, `src/components/ui/button.tsx`
+
+- **Services (Domain Logic)** (`src/services/`):
+  - All non-hook business logic and core calculations.
+  - Organized by domain: `src/services/terrain/`, `src/services/hydrology/`, `src/services/geopolitics/`, `src/services/rendering/`, `src/services/logistics/`, `src/services/utils/`, `src/services/pipeline/`
+
+- **Configuration** (`src/configs/`):
+  - Constants, default values, and configuration objects.
+  - Example: `src/configs/map/common.ts`, `src/configs/map/hydrology.ts`
+
+- **Hooks** (`src/hooks/`):
+  - All custom React hooks.
 
 - **State Management**:
   - Zustand stores → `src/store/`
   - React Context → `src/contexts/`
 
-- **Style**
-  - All style files (.css, .scss, .sass) store in `src/styles`
+- **Styles** (`src/styles/`):
+  - Global style files (.css).
+
+- **Types** (`src/types/`):
+  - All shared TypeScript types and interfaces.
 
 ### 3. TypeScript Conventions
 
@@ -93,25 +102,21 @@ The file is **atomic** (self-contained with a single clear responsibility) and f
 ### 5. Architecture
 
 - `app/` → thin routing + metadata only.
-- UI composition → `src/views/`
-- Domain logic → `src/features/[domain]/core/`
-- All randomness must go through `seededRandom.ts` (deterministic generation).
+- `src/views/` → page compositions (orchestrating UI components).
+- `src/services/` → all domain logic, organized by domain (terrain, hydrology, geopolitics, rendering, pipeline, logistics, utils).
+- `src/configs/` → configuration and constants.
+- `src/components/` → reusable UI components.
+- `src/store/` + `src/contexts/` → state management.
+- `src/types/` → canonical location for all shared types.
+- All world-generation randomness must go through `createSeededRandom()` from `src/services/utils/math.ts` (deterministic generation with FNV-1a hashing + LCG).
 
-## Development Flow (Roadmap Layers)
+## Development Flow (Pipeline Layers)
 
-1. **Core Mesh** – Voronoi/Delaunay
-2. **Geology** – Elevation, tectonics, terrain
-3. **Hydrology** – Rivers, water flow, erosion
-4. **Ecology & Culture** – Biomes, climate, politics
-
-## Project Structure
-
-- `app/` – Routes & metadata
-- `src/views/` – Page compositions
-- `src/features/` – Domain logic (core calculations)
-- `src/hooks/` – React hooks
-- `src/utils/` – Pure utilities
-- `src/types/` – **Canonical location for all shared types**
+1. **Mesh** – Voronoi/Delaunay geometry
+2. **Topography** – Elevation, tectonics, terrain classification
+3. **Hydrology** – Rivers, lakes, climate (temperature, precipitation, wind)
+4. **Population** – Population & economy distribution
+5. **Geopolitics** – Nations, provinces, ethnic regions, capitals, economic hubs
 
 ---
 

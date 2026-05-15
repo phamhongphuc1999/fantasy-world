@@ -170,7 +170,7 @@ export function pickEconomicAndCapital(
     const safeNationCells = nationCells.filter((cell) => isInBounds(cell, mapWidth, mapHeight));
     const candidateNationCells = safeNationCells.length > 0 ? safeNationCells : nationCells;
     const landSize = nationCells.length;
-    const random = createSeededRandom(`${seed}:capital:${nationId}`);
+    const random = createSeededRandom(`${seed}:${nationId}:capital`);
 
     let hubCount = 1;
     if (landSize >= GEOPOLITICAL_CONFIG.hubs.mediumNationMinLand) hubCount = 3;

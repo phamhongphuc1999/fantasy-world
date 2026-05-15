@@ -4,7 +4,7 @@ import { clamp, createSeededRandom } from 'src/services/utils/math';
 import { TCell, TDelaunayMesh, TEdge, TMeshParams, TPoint, TVertex } from 'src/types/map.types';
 
 function genPoints({ width, height, seed, cellCount }: TMeshParams): TPoint[] {
-  const random = createSeededRandom(seed);
+  const random = createSeededRandom(`${seed}:points`);
   const columns = Math.max(1, Math.ceil(Math.sqrt((cellCount * width) / height)));
   const rows = Math.max(1, Math.ceil(cellCount / columns));
   const cellWidth = width / columns;

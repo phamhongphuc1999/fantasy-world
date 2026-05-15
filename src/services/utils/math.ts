@@ -25,7 +25,7 @@ export function hashSeed(input: string): number {
   return hash >>> 0;
 }
 
-export function createSeededRandom(seed: string) {
+export function createSeededRandom(seed: string, max = 4294967296) {
   let state = hashSeed(seed) || 1;
 
   return function nextRandom() {
@@ -33,6 +33,6 @@ export function createSeededRandom(seed: string) {
     let value = Math.imul(state ^ (state >>> 15), 1 | state);
     value ^= value + Math.imul(value ^ (value >>> 7), 61 | value);
 
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+    return ((value ^ (value >>> 14)) >>> 0) / max;
   };
 }

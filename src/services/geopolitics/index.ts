@@ -83,7 +83,7 @@ function buildNationProfiles(owner: Int32Array, seed: string) {
   const nationProfiles = new Map<number, TNationProfile>();
 
   for (const nationId of nationIds) {
-    const random = createSeededRandom(`${seed}:nation-profile:${nationId}`);
+    const random = createSeededRandom(`${seed}:${nationId}:nation-profile`);
 
     nationProfiles.set(nationId, {
       populationMultiplier: randomBetween(
@@ -165,7 +165,7 @@ function limitNationPopulation(cells: TCell[], owner: Int32Array, seed: string) 
   const nextCells = [...cells];
 
   for (const nationId of nationIds) {
-    const random = createSeededRandom(`${seed}:nation-pop-floor:${nationId}`);
+    const random = createSeededRandom(`${seed}:${nationId}:nation-pop-floor`);
     const nationCellIds: number[] = [];
     let nationPopulation = 0;
     for (let cellId = 0; cellId < owner.length; cellId += 1) {

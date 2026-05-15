@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import BarChart from 'src/components/charts/BarChart';
 import PieChart from 'src/components/charts/PieChart';
@@ -15,176 +16,154 @@ type TProps = {
   provinces: TProvinceStatistic[];
 };
 
+const COLOR_STEP = 47;
+
+function provinceColor(index: number) {
+  return `hsl(${(index * COLOR_STEP) % 360} 72% 55%)`;
+}
+
 export default function Population({ provinces }: TProps) {
-  const colorByIndex = (index: number) => `hsl(${(index * 47) % 360} 72% 55%)`;
-  const provinceLegend = provinces.map((province, index) => ({
-    label: `P#${province.provinceId}`,
-    color: colorByIndex(index),
-  }));
-
-  const populationPieData: Array<TPieChartData & { cellCount: number }> = provinces.map(
-    (province, index) => ({
-      label: `P#${province.provinceId}`,
-      value: province.population,
-      color: colorByIndex(index),
-      cellCount: province.cellCount,
-    })
+  const legend = useMemo(
+    () =>
+      provinces.map((p, i) => ({
+        label: `P#${p.provinceId}`,
+        color: provinceColor(i),
+      })),
+    [provinces]
   );
 
-  const economyPieData: Array<TPieChartData & { cellCount: number }> = provinces.map(
-    (province, index) => ({
-      label: `P#${province.provinceId}`,
-      value: province.economy,
-      color: colorByIndex(index),
-      cellCount: province.cellCount,
-    })
-  );
-  const cellPieData: Array<TPieChartData & { cellCount: number }> = provinces.map(
-    (province, index) => ({
-      label: `P#${province.provinceId}`,
-      value: province.cellCount,
-      color: colorByIndex(index),
-      cellCount: province.cellCount,
-    })
-  );
+  const { populationPie, economyPie, cellPie, popBar, ecoBar } = useMemo(() => {
+    const pp: Array<TPieChartData & { cellCount: number }> = [];
+    const ep: Array<TPieChartData & { cellCount: number }> = [];
+    const cp: Array<TPieChartData & { cellCount: number }> = [];
+    const pb: TBarChartData[] = [];
+    const eb: TBarChartData[] = [];
 
-  const averagePopulationBarData: TBarChartData[] = provinces.map((province, index) => ({
-    label: `P#${province.provinceId}`,
-    value: province.population / Math.max(1, province.cellCount),
-    color: colorByIndex(index),
-  }));
+    provinces.forEach((p, i) => {
+      const c = provinceColor(i);
+      pp.push({
+        label: `P#${p.provinceId}`,
+        value: p.population,
+        color: c,
+        cellCount: p.cellCount,
+      });
+      ep.push({ label: `P#${p.provinceId}`, value: p.economy, color: c, cellCount: p.cellCount });
+      cp.push({ label: `P#${p.provinceId}`, value: p.cellCount, color: c, cellCount: p.cellCount });
+      pb.push({
+        label: `P#${p.provinceId}`,
+        value: p.population / Math.max(1, p.cellCount),
+        color: c,
+      });
+      eb.push({
+        label: `P#${p.provinceId}`,
+        value: p.economy / Math.max(1, p.cellCount),
+        color: c,
+      });
+    });
 
-  const averageEconomyBarData: TBarChartData[] = provinces.map((province, index) => ({
-    label: `P#${province.provinceId}`,
-    value: province.economy / Math.max(1, province.cellCount),
-    color: colorByIndex(index),
-  }));
+    return { populationPie: pp, economyPie: ep, cellPie: cp, popBar: pb, ecoBar: eb };
+  }, [provinces]);
+
+  if (provinces.length === 0) {
+    return (
+      <BlurCard title="Provinces">
+        <p className="py-2 text-center text-slate-500">No provinces.</p>
+      </BlurCard>
+    );
+  }
 
   return (
-    <BlurCard title="Population" containerProps={{ className: 'flex flex-col gap-3' }}>
-      {provinces.length > 0 ? (
-        <div className="mt-2 space-y-3">
-          <div className="flex flex-wrap justify-center gap-2">
-            {provinceLegend.map((item) => (
-              <div
-                key={`legend-shared-${item.label}`}
-                className="inline-flex items-center gap-1 rounded border border-white/10 bg-slate-900/45 px-2 py-1 text-[11px] text-slate-200"
-              >
-                <span
-                  className="inline-block size-2 rounded-full"
-                  style={{ backgroundColor: item.color }}
-                />
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-start gap-4">
-            <div className="rounded-xl border border-white/10 bg-slate-950/45 p-3">
-              <p className="mb-2 text-center text-xs font-bold text-slate-300">Population (%)</p>
-              <PieChart
-                width={320}
-                height={320}
-                data={populationPieData}
-                renderTooltip={(tooltip) => (
-                  <>
-                    <div className="font-semibold">{tooltip.label}</div>
-                    <div>
-                      <span className="font-bold">Population</span>:{' '}
-                      {formatPopulation(tooltip.value)}
-                    </div>
-                    <div>
-                      <span className="font-bold">Percent</span>: {tooltip.percent}%
-                    </div>
-                    <div>
-                      <span className="font-bold">Cells</span>: {tooltip.datum.cellCount}
-                    </div>
-                  </>
-                )}
-              />
-            </div>
-            <div className="rounded-xl border border-white/10 bg-slate-950/45 p-3">
-              <p className="mb-2 text-center text-xs font-bold text-slate-300">Economy (%)</p>
-              <PieChart
-                width={320}
-                height={320}
-                data={economyPieData}
-                renderTooltip={(tooltip) => (
-                  <>
-                    <div className="font-bold">{tooltip.label}</div>
-                    <div>
-                      <span className="font-bold">Economy</span>: {formatPopulation(tooltip.value)}
-                    </div>
-                    <div>
-                      <span className="font-bold">Percent</span>: {tooltip.percent}%
-                    </div>
-                    <div>
-                      <span className="font-bold">Cells</span>: {tooltip.datum.cellCount}
-                    </div>
-                  </>
-                )}
-              />
-            </div>
-            <div className="rounded-xl border border-white/10 bg-slate-950/45 p-3">
-              <p className="mb-2 text-center text-xs font-bold text-slate-300">Cells (%)</p>
-              <PieChart
-                width={320}
-                height={320}
-                data={cellPieData}
-                renderTooltip={(tooltip) => (
-                  <>
-                    <div className="font-bold">{tooltip.label}</div>
-                    <div>
-                      <span className="font-bold">Cells</span>: {tooltip.datum.cellCount}
-                    </div>
-                    <div>
-                      <span className="font-bold">Percent</span>: {tooltip.percent}%
-                    </div>
-                  </>
-                )}
-              />
-            </div>
-            <div className="rounded-xl border border-white/10 bg-slate-950/45 p-3">
-              <p className="mb-2 text-center text-xs font-bold text-slate-300">
-                Average population per cell
-              </p>
-              <BarChart
-                width={420}
-                height={320}
-                data={averagePopulationBarData}
-                renderTooltip={(tooltip) => (
-                  <>
-                    <div className="font-bold">{tooltip.label}</div>
-                    <div>
-                      <span className="font-bold">Avg Pop/Cell</span>: {tooltip.value.toFixed(2)}
-                    </div>
-                  </>
-                )}
-              />
-            </div>
-            <div className="rounded-xl border border-white/10 bg-slate-950/45 p-3">
-              <p className="mb-2 text-center text-xs font-bold text-slate-300">
-                Average economy per cell
-              </p>
-              <BarChart
-                width={420}
-                height={320}
-                data={averageEconomyBarData}
-                renderTooltip={(tooltip) => (
-                  <>
-                    <div className="font-bold">{tooltip.label}</div>
-                    <div>
-                      <span className="font-bold">Avg Economy/Cell</span>:{' '}
-                      {tooltip.value.toFixed(2)}
-                    </div>
-                  </>
-                )}
-              />
-            </div>
-          </div>
+    <BlurCard title="Provinces" containerProps={{ className: 'space-y-4' }}>
+      <div className="flex flex-wrap gap-1.5">
+        {legend.map((item) => (
+          <span
+            key={item.label}
+            className="inline-flex items-center gap-1 rounded border border-white/10 bg-slate-900/45 px-2 py-0.5 text-[11px] text-slate-200"
+          >
+            <span
+              className="inline-block size-2 rounded-full"
+              style={{ backgroundColor: item.color }}
+            />
+            {item.label}
+          </span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-lg border border-white/10 bg-slate-900/30 p-3">
+          <p className="mb-2 text-center text-xs font-bold tracking-wider text-slate-400 uppercase">
+            Population
+          </p>
+          <PieChart
+            data={populationPie}
+            renderTooltip={(t) => (
+              <>
+                <div className="font-semibold">{t.label}</div>
+                <div className="text-slate-200">Population: {formatPopulation(t.value)}</div>
+                <div className="text-slate-200">Share: {t.percent}%</div>
+              </>
+            )}
+          />
         </div>
-      ) : (
-        <p className="text-slate-500">No provinces.</p>
-      )}
+        <div className="rounded-lg border border-white/10 bg-slate-900/30 p-3">
+          <p className="mb-2 text-center text-xs font-bold tracking-wider text-slate-400 uppercase">
+            Economy
+          </p>
+          <PieChart
+            data={economyPie}
+            renderTooltip={(t) => (
+              <>
+                <div className="font-semibold">{t.label}</div>
+                <div className="text-slate-200">Economy: {formatPopulation(t.value)}</div>
+                <div className="text-slate-200">Share: {t.percent}%</div>
+              </>
+            )}
+          />
+        </div>
+        <div className="rounded-lg border border-white/10 bg-slate-900/30 p-3">
+          <p className="mb-2 text-center text-xs font-bold tracking-wider text-slate-400 uppercase">
+            Cells
+          </p>
+          <PieChart
+            data={cellPie}
+            renderTooltip={(t) => (
+              <>
+                <div className="font-semibold">{t.label}</div>
+                <div className="text-slate-200">Cells: {t.datum.cellCount}</div>
+                <div className="text-slate-200">Share: {t.percent}%</div>
+              </>
+            )}
+          />
+        </div>
+        <div className="rounded-lg border border-white/10 bg-slate-900/30 p-3">
+          <p className="mb-2 text-center text-xs font-bold tracking-wider text-slate-400 uppercase">
+            Avg Pop / Cell
+          </p>
+          <BarChart
+            data={popBar}
+            renderTooltip={(t) => (
+              <>
+                <div className="font-semibold">{t.label}</div>
+                <div className="text-slate-200">Avg Pop/Cell: {t.value.toFixed(1)}</div>
+              </>
+            )}
+          />
+        </div>
+        <div className="rounded-lg border border-white/10 bg-slate-900/30 p-3">
+          <p className="mb-2 text-center text-xs font-bold tracking-wider text-slate-400 uppercase">
+            Avg Economy / Cell
+          </p>
+          <BarChart
+            data={ecoBar}
+            renderTooltip={(t) => (
+              <>
+                <div className="font-semibold">{t.label}</div>
+                <div className="text-slate-200">Avg Economy/Cell: {t.value.toFixed(2)}</div>
+              </>
+            )}
+          />
+        </div>
+      </div>
     </BlurCard>
   );
 }
