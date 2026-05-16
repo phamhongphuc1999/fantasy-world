@@ -11,7 +11,9 @@ import useNationStatistic from 'src/hooks/useNationStatistic';
 import { formatPopulation, getNationColor } from 'src/services/utils';
 import { TDelaunayMesh } from 'src/types/map.types';
 import EthnicGroups from './EthnicGroups';
+import EthnicMiniMap from './EthnicMiniMap';
 import EthnicNations from './EthnicNations';
+import NationMiniMap from './NationMiniMap';
 import NationPopulation from './NationPopulation';
 
 type TView = 'nation' | 'ethnic';
@@ -135,8 +137,10 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
 
         {/* Scrollable content */}
         <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm md:p-6">
-          {view === 'nation' && nationData && (
+          {view === 'nation' && nationData && nation && (
             <>
+              <NationMiniMap nationId={nation.id} mesh={mesh} />
+
               {/* Summary cards */}
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <BlurCard title="Population">
@@ -183,6 +187,8 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
           )}
           {view === 'ethnic' && ethnicData && (
             <>
+              <EthnicMiniMap ethnicId={ethnicData.ethnics.id} mesh={mesh} />
+
               {/* Summary cards */}
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <BlurCard title="Population">
