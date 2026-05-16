@@ -185,6 +185,8 @@ export interface TDisplaySettings {
   landformRelief: boolean;
   biome: boolean;
   biomeRelief: boolean;
+  isometric: boolean;
+  threeDim: boolean;
   population: boolean;
   temperature: boolean;
   precipitation: boolean;

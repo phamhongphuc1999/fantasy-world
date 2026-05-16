@@ -39,6 +39,16 @@ export default function DisplayModePanel() {
         onChange={(checked) => setDisplayLayer('landformRelief', checked)}
       />
       <LayerToggle
+        label="Isometric 3D"
+        checked={displaySettings.isometric}
+        onChange={(checked) => setDisplayLayer('isometric', checked)}
+      />
+      <LayerToggle
+        label="3D (Three.js)"
+        checked={displaySettings.threeDim}
+        onChange={(checked) => setDisplayLayer('threeDim', checked)}
+      />
+      <LayerToggle
         label="Biome"
         checked={displaySettings.biome}
         onChange={(checked) => setDisplayLayer('biome', checked)}

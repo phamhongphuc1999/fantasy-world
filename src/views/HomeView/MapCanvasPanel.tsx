@@ -5,6 +5,7 @@ import CellDetailDialog from 'src/components/AppDialog/CellDetailDialog';
 import { useMapContext } from 'src/contexts/map.context';
 import useMapCanvas from 'src/hooks/useMapCanvas';
 import useMapOverlay from 'src/hooks/useMapOverlay';
+import useThreeMap from 'src/hooks/useThreeMap';
 import { getCanvasPoint } from 'src/services/rendering/canvas/primitives';
 import { useLogisticsGameStore } from 'src/store/logisticsGameStore';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
@@ -12,10 +13,11 @@ import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 export default function MapCanvasPanel() {
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const threeContainerRef = useRef<HTMLDivElement | null>(null);
   const [selectedNationId, setSelectedNationId] = useState<number | null>(null);
   const [selectedEthnicId, setSelectedEthnicId] = useState<number | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { setHoverIndex, setHoverClientPoint } = useMapExplorerStore();
+  const { setHoverIndex, setHoverClientPoint, displaySettings } = useMapExplorerStore();
   const {
     enabled: logisticsEnabled,
     handleMapCellClick,
@@ -23,12 +25,24 @@ export default function MapCanvasPanel() {
   } = useLogisticsGameStore();
   const { mesh, isGenerating, handlePointerMove } = useMapContext();
   const { cells, width, height } = mesh;
+  const isIso = displaySettings.isometric;
+  const isThree = displaySettings.threeDim;
+  const show2D = !isThree;
 
   useMapCanvas({ canvasRef: baseCanvasRef });
   useMapOverlay({ canvasRef: overlayCanvasRef });
+  useThreeMap({ containerRef: threeContainerRef });
+
+  function resolveCanvasPoint(event: MouseEvent<HTMLCanvasElement>) {
+    const point = getCanvasPoint(event, width, height);
+    if (isIso) {
+      return { x: point.x, y: point.y };
+    }
+    return point;
+  }
 
   function onCanvasPanelClick(event: MouseEvent<HTMLCanvasElement>) {
-    const point = getCanvasPoint(event, width, height);
+    const point = resolveCanvasPoint(event);
     const clickedId = mesh.delaunay.find(point.x, point.y);
     if (clickedId < 0 || cells[clickedId]?.isWater) return;
 
@@ -55,30 +69,45 @@ export default function MapCanvasPanel() {
     <div className="flex h-full w-full items-center justify-center overflow-hidden p-2 sm:p-0">
       <div
         className="relative max-h-full w-full max-w-full"
-        style={{ aspectRatio: `${width}/${height}` }}
+        style={{
+          aspectRatio: show2D ? `${width}/${height}` : undefined,
+          minHeight: show2D ? undefined : '80vh',
+        }}
       >
-        <canvas
-          id="map-base-canvas"
-          ref={baseCanvasRef}
-          width={width}
-          height={height}
-          className="absolute inset-0 h-full w-full"
-        />
-        <canvas
-          ref={overlayCanvasRef}
-          width={width}
-          height={height}
-          className="absolute inset-0 h-full w-full cursor-pointer"
-          onPointerMove={(event) => {
-            const point = getCanvasPoint(event, width, height);
-            handlePointerMove(point.x, point.y);
-          }}
-          onPointerLeave={() => {
-            setHoverIndex(null);
-            setHoverClientPoint(null);
-          }}
-          onClick={onCanvasPanelClick}
-        />
+        {show2D && (
+          <>
+            <canvas
+              id="map-base-canvas"
+              ref={baseCanvasRef}
+              width={width}
+              height={height}
+              className="absolute inset-0 h-full w-full"
+            />
+            <canvas
+              ref={overlayCanvasRef}
+              width={width}
+              height={height}
+              className="absolute inset-0 h-full w-full cursor-pointer"
+              onPointerMove={(event) => {
+                const point = resolveCanvasPoint(event);
+                handlePointerMove(point.x, point.y);
+              }}
+              onPointerLeave={() => {
+                setHoverIndex(null);
+                setHoverClientPoint(null);
+              }}
+              onClick={onCanvasPanelClick}
+            />
+          </>
+        )}
+
+        {isThree && (
+          <div
+            ref={threeContainerRef}
+            className="absolute inset-0 h-full w-full cursor-grab active:cursor-grabbing"
+          />
+        )}
+
         {isGenerating && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/55 backdrop-blur-[1px]">
             <div className="rounded-xl border border-white/15 bg-slate-900/85 px-4 py-2 text-sm text-slate-100">

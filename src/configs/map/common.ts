@@ -79,6 +79,8 @@ export const DEFAULT_CONFIG: TConfig = {
     landformRelief: false,
     biome: false,
     biomeRelief: true,
+    isometric: false,
+    threeDim: false,
     population: false,
     temperature: false,
     precipitation: false,

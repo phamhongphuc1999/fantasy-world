@@ -29,6 +29,8 @@ const DISPLAY_MAP: Record<TNationMiniMapDisplay, TDisplaySettings> = {
     cellData: false,
     landformRelief: false,
     biomeRelief: false,
+    isometric: false,
+    threeDim: false,
   },
   biome: {
     landform: false,
@@ -49,6 +51,8 @@ const DISPLAY_MAP: Record<TNationMiniMapDisplay, TDisplaySettings> = {
     cellData: false,
     landformRelief: false,
     biomeRelief: false,
+    isometric: false,
+    threeDim: false,
   },
   nation: {
     landform: false,
@@ -69,6 +73,8 @@ const DISPLAY_MAP: Record<TNationMiniMapDisplay, TDisplaySettings> = {
     cellData: false,
     landformRelief: false,
     biomeRelief: false,
+    isometric: false,
+    threeDim: false,
   },
   ethnic: {
     landform: false,
@@ -89,6 +95,8 @@ const DISPLAY_MAP: Record<TNationMiniMapDisplay, TDisplaySettings> = {
     cellData: false,
     landformRelief: false,
     biomeRelief: false,
+    isometric: false,
+    threeDim: false,
   },
 };
 
