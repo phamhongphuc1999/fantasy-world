@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TBarChartData, TBaseChartData } from 'src/types/global';
 
@@ -18,17 +18,35 @@ type TProps<T extends TBarChartData> = TBaseChartData & {
 
 export default function BarChart<T extends TBarChartData>({
   data,
-  width = 400,
+  width: explicitWidth,
   height = 260,
   maxValue,
   renderTooltip,
 }: TProps<T>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
     data: TBarTooltipData<T>;
   } | null>(null);
+
+  useEffect(() => {
+    if (explicitWidth) return;
+
+    function updateWidth() {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+    }
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [explicitWidth]);
+
+  const width = explicitWidth ?? Math.max(280, containerWidth);
 
   const margin = { top: 12, right: 8, bottom: 42, left: 8 };
   const innerWidth = width - margin.left - margin.right;
@@ -43,7 +61,7 @@ export default function BarChart<T extends TBarChartData>({
   );
 
   return (
-    <div ref={containerRef} className="relative w-fit">
+    <div ref={containerRef} className="relative w-full">
       <svg width={width} height={height}>
         <line
           x1={margin.left}
@@ -102,7 +120,7 @@ export default function BarChart<T extends TBarChartData>({
       {tooltip &&
         createPortal(
           <div
-            className="pointer-events-none fixed z-[100] rounded-xl bg-black px-3 py-2 text-sm text-white shadow-lg"
+            className="pointer-events-none fixed z-100 rounded-xl bg-black px-3 py-2 text-sm text-white shadow-lg"
             style={{ top: tooltip.y + 12, left: tooltip.x + 12 }}
           >
             {renderTooltip ? (

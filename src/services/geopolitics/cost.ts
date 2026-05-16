@@ -24,17 +24,17 @@ export default class Cost {
   static ethnic(cell: TCell, config: { strength: number }) {
     const strength = config.strength;
     if (cell.landform === 'plain' || cell.landform === 'valley' || cell.landform === 'coast')
-      return strength;
+      return 0.55 * strength;
     if (cell.biome === 'temperate_forest' || cell.biome === 'tropical_forest')
-      return 1.35 * strength;
-    if (cell.biome === 'wetland') return 1.75 * strength;
-    if (cell.landform === 'hills') return 1.5 * strength;
-    if (cell.landform === 'plateau') return 1.6 * strength;
-    if (cell.landform === 'mountain' || cell.landform === 'volcanic_field') return 2.45 * strength;
+      return 2.8 * strength;
+    if (cell.biome === 'wetland') return 3.2 * strength;
+    if (cell.landform === 'hills') return 2.2 * strength;
+    if (cell.landform === 'plateau') return 2.4 * strength;
+    if (cell.landform === 'mountain' || cell.landform === 'volcanic_field') return 4.5 * strength;
     if (cell.biome === 'desert_hot' || cell.biome === 'desert_cold' || cell.biome === 'steppe')
-      return 1.65 * strength;
-    if (cell.biome === 'tundra' || cell.biome === 'ice') return 1.55 * strength;
-    return 1.25 * strength;
+      return 3.0 * strength;
+    if (cell.biome === 'tundra' || cell.biome === 'ice') return 2.8 * strength;
+    return 1.8 * strength;
   }
 
   static border(cell: TCell, borderType: TBorderType) {
