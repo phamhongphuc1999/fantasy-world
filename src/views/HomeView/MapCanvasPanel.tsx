@@ -1,8 +1,7 @@
 'use client';
 
 import { MouseEvent, useRef, useState } from 'react';
-import EthnicDetailDialog from 'src/components/AppDialog/EthnicDetailDialog';
-import NationDetailDialog from 'src/components/AppDialog/NationDetailDialog';
+import CellDetailDialog from 'src/components/AppDialog/CellDetailDialog';
 import { useMapContext } from 'src/contexts/map.context';
 import useMapCanvas from 'src/hooks/useMapCanvas';
 import useMapOverlay from 'src/hooks/useMapOverlay';
@@ -15,9 +14,8 @@ export default function MapCanvasPanel() {
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [selectedNationId, setSelectedNationId] = useState<number | null>(null);
   const [selectedEthnicId, setSelectedEthnicId] = useState<number | null>(null);
-  const [nationDialogOpen, setNationDialogOpen] = useState(false);
-  const [ethnicDialogOpen, setEthnicDialogOpen] = useState(false);
-  const { displaySettings, setHoverIndex, setHoverClientPoint } = useMapExplorerStore();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const { setHoverIndex, setHoverClientPoint } = useMapExplorerStore();
   const {
     enabled: logisticsEnabled,
     handleMapCellClick,
@@ -34,6 +32,9 @@ export default function MapCanvasPanel() {
     const clickedId = mesh.delaunay.find(point.x, point.y);
     if (clickedId < 0 || cells[clickedId]?.isWater) return;
 
+    const clickedCell = cells[clickedId];
+    if (!clickedCell) return;
+
     if (logisticsEnabled) {
       handleMapCellClick(clickedId);
       queueMicrotask(() => {
@@ -42,24 +43,12 @@ export default function MapCanvasPanel() {
       return;
     }
 
-    const shouldOpenEthnicDetail =
-      (displaySettings.ethnicFill || displaySettings.ethnicBorders) &&
-      !displaySettings.nationFill &&
-      !displaySettings.nationBorders;
-    if (shouldOpenEthnicDetail) {
-      const ethnicId = cells[clickedId]?.ethnicId ?? null;
-      if (ethnicId === null) return;
-      setNationDialogOpen(false);
-      setSelectedEthnicId(ethnicId);
-      setEthnicDialogOpen(true);
-      return;
-    }
-
-    const nationId = cells[clickedId]?.nationId ?? null;
-    if (nationId === null) return;
-    setEthnicDialogOpen(false);
+    const nationId = clickedCell.nationId ?? null;
+    const ethnicId = clickedCell.ethnicId ?? null;
+    if (nationId === null && ethnicId === null) return;
     setSelectedNationId(nationId);
-    setNationDialogOpen(true);
+    setSelectedEthnicId(ethnicId);
+    setDialogOpen(true);
   }
 
   return (
@@ -98,15 +87,10 @@ export default function MapCanvasPanel() {
           </div>
         )}
       </div>
-      <NationDetailDialog
-        open={nationDialogOpen}
-        onOpenChange={setNationDialogOpen}
+      <CellDetailDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
         nationId={selectedNationId}
-        mesh={mesh}
-      />
-      <EthnicDetailDialog
-        open={ethnicDialogOpen}
-        onOpenChange={setEthnicDialogOpen}
         ethnicId={selectedEthnicId}
         mesh={mesh}
       />

@@ -1,7 +1,12 @@
-import { useMemo } from 'react';
+'use client';
+
+import { ListIcon, Table2Icon } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import BarChart from 'src/components/charts/BarChart';
 import PieChart from 'src/components/charts/PieChart';
+import { Button } from 'src/components/ui/button';
+import { ButtonGroup } from 'src/components/ui/button-group';
 import { formatPopulation } from 'src/services/utils';
 import { TBarChartData, TPieChartData } from 'src/types/global';
 
@@ -16,13 +21,41 @@ type TProps = {
   provinces: TProvinceStatistic[];
 };
 
+type TChartOption = 'population' | 'economy' | 'cells' | 'pop-per-cell' | 'eco-per-cell';
+
 const COLOR_STEP = 47;
+
+const CHART_OPTIONS: { key: TChartOption; label: string }[] = [
+  { key: 'population', label: 'Population' },
+  { key: 'economy', label: 'Economy' },
+  { key: 'cells', label: 'Cells' },
+  { key: 'pop-per-cell', label: 'Pop / Cell' },
+  { key: 'eco-per-cell', label: 'Eco / Cell' },
+];
 
 function provinceColor(index: number) {
   return `hsl(${(index * COLOR_STEP) % 360} 72% 55%)`;
 }
 
-export default function Population({ provinces }: TProps) {
+function formatValue(key: TChartOption, value: number): string {
+  switch (key) {
+    case 'population':
+      return formatPopulation(value);
+    case 'economy':
+      return formatPopulation(value);
+    case 'cells':
+      return value.toLocaleString();
+    case 'pop-per-cell':
+      return value.toFixed(1);
+    case 'eco-per-cell':
+      return value.toFixed(2);
+  }
+}
+
+export default function NationPopulation({ provinces }: TProps) {
+  const [activeChart, setActiveChart] = useState<TChartOption>('population');
+  const [showData, setShowData] = useState(false);
+
   const legend = useMemo(
     () =>
       provinces.map((p, i) => ({
@@ -64,6 +97,21 @@ export default function Population({ provinces }: TProps) {
     return { populationPie: pp, economyPie: ep, cellPie: cp, popBar: pb, ecoBar: eb };
   }, [provinces]);
 
+  const activeData = useMemo(() => {
+    switch (activeChart) {
+      case 'population':
+        return populationPie;
+      case 'economy':
+        return economyPie;
+      case 'cells':
+        return cellPie;
+      case 'pop-per-cell':
+        return popBar;
+      case 'eco-per-cell':
+        return ecoBar;
+    }
+  }, [activeChart, populationPie, economyPie, cellPie, popBar, ecoBar]);
+
   if (provinces.length === 0) {
     return (
       <BlurCard title="Provinces">
@@ -74,26 +122,65 @@ export default function Population({ provinces }: TProps) {
 
   return (
     <BlurCard title="Provinces" containerProps={{ className: 'space-y-4' }}>
+      {/* Legend / Data rows */}
       <div className="flex flex-wrap gap-1.5">
-        {legend.map((item) => (
-          <span
-            key={item.label}
-            className="inline-flex items-center gap-1 rounded border border-white/10 bg-slate-900/45 px-2 py-0.5 text-[11px] text-slate-200"
-          >
-            <span
-              className="inline-block size-2 rounded-full"
-              style={{ backgroundColor: item.color }}
-            />
-            {item.label}
-          </span>
-        ))}
+        {showData
+          ? activeData.map((item) => (
+              <span
+                key={item.label}
+                className="inline-flex items-center gap-1 rounded border border-white/10 bg-slate-900/45 px-2 py-0.5 text-[11px] text-slate-200"
+              >
+                <span
+                  className="inline-block size-2 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span>{item.label}</span>
+                <span className="ml-1 font-medium text-slate-100 tabular-nums">
+                  {formatValue(activeChart, item.value)}
+                </span>
+              </span>
+            ))
+          : legend.map((item) => (
+              <span
+                key={item.label}
+                className="inline-flex items-center gap-1 rounded border border-white/10 bg-slate-900/45 px-2 py-0.5 text-[11px] text-slate-200"
+              >
+                <span
+                  className="inline-block size-2 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                {item.label}
+              </span>
+            ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-lg border border-white/10 bg-slate-900/30 p-3">
-          <p className="mb-2 text-center text-xs font-bold tracking-wider text-slate-400 uppercase">
-            Population
-          </p>
+      {/* Chart selector + data toggle */}
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <ButtonGroup>
+          {CHART_OPTIONS.map((opt) => (
+            <Button
+              key={opt.key}
+              size="xs"
+              variant={activeChart === opt.key ? 'default' : 'ghost'}
+              onClick={() => setActiveChart(opt.key)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Button
+          size="xs"
+          variant="ghost"
+          onClick={() => setShowData((v) => !v)}
+          className={showData ? 'text-sky-300' : ''}
+        >
+          {showData ? <Table2Icon className="size-3.5" /> : <ListIcon className="size-3.5" />}
+        </Button>
+      </div>
+
+      {/* Active chart */}
+      <div className="flex justify-center rounded-lg border border-white/10 bg-slate-900/30 p-4">
+        {activeChart === 'population' && (
           <PieChart
             data={populationPie}
             renderTooltip={(t) => (
@@ -104,11 +191,8 @@ export default function Population({ provinces }: TProps) {
               </>
             )}
           />
-        </div>
-        <div className="rounded-lg border border-white/10 bg-slate-900/30 p-3">
-          <p className="mb-2 text-center text-xs font-bold tracking-wider text-slate-400 uppercase">
-            Economy
-          </p>
+        )}
+        {activeChart === 'economy' && (
           <PieChart
             data={economyPie}
             renderTooltip={(t) => (
@@ -119,11 +203,8 @@ export default function Population({ provinces }: TProps) {
               </>
             )}
           />
-        </div>
-        <div className="rounded-lg border border-white/10 bg-slate-900/30 p-3">
-          <p className="mb-2 text-center text-xs font-bold tracking-wider text-slate-400 uppercase">
-            Cells
-          </p>
+        )}
+        {activeChart === 'cells' && (
           <PieChart
             data={cellPie}
             renderTooltip={(t) => (
@@ -134,11 +215,8 @@ export default function Population({ provinces }: TProps) {
               </>
             )}
           />
-        </div>
-        <div className="rounded-lg border border-white/10 bg-slate-900/30 p-3">
-          <p className="mb-2 text-center text-xs font-bold tracking-wider text-slate-400 uppercase">
-            Avg Pop / Cell
-          </p>
+        )}
+        {activeChart === 'pop-per-cell' && (
           <BarChart
             data={popBar}
             renderTooltip={(t) => (
@@ -148,11 +226,8 @@ export default function Population({ provinces }: TProps) {
               </>
             )}
           />
-        </div>
-        <div className="rounded-lg border border-white/10 bg-slate-900/30 p-3">
-          <p className="mb-2 text-center text-xs font-bold tracking-wider text-slate-400 uppercase">
-            Avg Economy / Cell
-          </p>
+        )}
+        {activeChart === 'eco-per-cell' && (
           <BarChart
             data={ecoBar}
             renderTooltip={(t) => (
@@ -162,7 +237,7 @@ export default function Population({ provinces }: TProps) {
               </>
             )}
           />
-        </div>
+        )}
       </div>
     </BlurCard>
   );
