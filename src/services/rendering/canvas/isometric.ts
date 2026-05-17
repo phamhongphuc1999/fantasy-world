@@ -1,39 +1,24 @@
 import { TCell, TPoint } from 'src/types/map.types';
 
-// Oblique (2.5D) projection constants
-// Keeps world X/Y unchanged — only shifts Y upward based on elevation.
 export const DEFAULT_ELEV_SCALE = 3.5;
 
-/**
- * Project world (x, y, elevation) to oblique canvas coordinates.
- * X/Y remain unchanged (no rotation), only Y shifts for elevation.
- * This gives a top-down view with visible height via side walls.
- */
 export function projectToIso(
   x: number,
   y: number,
   elevation: number,
-  elevScale: number = DEFAULT_ELEV_SCALE
+  elevScale = DEFAULT_ELEV_SCALE
 ): [number, number] {
   return [x, y - elevation * elevScale];
 }
 
-/**
- * Project an entire polygon to oblique coordinates.
- * Uses the cell's elevation uniformly for all vertices.
- */
 export function projectPolygonToIso(
   polygon: TPoint[],
   elevation: number,
-  elevScale: number = DEFAULT_ELEV_SCALE
+  elevScale = DEFAULT_ELEV_SCALE
 ): TPoint[] {
   return polygon.map(([px, py]) => projectToIso(px, py, elevation, elevScale));
 }
 
-/**
- * Calculate the bounding box of all cells in oblique space.
- * Returns { minX, minY, maxX, maxY, width, height }.
- */
 export function getIsoBoundingBox(
   cells: TCell[],
   elevScale: number = DEFAULT_ELEV_SCALE
@@ -56,26 +41,14 @@ export function getIsoBoundingBox(
   return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
 }
 
-/**
- * Compute depth value for sorting (Painter's algorithm).
- * Cells with larger depth are rendered first (behind).
- * In oblique projection, depth is purely based on Y + elevation.
- */
 export function getCellDepth(cell: TCell): number {
   return cell.site[1] + cell.elevation;
 }
 
-/**
- * Sort cells from back to front (Painter's algorithm).
- */
 export function sortByDepth(cells: TCell[]): TCell[] {
   return [...cells].sort((a, b) => getCellDepth(a) - getCellDepth(b));
 }
 
-/**
- * Find shared edge vertices between two cells' polygons.
- * Returns the two shared vertices as [TPoint, TPoint] or null.
- */
 export function findSharedEdge(polyA: TPoint[], polyB: TPoint[]): [TPoint, TPoint] | null {
   const EPS = 0.5;
   const shared: TPoint[] = [];
@@ -89,4 +62,37 @@ export function findSharedEdge(polyA: TPoint[], polyB: TPoint[]): [TPoint, TPoin
     return [shared[0], shared[1]];
   }
   return null;
+}
+
+export type TIsoCanvasDims = {
+  width: number;
+  height: number;
+  offsetX: number;
+  offsetY: number;
+};
+
+export function getIsoCanvasDims(
+  cells: TCell[],
+  elevScale: number,
+  isIso: boolean
+): TIsoCanvasDims | null {
+  if (!isIso) return null;
+
+  const bbox = getIsoBoundingBox(cells, elevScale);
+  return {
+    width: Math.ceil(bbox.width),
+    height: Math.ceil(bbox.height),
+    offsetX: -bbox.minX,
+    offsetY: -bbox.minY,
+  };
+}
+
+export function isoProjectCellPolygon(
+  polygon: TPoint[],
+  elevation: number,
+  offsetX: number,
+  offsetY: number,
+  elevScale: number
+): TPoint[] {
+  return polygon.map(([px, py]) => [offsetX + px, offsetY + py - elevation * elevScale]);
 }

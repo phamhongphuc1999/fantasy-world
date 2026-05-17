@@ -2,7 +2,11 @@
 
 import { RefObject, useEffect, useMemo } from 'react';
 import { useMapContext } from 'src/contexts/map.context';
-import { DEFAULT_ELEV_SCALE, getIsoBoundingBox } from 'src/services/rendering/canvas/isometric';
+import {
+  DEFAULT_ELEV_SCALE,
+  getIsoBoundingBox,
+  isoProjectCellPolygon,
+} from 'src/services/rendering/canvas/isometric';
 import {
   drawCellShape,
   drawSiteMarker,
@@ -58,9 +62,7 @@ export default function useMapOverlay({ canvasRef }: TProps) {
       const ox = isoOffsetX;
       const oy = isoOffsetY;
       const es = elevScale;
-      const isoPoly = hoveredCell.polygon.map(
-        ([px, py]) => [ox + px, oy + py - hoveredCell.elevation * es] as [number, number]
-      );
+      const isoPoly = isoProjectCellPolygon(hoveredCell.polygon, hoveredCell.elevation, ox, oy, es);
       drawPolygon(context, isoPoly);
       context.fillStyle = 'rgba(56, 189, 248, 0.84)';
       context.fill();
