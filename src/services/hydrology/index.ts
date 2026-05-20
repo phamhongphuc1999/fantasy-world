@@ -35,6 +35,56 @@ function applyPrecipitationControl(value: number, offset: number, scale: number)
   return clamp(value * scale + offset, 0, 1);
 }
 
+// ─── Lightweight typed cell clone ──────────────────────────────────────────────
+// Avoids spread-operator overhead by direct property assignment.
+function cloneCellWithHydrology(
+  cell: TCell,
+  overrides: {
+    elevation: number;
+    isWater: boolean;
+    flow: number;
+    effectiveFlow: number;
+    riverWidth: number;
+    downstreamId: number | null;
+    erosion: number;
+    isRiver: boolean;
+    riverId: number | null;
+    riverOrder: number;
+    isRiverSource: boolean;
+    isRiverMouth: boolean;
+    isLake: boolean;
+    landform: string;
+    temperature: number;
+    precipitation: number;
+    rainShadow: number;
+    petProxy: number;
+    aridityIndex: number;
+    temperatureSeasonality: number;
+    precipitationSeasonality: number;
+    biome: string;
+    suitability: number;
+    population: number;
+    economy: number;
+    waterAccessScore: number;
+    nationId: number | null;
+    provinceId: number | null;
+    ethnicId: number | null;
+    zoneType: string;
+    isCapital: boolean;
+    isEconomicHub: boolean;
+  }
+): TCell {
+  return {
+    id: cell.id,
+    site: cell.site,
+    polygon: cell.polygon,
+    vertexIds: cell.vertexIds,
+    edgeIds: cell.edgeIds,
+    neighbors: cell.neighbors,
+    ...overrides,
+  } as TCell;
+}
+
 function runHydrologyInternal({
   mesh,
   seaLevel,
@@ -132,8 +182,7 @@ function runHydrologyInternal({
   }
 
   const cells = mesh.cells.map((cell, cellIndex) => {
-    const nextCell: TCell = {
-      ...cell,
+    return cloneCellWithHydrology(cell, {
       elevation: adjustedElevations[cellIndex],
       isWater: cell.isWater || isLake[cellIndex] === 1,
       flow: flow[cellIndex],
@@ -166,9 +215,7 @@ function runHydrologyInternal({
       zoneType: 'international-waters' as const,
       isCapital: false,
       isEconomicHub: false,
-    };
-
-    return nextCell;
+    });
   });
   const neighborsByCell = cells.map((cell) => cell.neighbors);
 

@@ -4,8 +4,8 @@ import { useRef, useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import { Button } from 'src/components/ui/button';
 import { ButtonGroup } from 'src/components/ui/button-group';
-import useEthnicMiniMap, { TEthnicMiniMapDisplay } from 'src/hooks/useEthnicMiniMap';
-import { TDelaunayMesh } from 'src/types/map.types';
+import useEthnicMiniMap from 'src/hooks/useEthnicMiniMap';
+import { TDelaunayMesh, TEthnicMiniMapDisplay } from 'src/types/map.types';
 
 type TProps = {
   ethnicId: number;

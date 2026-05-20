@@ -1,13 +1,16 @@
 import { TOPOGRAPHY_CONFIG } from 'src/configs/map/topography';
-import { distanceToSegment } from 'src/services/utils/geometry';
-import { clamp, createSeededRandom, hashSeed, smoothStep } from 'src/services/utils/math';
-import { TDelaunayMesh, TLine, TTopographyCell, TTopographyParams } from 'src/types/map.types';
+import {
+  clamp,
+  createSeededRandom,
+  hashSeed,
+  smoothStep,
+  simplex2D,
+} from 'src/services/utils/math';
+import { TDelaunayMesh, TTopographyCell, TTopographyParams } from 'src/types/map.types';
 import { applyTopography } from './preset';
-
-type TBoundaryLine = TLine & {
-  kind: 'collision' | 'rift';
-  strength: number;
-};
+import { generatePlates, classifyBoundaryForCell } from './tectonics';
+import { computeIsostaticElevation } from './isostasy';
+import { simulateHydraulicErosion } from './erosion';
 
 type TReliefSeed = {
   x: number;
@@ -23,34 +26,6 @@ type TNoiseSampler = {
   billow: (x: number, y: number, seedHash: number) => number;
 };
 
-function lerp(start: number, end: number, factor: number) {
-  return start + (end - start) * factor;
-}
-
-function hashGrid(gridX: number, gridY: number, seedHash: number) {
-  let value = seedHash ^ Math.imul(gridX, 374761393) ^ Math.imul(gridY, 668265263);
-  value = Math.imul(value ^ (value >>> 13), 1274126177);
-  return ((value ^ (value >>> 16)) >>> 0) / 4294967295;
-}
-
-function sampleValueNoise(x: number, y: number, seedHash: number) {
-  const floorX = Math.floor(x);
-  const floorY = Math.floor(y);
-  const localX = x - floorX;
-  const localY = y - floorY;
-  const smoothX = smoothStep(localX);
-  const smoothY = smoothStep(localY);
-
-  const topLeft = hashGrid(floorX, floorY, seedHash);
-  const topRight = hashGrid(floorX + 1, floorY, seedHash);
-  const bottomLeft = hashGrid(floorX, floorY + 1, seedHash);
-  const bottomRight = hashGrid(floorX + 1, floorY + 1, seedHash);
-  const top = lerp(topLeft, topRight, smoothX);
-  const bottom = lerp(bottomLeft, bottomRight, smoothX);
-
-  return lerp(top, bottom, smoothY);
-}
-
 function sampleFractalNoise(x: number, y: number, seedHash: number) {
   const { octaves, persistence, lacunarity } = NOISE.fbm;
   let total = 0;
@@ -59,8 +34,7 @@ function sampleFractalNoise(x: number, y: number, seedHash: number) {
   let weight = 0;
 
   for (let octave = 0; octave < octaves; octave += 1) {
-    total +=
-      sampleValueNoise(x * frequency, y * frequency, seedHash ^ (octave * 374761393)) * amplitude;
+    total += simplex2D(x * frequency, y * frequency, seedHash ^ (octave * 374761393)) * amplitude;
     weight += amplitude;
     amplitude *= persistence;
     frequency *= lacunarity;
@@ -77,7 +51,7 @@ function sampleRidgedNoise(x: number, y: number, seedHash: number) {
   let weight = 0;
 
   for (let octave = 0; octave < octaves; octave += 1) {
-    const base = sampleValueNoise(x * frequency, y * frequency, seedHash ^ (octave * 668265263));
+    const base = simplex2D(x * frequency, y * frequency, seedHash ^ (octave * 668265263));
     const ridge = Math.pow(1 - Math.abs(base * 2 - 1), sharpness);
     total += ridge * amplitude;
     weight += amplitude;
@@ -95,7 +69,7 @@ function sampleBillowyNoise(x: number, y: number, seedHash: number) {
   let weight = 0;
 
   for (let octave = 0; octave < octaves; octave += 1) {
-    const base = sampleValueNoise(x * frequency, y * frequency, seedHash ^ (octave * 1274126177));
+    const base = simplex2D(x * frequency, y * frequency, seedHash ^ (octave * 1274126177));
     const billow = Math.abs(base * 2 - 1);
     total += billow * amplitude;
     weight += amplitude;
@@ -108,42 +82,14 @@ function sampleBillowyNoise(x: number, y: number, seedHash: number) {
 
 function createNoiseSampler(): TNoiseSampler {
   return {
-    value: sampleValueNoise,
+    value: simplex2D,
     fractal: sampleFractalNoise,
     ridged: sampleRidgedNoise,
     billow: sampleBillowyNoise,
   };
 }
 
-const BOUNDARY = TOPOGRAPHY_CONFIG.boundary;
 const SEEDS = TOPOGRAPHY_CONFIG.seeds;
-function buildBoundaryLines(seed: string, width: number, height: number): TBoundaryLine[] {
-  const random = createSeededRandom(`${seed}:boundaries`);
-  const diagonal = Math.sqrt(width ** 2 + height ** 2);
-  const lines: TBoundaryLine[] = [];
-
-  const collisionCount =
-    BOUNDARY.collisionBaseCount + Math.floor(random() * BOUNDARY.collisionExtraCount);
-  const riftCount = BOUNDARY.riftBaseCount + Math.floor(random() * BOUNDARY.riftExtraCount);
-
-  for (let index = 0; index < collisionCount + riftCount; index += 1) {
-    const cx = random() * width;
-    const cy = random() * height;
-    const theta = random() * Math.PI * 2;
-    const halfLength = diagonal * (BOUNDARY.halfLengthMin + random() * BOUNDARY.halfLengthRange);
-
-    lines.push({
-      x1: clamp(cx - Math.cos(theta) * halfLength, 0, width),
-      y1: clamp(cy - Math.sin(theta) * halfLength, 0, height),
-      x2: clamp(cx + Math.cos(theta) * halfLength, 0, width),
-      y2: clamp(cy + Math.sin(theta) * halfLength, 0, height),
-      kind: index < collisionCount ? 'collision' : 'rift',
-      strength: BOUNDARY.strengthBase + random() * BOUNDARY.strengthRange,
-    });
-  }
-
-  return lines;
-}
 
 function buildReliefSeeds(
   seed: string,
@@ -215,16 +161,24 @@ function reinforceHighMountains(elevations: Float32Array, seaLevel: number) {
 const BLEND = TOPOGRAPHY_CONFIG.blend;
 const WARP = TOPOGRAPHY_CONFIG.warp;
 const NOISE = TOPOGRAPHY_CONFIG.noise;
+const TECTONIC = TOPOGRAPHY_CONFIG.tectonic;
+
 export function buildTopography(params: TTopographyParams): TDelaunayMesh {
   const { mesh, seed, seaLevel, topography } = params;
   const noise = createNoiseSampler();
   const macroHash = hashSeed(`${seed}:macro`);
   const warpHash = hashSeed(`${seed}:warp`);
   const detailHash = hashSeed(`${seed}:detail`);
-  const boundaries = buildBoundaryLines(seed, mesh.width, mesh.height);
+
+  // ── Tectonic plates ──────────────────────────────────────────────────────────
+  const cellSites = mesh.cells.map((c) => c.site);
+  const { plates, cellPlateId } = generatePlates(seed, mesh.width, mesh.height, cellSites);
+
+  // ── Relief seeds ─────────────────────────────────────────────────────────────
   const upliftSeeds = buildReliefSeeds(seed, 'uplift-seeds', SEEDS.upliftCount, true);
   const basinSeeds = buildReliefSeeds(seed, 'basin-seeds', SEEDS.basinCount, false);
-  const diagonal = Math.sqrt(mesh.width ** 2 + mesh.height ** 2);
+
+  // ── Elevation loop ───────────────────────────────────────────────────────────
   const baseElevations = new Float32Array(mesh.cells.length);
 
   for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
@@ -232,7 +186,7 @@ export function buildTopography(params: TTopographyParams): TDelaunayMesh {
     const nx = cell.site[0] / mesh.width;
     const ny = cell.site[1] / mesh.height;
 
-    // Domain warping breaks up smooth symmetric contours.
+    // ── Domain warping ─────────────────────────────────────────────────────────
     const warpX = noise.value(nx * WARP.frequency, ny * WARP.frequency, warpHash) - 0.5;
     const warpY =
       noise.value(nx * WARP.frequency, ny * WARP.frequency, warpHash ^ 0x27d4eb2d) - 0.5;
@@ -253,6 +207,7 @@ export function buildTopography(params: TTopographyParams): TDelaunayMesh {
     const warpedX = clamp(warpedPrimaryX + warpSecondaryX * WARP.secondaryStrength, 0, 1);
     const warpedY = clamp(warpedPrimaryY + warpSecondaryY * WARP.secondaryStrength, 0, 1);
 
+    // ── Multi-octave noise layers ──────────────────────────────────────────────
     const macroNoise = noise.fractal(warpedX, warpedY, macroHash) / NOISE.macroDivisor;
     const secondaryNoise =
       noise.fractal(
@@ -269,40 +224,107 @@ export function buildTopography(params: TTopographyParams): TDelaunayMesh {
       detailHash
     );
 
+    // ── Relief seed fields ─────────────────────────────────────────────────────
     const upliftField = sampleSeedField(warpedX, warpedY, upliftSeeds);
     const basinField = sampleSeedField(warpedX, warpedY, basinSeeds);
+
+    // ── Tectonic boundary influence ────────────────────────────────────────────
+    const boundaryInfo = classifyBoundaryForCell(
+      cellIndex,
+      cell.site[0],
+      cell.site[1],
+      cell.neighbors,
+      cellSites,
+      plates,
+      cellPlateId,
+      seaLevel,
+      mesh.width,
+      mesh.height
+    );
+
+    // Compute minimum distance to any neighbour on a different plate
+    // (used by isostasy for thermal subsidence approximation)
+    let distanceToAnyBoundary = 1;
+    for (const nid of cell.neighbors) {
+      if (cellPlateId[nid] !== cellPlateId[cellIndex]) {
+        const ns = cellSites[nid];
+        const d =
+          Math.hypot(cell.site[0] - ns[0], cell.site[1] - ns[1]) /
+          Math.hypot(mesh.width, mesh.height);
+        if (d < distanceToAnyBoundary) distanceToAnyBoundary = d;
+      }
+    }
+
+    // ── Isostatic elevation ────────────────────────────────────────────────────
+    const isostaticElevation = computeIsostaticElevation(
+      boundaryInfo.isContinental,
+      boundaryInfo,
+      distanceToAnyBoundary,
+      cellIndex,
+      plates,
+      cellPlateId[cellIndex]
+    );
 
     let tectonicUplift = 0;
     let tectonicRift = 0;
 
-    for (const boundary of boundaries) {
-      const distance = distanceToSegment(cell.site[0], cell.site[1], boundary) / diagonal;
-      const influence = clamp(1 - distance / BOUNDARY.influenceWidth, 0, 1);
-      if (influence === 0) continue;
+    if (boundaryInfo.boundaryKind !== 'none') {
+      const distNorm = boundaryInfo.distanceToBoundary / TECTONIC.boundaryInfluenceWidth;
+      const influence = clamp(1 - distNorm, 0, 1);
+      const influenceSq = influence * influence;
 
+      // Add jaggedness via noise for organic boundary roughness
       const jaggedness =
-        NOISE.jaggedBase +
+        TOPOGRAPHY_CONFIG.noise.jaggedBase +
         noise.value(
-          warpedX * NOISE.jaggedFrequency,
-          warpedY * NOISE.jaggedFrequency,
+          warpedX * TOPOGRAPHY_CONFIG.noise.jaggedFrequency,
+          warpedY * TOPOGRAPHY_CONFIG.noise.jaggedFrequency,
           detailHash ^ cellIndex
         ) *
-          NOISE.jaggedRange;
-      const value = influence * influence * boundary.strength * jaggedness;
+          TOPOGRAPHY_CONFIG.noise.jaggedRange;
 
-      if (boundary.kind === 'collision') tectonicUplift += value;
-      else tectonicRift += value;
+      if (boundaryInfo.boundaryKind === 'convergent') {
+        // Subduction: oceanic plate goes under continental plate → volcanic arc
+        const isSubduction =
+          !boundaryInfo.isContinental && boundaryInfo.neighborPlateKind === 'continental';
+
+        let baseUplift = boundaryInfo.convergenceRate * TECTONIC.convergentUpliftScale;
+
+        // Subduction zones get extra boost on the continental side
+        if (isSubduction) {
+          baseUplift *= TECTONIC.subductionArcBoost;
+        }
+
+        tectonicUplift = clamp(baseUplift * influenceSq * jaggedness * 0.5, 0, BLEND.maxUplift);
+      } else if (boundaryInfo.boundaryKind === 'divergent') {
+        // Mid-ocean ridge (underwater) → slight elevation bump
+        // Continental rift → valley (negative)
+        const baseRift = boundaryInfo.divergenceRate * TECTONIC.divergentRiftScale;
+
+        if (!boundaryInfo.isContinental) {
+          // Underwater divergent: add ridge elevation
+          tectonicUplift = clamp(baseRift * influenceSq * jaggedness * 0.15, 0, BLEND.maxUplift);
+        } else {
+          // Continental divergent: rift valley
+          tectonicRift = clamp(baseRift * influenceSq * jaggedness * 0.5, 0, BLEND.maxRift);
+        }
+      }
+      // Transform → no vertical displacement
     }
 
-    tectonicUplift = clamp(tectonicUplift * BOUNDARY.collisionScale, 0, BLEND.maxUplift);
-    tectonicRift = clamp(tectonicRift * BOUNDARY.riftScale, 0, BLEND.maxRift);
+    // ── Continental/oceanic base offset (isostatic principle) ──────────────────
+    const isContinentalCell = boundaryInfo.isContinental;
+    const continentalBias = isContinentalCell
+      ? TECTONIC.continentalElevationBias
+      : -TECTONIC.oceanicElevationBias;
 
-    // Keep a weak ocean shelf near borders, but not as a dominant elevation driver.
+    // ── Edge shelf ─────────────────────────────────────────────────────────────
     const edgeDistance = Math.min(nx, 1 - nx, ny, 1 - ny);
     const shelf = smoothStep(
       (edgeDistance - TOPOGRAPHY_CONFIG.shelf.edgeOffset) / TOPOGRAPHY_CONFIG.shelf.edgeRange
     );
 
+    // ── Blend all layers ───────────────────────────────────────────────────────
     baseElevations[cellIndex] = clamp(
       macroNoise * BLEND.macro +
         secondaryNoise * BLEND.secondary +
@@ -312,7 +334,9 @@ export function buildTopography(params: TTopographyParams): TDelaunayMesh {
         upliftField * BLEND.upliftField +
         tectonicUplift * BLEND.tectonicUplift +
         coastNoise * BLEND.coastNoise +
-        shelf * TOPOGRAPHY_CONFIG.shelf.weight -
+        shelf * TOPOGRAPHY_CONFIG.shelf.weight +
+        continentalBias * BLEND.continentalBias +
+        isostaticElevation * BLEND.isostatic -
         basinField * BLEND.basinField -
         tectonicRift * BLEND.tectonicRift,
       0,
@@ -320,6 +344,7 @@ export function buildTopography(params: TTopographyParams): TDelaunayMesh {
     );
   }
 
+  // ── Post-processing ──────────────────────────────────────────────────────────
   const presetElevations = applyTopography({
     mesh,
     seed,
@@ -328,9 +353,21 @@ export function buildTopography(params: TTopographyParams): TDelaunayMesh {
   });
   const elevations = reinforceHighMountains(presetElevations, seaLevel);
 
+  // ── Hydraulic erosion ────────────────────────────────────────────────────────
+  const neighborMap = mesh.cells.map((c) => c.neighbors);
+  const { elevations: erodedElevations } = simulateHydraulicErosion(
+    elevations,
+    cellSites,
+    neighborMap,
+    mesh.width,
+    mesh.height,
+    seed,
+    seaLevel
+  );
+
   const cells = mesh.cells.map((cell) => ({
     ...cell,
-    ...buildCellTopography(elevations[cell.id], seaLevel),
+    ...buildCellTopography(erodedElevations[cell.id], seaLevel),
   }));
 
   return { ...mesh, cells };

@@ -7,7 +7,7 @@ export function projectToIso(
   y: number,
   elevation: number,
   elevScale = DEFAULT_ELEV_SCALE
-): [number, number] {
+): TPoint {
   return [x, y - elevation * elevScale];
 }
 
@@ -57,10 +57,7 @@ export function findSharedEdge(polyA: TPoint[], polyB: TPoint[]): [TPoint, TPoin
     const found = polyB.some((b) => Math.hypot(b[0] - a[0], b[1] - a[1]) < EPS);
     if (found) shared.push(a);
   }
-
-  if (shared.length >= 2) {
-    return [shared[0], shared[1]];
-  }
+  if (shared.length >= 2) return [shared[0], shared[1]];
   return null;
 }
 
