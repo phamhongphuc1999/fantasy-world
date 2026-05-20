@@ -250,3 +250,160 @@ export function applyArchipelagoSeeds(
     elevations[cellIndex] = clamp(baseOcean + islandElevation - channelNoise, 0, 1);
   }
 }
+
+// ── Hills / rolling foothills ──────────────────────────────────────────────────
+// Like range bands but stochastic — scattered hill clusters.
+export function applyHillBands(
+  mesh: TMesh,
+  random: () => number,
+  elevations: Float32Array,
+  count: number,
+  amplitude: number,
+  width: number
+) {
+  const diagonal = Math.hypot(mesh.width, mesh.height);
+
+  for (let bandIndex = 0; bandIndex < count; bandIndex += 1) {
+    const cx = random() * mesh.width;
+    const cy = random() * mesh.height;
+    const theta = random() * Math.PI * 2;
+    const halfLength = diagonal * (0.06 + random() * 0.12);
+    const x1 = clamp(cx - Math.cos(theta) * halfLength, 0, mesh.width);
+    const y1 = clamp(cy - Math.sin(theta) * halfLength, 0, mesh.height);
+    const x2 = clamp(cx + Math.cos(theta) * halfLength, 0, mesh.width);
+    const y2 = clamp(cy + Math.sin(theta) * halfLength, 0, mesh.height);
+    const hillWidth = width * (0.7 + random() * 0.6);
+
+    for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+      const [x, y] = mesh.cells[cellIndex].site;
+      const dist = distanceToSegment(x, y, { x1, y1, x2, y2 }) / diagonal;
+      const influence = clamp(1 - dist / hillWidth, 0, 1);
+      if (influence === 0) continue;
+
+      // Stochastic scatter — only some cells get hills (noise > threshold)
+      const noiseVal = sampleDeterministicDetail(x * 0.035, y * 0.035, bandIndex * 31);
+      if (noiseVal < 0.35) continue;
+
+      elevations[cellIndex] = clamp(
+        elevations[cellIndex] + amplitude * influence * influence * noiseVal,
+        0,
+        1
+      );
+    }
+  }
+}
+
+// ── Plateaus ───────────────────────────────────────────────────────────────────
+// Broad flat elevated regions with steep edges.
+export function applyPlateaus(
+  mesh: TMesh,
+  random: () => number,
+  elevations: Float32Array,
+  count: number,
+  elevation: number,
+  radiusFraction: number
+) {
+  const diagNorm = Math.hypot(mesh.width, mesh.height);
+
+  for (let pIdx = 0; pIdx < count; pIdx += 1) {
+    const cx = (0.12 + random() * 0.76) * mesh.width;
+    const cy = (0.12 + random() * 0.76) * mesh.height;
+    const plateauRadius = diagNorm * radiusFraction * (0.7 + random() * 0.6);
+    const targetElev = elevation * (0.8 + random() * 0.4);
+    const steepness = 3 + random() * 4; // 3-7: higher = steeper edge
+
+    for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+      const [x, y] = mesh.cells[cellIndex].site;
+      const dist = Math.hypot(x - cx, y - cy) / plateauRadius;
+      if (dist > 1.5) continue;
+
+      const edgeWidth = 1 / steepness;
+      let liftFactor: number;
+
+      if (dist < 1 - edgeWidth) {
+        liftFactor = 1; // Flat top
+      } else if (dist < 1) {
+        // Smooth transition
+        const t = (dist - (1 - edgeWidth)) / edgeWidth;
+        liftFactor = 1 - smoothStep(t);
+      } else {
+        // Slight basin at foot
+        const t = (dist - 1) / 0.5;
+        liftFactor = -0.3 * Math.exp(-t * t);
+      }
+
+      const current = elevations[cellIndex];
+      const target = current + targetElev * liftFactor;
+      elevations[cellIndex] = clamp(Math.max(current, target), 0, 1);
+    }
+  }
+}
+
+// ── Volcanic hotspots ──────────────────────────────────────────────────────────
+// Localised shield-volcano domes with optional caldera.
+export function applyVolcanicHotspots(mesh: TMesh, random: () => number, elevations: Float32Array) {
+  const hotspotCount = 1 + Math.floor(random() * 3);
+  const diagNorm = Math.hypot(mesh.width, mesh.height);
+
+  for (let h = 0; h < hotspotCount; h += 1) {
+    const cx = random() * mesh.width;
+    const cy = random() * mesh.height;
+    const baseRadius = diagNorm * (0.03 + random() * 0.06);
+    const peakElev = 0.2 + random() * 0.25;
+    const hasCaldera = random() > 0.5;
+    const calderaR = baseRadius * (0.12 + random() * 0.12);
+
+    for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+      const [x, y] = mesh.cells[cellIndex].site;
+      const dist = Math.hypot(x - cx, y - cy) / baseRadius;
+      if (dist > 2.5) continue;
+
+      let lift: number;
+      if (hasCaldera && dist < calderaR / baseRadius) {
+        const t = dist / (calderaR / baseRadius);
+        lift = peakElev * (0.3 + t * 0.7);
+      } else {
+        lift = peakElev / (1 + dist * dist * 1.5);
+      }
+
+      elevations[cellIndex] = clamp(elevations[cellIndex] + lift, 0, 1);
+    }
+  }
+}
+
+// ── Escarpments / cliff lines ──────────────────────────────────────────────────
+// Sharp elevation drop along a line (rifted margins, fault scarps).
+export function applyEscarpments(mesh: TMesh, random: () => number, elevations: Float32Array) {
+  const escarpCount = 1 + Math.floor(random() * 3);
+  const diagNorm = Math.hypot(mesh.width, mesh.height);
+
+  for (let e = 0; e < escarpCount; e += 1) {
+    const cx = random() * mesh.width;
+    const cy = random() * mesh.height;
+    const theta = random() * Math.PI * 2;
+    const halfLength = diagNorm * (0.15 + random() * 0.18);
+    const drop = 0.05 + random() * 0.08;
+    const cliffWidth = diagNorm * (0.015 + random() * 0.015);
+    const highSide = random() > 0.5 ? 1 : -1;
+
+    const x1 = clamp(cx - Math.cos(theta) * halfLength, 0, mesh.width);
+    const y1 = clamp(cy - Math.sin(theta) * halfLength, 0, mesh.height);
+    const x2 = clamp(cx + Math.cos(theta) * halfLength, 0, mesh.width);
+    const y2 = clamp(cy + Math.sin(theta) * halfLength, 0, mesh.height);
+
+    for (let cellIndex = 0; cellIndex < mesh.cells.length; cellIndex += 1) {
+      const [x, y] = mesh.cells[cellIndex].site;
+      const dist = distanceToSegment(x, y, { x1, y1, x2, y2 });
+      if (dist > cliffWidth * 2) continue;
+
+      // Signed distance to determine which side of the line
+      const crossProd = (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1);
+      const side = crossProd > 0 ? 1 : -1;
+
+      if (side !== highSide) continue;
+
+      const influence = clamp(1 - dist / cliffWidth, 0, 1);
+      elevations[cellIndex] = clamp(elevations[cellIndex] - drop * influence * influence, 0, 1);
+    }
+  }
+}

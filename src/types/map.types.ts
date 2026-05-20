@@ -77,7 +77,13 @@ export type TBorderConfig = {
   smoothness: { edgeNoiseWeight: number; jaggedPenalty: number };
 };
 
-export type TTopography = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
+export type TTopography =
+  | 'balanced'
+  | 'archipelago'
+  | 'ranges'
+  | 'rifted'
+  | 'volcanic'
+  | 'continental';
 export type TEthnicMiniMapDisplay = 'terrain' | 'biome' | 'nation';
 
 export interface TTopographyCell {

@@ -1,16 +1,11 @@
 export const TOPOGRAPHY_CONFIG = {
-  boundary: {
-    collisionBaseCount: 7,
-    collisionExtraCount: 4,
-    riftBaseCount: 4,
-    riftExtraCount: 3,
-    halfLengthMin: 0.11,
-    halfLengthRange: 0.25,
-    strengthBase: 0.75,
-    strengthRange: 0.6,
-    influenceWidth: 0.12,
-    collisionScale: 0.26,
-    riftScale: 0.2,
+  tectonic: {
+    boundaryInfluenceWidth: 0.12,
+    convergentUpliftScale: 0.35,
+    divergentRiftScale: 0.2,
+    subductionArcBoost: 1.6,
+    continentalElevationBias: 0.03,
+    oceanicElevationBias: 0.06,
   },
   seeds: {
     upliftCount: 10,
@@ -36,9 +31,9 @@ export const TOPOGRAPHY_CONFIG = {
     jaggedFrequency: 5.2,
     jaggedBase: 0.72,
     jaggedRange: 0.62,
-    fbm: { octaves: 8, persistence: 0.53, lacunarity: 2.08 },
-    ridged: { octaves: 7, persistence: 0.49, lacunarity: 2.2, sharpness: 1.75 },
-    billow: { octaves: 7, persistence: 0.5, lacunarity: 1.96 },
+    fbm: { octaves: 5, persistence: 0.55, lacunarity: 2.08 },
+    ridged: { octaves: 5, persistence: 0.52, lacunarity: 2.2, sharpness: 1.75 },
+    billow: { octaves: 5, persistence: 0.52, lacunarity: 1.96 },
   },
   shelf: { edgeOffset: 0.005, edgeRange: 0.18, weight: 0.05 },
   blend: {
@@ -54,8 +49,20 @@ export const TOPOGRAPHY_CONFIG = {
     tectonicRift: 0.24,
     maxUplift: 1.2,
     maxRift: 1,
+    continentalBias: 0.5,
+    isostatic: 0.4,
   },
   mountainRecovery: { quantileStart: 0.86, peakBoostMax: 0.14 },
+  erosion: {
+    passCount: 2,
+    sedimentCapacityFactor: 3.0,
+    erosionRate: 0.2,
+    depositionRate: 0.3,
+    evaporationRate: 0.05,
+    maxParticleSteps: 30,
+    initialWaterVolume: 1.0,
+    minSlope: 0.0005,
+  },
 };
 
 export const TOPOGRAPHY_PRESET_CONFIG = {
@@ -88,5 +95,20 @@ export const TOPOGRAPHY_PRESET_CONFIG = {
     valleyBands: { count: 7, depth: 0.1, width: 0.1 },
     edgeShelfStrength: 0.3,
     smoothFactor: 0.14,
+  },
+  volcanic: {
+    rangeBands: { count: 6, amplitude: 0.18, width: 0.08 },
+    valleyBands: { count: 6, depth: 0.14, width: 0.09 },
+    globalScale: { offset: -0.01, scale: 1.0 },
+    edgeShelfStrength: 0.26,
+    smoothFactor: 0.12,
+  },
+  continental: {
+    plateauCount: 3,
+    rangeBands: { count: 5, amplitude: 0.15, width: 0.14 },
+    valleyBands: { count: 6, depth: 0.08, width: 0.15 },
+    globalScale: { offset: 0.01, scale: 0.96 },
+    edgeShelfStrength: 0.2,
+    smoothFactor: 0.22,
   },
 };
