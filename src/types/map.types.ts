@@ -78,6 +78,7 @@ export type TBorderConfig = {
 };
 
 export type TTopography = 'balanced' | 'archipelago' | 'ranges' | 'rifted';
+export type TEthnicMiniMapDisplay = 'terrain' | 'biome' | 'nation';
 
 export interface TTopographyCell {
   elevation: number;
