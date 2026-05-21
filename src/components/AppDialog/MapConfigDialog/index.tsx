@@ -62,8 +62,8 @@ export default function MapConfigDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent
-        overlayClassName="backdrop-blur-none"
-        className="fantasy-glass-strong fixed inset-0 z-50 flex w-full translate-x-0 translate-y-0 flex-col rounded-none border-none p-4 sm:max-w-none md:inset-auto md:top-auto md:right-4 md:bottom-4 md:left-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-95 md:translate-x-0 md:translate-y-0 md:rounded-xl md:p-5"
+        overlayClassName="bg-transparent backdrop-blur-none!"
+        className="fixed inset-0 z-50 flex w-full translate-x-0 translate-y-0 flex-col rounded-none border-none bg-black/25 p-4 sm:max-w-none md:inset-auto md:top-auto md:right-4 md:bottom-4 md:left-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-95 md:translate-x-0 md:translate-y-0 md:rounded-xl md:bg-black/35 md:p-5"
       >
         <DialogHeader>
           <DialogTitle>Map Configuration</DialogTitle>
