@@ -10,14 +10,14 @@ type TLayerToggleProps = {
 
 function LayerToggle({ label, checked, disabled = false, onChange }: TLayerToggleProps) {
   return (
-    <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950/55 px-3 py-2">
-      <span className={disabled ? 'text-slate-500' : 'text-sm text-slate-100'}>{label}</span>
+    <label className="fantasy-glass flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2">
+      <span className={disabled ? 'fantasy-text-muted' : 'text-sm'}>{label}</span>
       <Input
         type="checkbox"
         checked={checked}
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
-        className="size-4 accent-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
+        className="size-4 accent-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
       />
     </label>
   );

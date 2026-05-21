@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Fira_Code, Geist } from 'next/font/google';
+import { Fira_Code, Geist, IM_Fell_English, MedievalSharp } from 'next/font/google';
 import { type ReactNode } from 'react';
 import MapLayout from 'src/components/MapLayout';
 import { APP_NAME, siteMetadata } from 'src/configs/constance';
@@ -8,6 +8,18 @@ import '../src/styles/globals.css';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const firaCode = Fira_Code({ subsets: ['latin'] });
+
+const fellEnglish = IM_Fell_English({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-fell',
+});
+
+const medievalSharp = MedievalSharp({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-medieval',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteMetadata.url),
@@ -44,7 +56,10 @@ interface TProps {
 
 export default function RootLayout({ children }: TProps) {
   return (
-    <html lang="en" className={cn('font-sans', geist.variable)}>
+    <html
+      lang="en"
+      className={cn('font-sans', geist.variable, fellEnglish.variable, medievalSharp.variable)}
+    >
       <body className={cn('flex min-h-full flex-col antialiased', firaCode.className)}>
         <MapLayout>{children}</MapLayout>
       </body>

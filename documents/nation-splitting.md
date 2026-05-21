@@ -4,6 +4,10 @@
 
 `src/services/geopolitics/nations.ts`
 
+## Main Export
+
+`buildLandNations(cells, seed, nationCount)` — returns `owner: Int32Array` directly.
+
 ## Inputs / Outputs
 
 - Input: `cells: TCell[]`, `seed`, requested `nationCount`.
@@ -14,7 +18,7 @@
 The nation pipeline uses:
 
 - Seed suitability: `getNationSeedSuitability(...)`
-- Frontier expansion: `runMultiSourceExpansion(...)`
+- Frontier expansion: `runMultiSourceExpansion(...)` with `getNationStepCost(...)`
 - Boundary cost: `getBoundaryStepCost(...)`
 - Neighbor statistics: `getNationNeighborCounts(...)`
 - Hash/noise: `makeFrontierHash(...)`
@@ -29,6 +33,13 @@ The nation pipeline uses:
 
 ## Implementation-Level Flow
 
+### Step 0: Nation Count Determination
+
+`buildLandNations(...)`:
+
+- Compute `numOfNation = getNationCount(nationCount, landCellCount)` — adjusts requested count based on land cells.
+- Uses `connectivity = buildConnectivityContext(cells)` for component awareness.
+
 ### Step 1: Connectivity Context
 
 `buildConnectivityContext(cells)`:
@@ -38,19 +49,37 @@ The nation pipeline uses:
   - `componentSizes`
   - `boundaryCells` (cells touching water)
 - Large component condition:
-  - `componentSize >= LARGE_LAND_COMPONENT_MIN_CELLS` => mark as large.
+  - `componentSize >= LARGE_LAND_COMPONENT_MIN_CELLS = 200` => mark as large.
 
 ### Step 2: Initial Seeding
 
-- Collect land candidates with suitability scores.
-- Apply seed spacing and component coverage logic.
-- Rules:
-  - `if candidate component is large and unseeded`: strongly prioritize.
-  - `if candidate too close to existing seed`: reject.
+`selectNationSeeds(cells, nationCount, seed, connectivity, minComponentSize)`:
+
+- Collect land candidates sorted by `getNationSeedSuitability(...)` score.
+- Apply seed spacing and component coverage logic including:
+  - Soft geography bias: large + far disconnected components get separate seeds.
+  - Small/similar close islands pushed toward sharing nations.
+  - Noise via `sin(cellId * 2654435761 + seedHash) * 0.35`.
+- `estimateWaterCells(...)` calculates water gaps between components.
+- `minComponentSize` parameter filters candidates (default = `GEOPOLITICAL_CONFIG.minLandCells + 6`).
 
 ### Step 3: Multi-source Expansion
 
-Expansion state contains at least:
+`buildLandNations(...)` integrates two expansion stages:
+
+**Stage A — Floor Expansion** (`runFloorExpansion`):
+
+- Grows nations toward `GEOPOLITICAL_CONFIG.minLandCells` before global expansion.
+- Uses per-nation `nationExpansionBias` from seeded RNG (`${seed}:${nationId}:nation-expansion-bias`).
+
+**Stage B — Regular Multi-source Expansion** (via `runMultiSourceExpansion`):
+
+- Uses `getNationStepCost(...)` which wraps `getBoundaryStepCost(...)` with:
+  - `nationExpansionBias[nationId]` multiplier.
+  - `GEOPOLITICAL_CONFIG.frontierNoise * 0.15` additive noise.
+  - Min floor: `max(0.2, stepCost)`.
+
+Expansion state:
 
 - `cellId`
 - `nationId`
@@ -67,17 +96,17 @@ For each frontier pop:
     - assign `owner[neighbor] = current.nationId`
     - push next state
 
-Step cost includes terrain, barriers, and seeded noise terms.
+Step cost includes terrain, barriers, nation expansion bias, and seeded noise terms.
 
 ### Step 4: Repair Small Nations
 
 Core helpers:
 
 - `buildLandNationSizeMap(...)`
-- `getSmallNationIds(...)`
-- `tryGrowNation(...)`
-- `borrowCellForNation(...)`
-- `transferBorderCell(...)`
+- `getSmallNationIds(...)` — sorts by size ascending
+- `tryGrowNation(...)` — iterates border cells, uses score = `sharedBorder * 10 - elevation * 0.1`
+- `borrowCellForNation(...)` — recursive donor-to-donor chain
+- `transferBorderCell(...)` — picks best cell by target neighbor count
 
 Decision pattern:
 
@@ -86,28 +115,42 @@ Decision pattern:
 - Donor constraints:
   - `if donor would drop below minimum floor`: donor rejected.
   - `if candidate border cell does not touch target nation`: rejected.
+- Falling back: if still under minimum and count > `preserveNationCount`, dissolve nation by reassigning all cells to best neighboring nation.
 
 ### Step 5: Cross-Component / Foreign Nation Bridge
 
 `findNearestForeignNation(...)`:
 
 - Finds nearest land cell whose owner is different from source nation.
-- Uses nearest-cell search with explicit predicate.
+- Uses `findNearestCell(...)` with explicit predicate.
 - `if no candidate`: return `-1` and skip transfer.
 
 ### Step 6: Contiguity and Border Stabilization
 
-Passes include:
+`enforceMainlandContiguity(...)`:
 
-- `enforceMainlandContiguity(...)`
-- `alignNaturalTerrainClusters(...)`
-- `finalizeNationBorders(...)`
-- `diversifySmallNationSizes(...)`
+- For each nation, find disconnected land components.
+- Keep largest component, reassign smaller components to best neighboring nation via `pickBestNationForCell(...)`.
 
-Typical local rule:
+`alignNaturalTerrainClusters(...)`:
 
-- `if cell has stronger neighbor support from another nation` AND change does not violate constraints => reassign.
-- else keep current owner.
+- For mountain/hills/plateau/valley cells, reassign if same-terrain neighbors strongly support another nation.
+- 2 passes, threshold = `bestCount >= 3`.
+
+`finalizeNationBorders(...)`:
+
+- `fillUnclaimedLand(...)` — assigns any unclaimed land cells to best neighboring nation.
+- `ensureAllLandClaimed(...)` — if still unclaimed, assign to nearest claimed nation cell.
+- `enforceMinNationArea(...)` — ensures minimum nation sizes.
+- Runs up to 3 passes, stops early when stabilized.
+
+`diversifySmallNationSizes(...)`:
+
+- Uses seeded RNG from `${seed}:nation-size-diversify:v3`.
+- Phase 0: lift nations stuck at exactly `minNationCells`.
+- Phase 1: lift many tiny nations out of 10-13 bucket.
+- Phase 2: randomly pick some nations to become medium-sized (20+).
+- Respects `hardCapTargetSize = max(minNationCells+12, floor(averageSize*1.85))`.
 
 ## Edge / Exception Cases
 

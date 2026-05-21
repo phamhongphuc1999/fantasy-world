@@ -15,6 +15,7 @@ interface TMapExplorerState {
   displaySettings: TDisplaySettings;
   hoverIndex: number | null;
   hoverClientPoint: { x: number; y: number } | null;
+  resetCounter: number;
 }
 
 type TMapExplorerActions = {
@@ -44,6 +45,7 @@ const DEFAULT_STATE: TMapExplorerState = {
   displaySettings: DEFAULT_CONFIG.displaySettings,
   hoverIndex: null,
   hoverClientPoint: null,
+  resetCounter: 0,
 };
 
 export const useMapExplorerStore = create<TMapExplorerStore>()(
@@ -96,7 +98,13 @@ export const useMapExplorerStore = create<TMapExplorerStore>()(
         set({ hoverIndex: null, hoverClientPoint: null });
       },
       resetToDefaults() {
-        set({ ...DEFAULT_STATE, hoverIndex: null, hoverClientPoint: null });
+        set({
+          ...DEFAULT_STATE,
+          hoverIndex: null,
+          hoverClientPoint: null,
+          resetCounter: Date.now(),
+        });
+        localStorage.removeItem('map-explorer');
       },
     }),
     {

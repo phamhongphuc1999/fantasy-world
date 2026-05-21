@@ -110,20 +110,18 @@ export default function HoverCellOverview() {
 
   return (
     <div className="pointer-events-none fixed z-1000000" style={positionStyle}>
-      <div className="w-72 rounded-xl border border-white/10 bg-slate-950/70 p-3 pb-2.5 text-white shadow-2xl backdrop-blur-md">
-        <p className="mb-2 text-xs font-bold tracking-wider text-white/50">CELL #{cell.id}</p>
+      <div className="fantasy-glass-strong w-72 rounded-xl p-3 pb-2.5 shadow-2xl">
+        <p className="fantasy-text-muted mb-2 text-xs font-bold tracking-wider uppercase">
+          CELL #{cell.id}
+        </p>
         <div className="flex flex-wrap gap-x-3 gap-y-1">
           {rows.map((row) => (
             <span
               key={row.label}
               className="inline-flex items-baseline gap-1 text-xs leading-tight"
             >
-              <span className="text-slate-500">{row.label}</span>
-              <span
-                className={
-                  row.accent ? 'font-semibold text-cyan-300' : 'font-medium text-slate-200'
-                }
-              >
+              <span className="fantasy-text-muted">{row.label}</span>
+              <span className={row.accent ? 'fantasy-text-gold font-semibold' : 'font-medium'}>
                 {row.value}
               </span>
             </span>

@@ -3,7 +3,7 @@ import MapCanvasPanel from 'src/views/HomeView/MapCanvasPanel';
 
 export default function HomeView() {
   return (
-    <main className="h-dvh w-full overflow-hidden bg-slate-950">
+    <main className="bg-background h-dvh w-full overflow-hidden">
       <section className="relative h-full w-full">
         <MapCanvasPanel />
         <div className="pointer-events-none absolute right-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 md:right-4 md:bottom-4">

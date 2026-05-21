@@ -251,7 +251,6 @@ export function applyArchipelagoSeeds(
   }
 }
 
-// ── Hills / rolling foothills ──────────────────────────────────────────────────
 // Like range bands but stochastic — scattered hill clusters.
 export function applyHillBands(
   mesh: TMesh,
@@ -293,7 +292,6 @@ export function applyHillBands(
   }
 }
 
-// ── Plateaus ───────────────────────────────────────────────────────────────────
 // Broad flat elevated regions with steep edges.
 export function applyPlateaus(
   mesh: TMesh,
@@ -339,7 +337,6 @@ export function applyPlateaus(
   }
 }
 
-// ── Volcanic hotspots ──────────────────────────────────────────────────────────
 // Localised shield-volcano domes with optional caldera.
 export function applyVolcanicHotspots(mesh: TMesh, random: () => number, elevations: Float32Array) {
   const hotspotCount = 1 + Math.floor(random() * 3);
@@ -371,7 +368,6 @@ export function applyVolcanicHotspots(mesh: TMesh, random: () => number, elevati
   }
 }
 
-// ── Escarpments / cliff lines ──────────────────────────────────────────────────
 // Sharp elevation drop along a line (rifted margins, fault scarps).
 export function applyEscarpments(mesh: TMesh, random: () => number, elevations: Float32Array) {
   const escarpCount = 1 + Math.floor(random() * 3);

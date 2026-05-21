@@ -47,8 +47,8 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
 
   if (!hasNation && !hasEthnic) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-sm">
-        <section className="relative w-[min(36rem,calc(100vw-2rem))] rounded-xl border border-white/15 bg-slate-950/60 p-6 text-slate-100 backdrop-blur-md">
+      <div className="fantasy-glass-strong fixed inset-0 z-50 flex items-center justify-center">
+        <section className="fantasy-panel relative w-[min(36rem,calc(100vw-2rem))] p-6">
           <Button
             type="button"
             variant="ghost"
@@ -60,7 +60,7 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
             <span className="sr-only">Close</span>
           </Button>
           <h2 className="text-lg font-medium">Cell Detail</h2>
-          <p className="mt-2 text-sm text-slate-400">No data available for this cell.</p>
+          <p className="fantasy-text-muted mt-2 text-sm">No data available for this cell.</p>
         </section>
       </div>
     );
@@ -74,10 +74,10 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
   const availableViews = views.filter((v) => v.available);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm">
-      <section className="relative mx-auto flex h-dvh w-dvw flex-col border border-white/15 bg-slate-950/60 text-slate-100 backdrop-blur-md md:my-4 md:h-[calc(100dvh-2rem)] md:w-[min(72rem,calc(100dvw-2rem))] md:rounded-xl">
+    <div className="fantasy-glass-strong fixed inset-0 z-50">
+      <section className="fantasy-glass-strong relative mx-auto flex h-dvh w-dvw flex-col md:my-4 md:h-[calc(100dvh-2rem)] md:w-[min(72rem,calc(100dvw-2rem))] md:rounded-xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 md:px-6">
+        <div className="border-border flex items-center justify-between border-b px-4 py-3 md:px-6">
           <div className="min-w-0 flex-1">
             {view === 'nation' && nation && nationData && (
               <>
@@ -87,7 +87,7 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
                 >
                   {nation.name}
                 </h2>
-                <p className="truncate text-sm text-slate-400">
+                <p className="fantasy-text-muted truncate text-sm">
                   Nation #{nation.id} · {nationData.nationCells.length.toLocaleString()} cells ·{' '}
                   {formatPopulation(nationData.totalPopulation)} people
                 </p>
@@ -101,7 +101,7 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
                 >
                   {ethnicData.ethnics.name}
                 </h2>
-                <p className="truncate text-sm text-slate-400">
+                <p className="fantasy-text-muted truncate text-sm">
                   Ethnic #{ethnicData.ethnics.id} · {ethnicData.ethnicCells.length.toLocaleString()}{' '}
                   cells · {formatPopulation(ethnicData.totalPopulation)} people
                 </p>

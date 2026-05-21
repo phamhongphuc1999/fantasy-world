@@ -4,6 +4,10 @@
 
 `src/services/geopolitics/ethnic.ts`
 
+## Return Value
+
+`buildEthnicRegions(cells, nationOwner, seed)` returns `{ ethnicOwner: Int32Array, ethnics: TEthnic[] }` — an object containing both the ownership array and the list of ethnic group objects.
+
 ## Constants and Configuration
 
 - `T_MIN_ETHNIC_POPULATION = 1000`
@@ -17,7 +21,7 @@
   - `terrainInfluenceStrength` (landform-aware step cost via `Cost.ethnic`)
   - `distancePenalty`
   - `smoothingPasses`
-  - `minorityClusterMinCells`
+  - `minorityClusterMin` (**note**: this is the config field name — in code it's `config.minorityClusterMin`, not `minorityClusterMinCells`)
 
 ## Exact Stage Order
 
@@ -53,15 +57,17 @@ Pass order is part of behavior.
 
 ### Seed Picking
 
-Each candidate score uses:
+`pickEthnicCoreSeeds(cells, cellIds, count, seed)`:
 
-- base: `suitability * 1.3`
-- bonuses:
-  - plains/valley `+1.1`
-  - forest `+0.35`
-  - mountains `+0.2`
-  - river/lake `+0.35`
-- random jitter from seeded RNG
+- Uses seeded RNG from `${seed}:ethnic:cores`.
+- Each candidate score uses:
+  - base: `suitability * 1.3`
+  - bonuses:
+    - plains/valley `+1.1`
+    - temperate_forest/tropical_forest `+0.35`
+    - mountains `+0.2`
+    - river/lake `+0.35`
+  - random jitter: `random() * 0.5` (seeded RNG, **not** edge noise/hash)
 
 Selection rule:
 
@@ -120,16 +126,17 @@ Bridge exception (both dominant/secondary repaint):
 `addEthnicFragmentation(...)`:
 
 - For each ethnic group:
-  - if group size `< minorityClusterMinCells * 2`: skip
+  - if group size `< config.minorityClusterMin * 2`: skip
   - choose mountain anchor randomly
-  - frontier spread over mountain/hill neighbors with probabilistic acceptance
+  - frontier spread over mountain/hill neighbors with probabilistic acceptance (`random() > 0.62`)
+  - Up to `fragmentSteps = max(1, floor(fragmentationLevel * 6))` steps
 
 ### Cross-Border Smoothing/Expansion
 
 Two paired rounds of:
 
-- `expandCrossBorderEthnics(...)`
-- `smoothCrossBorderEthnics(...)`
+- `expandCrossBorderEthnics(...)` — uses BFS depth search for cross-border support, plus terrain bias and random noise (seeded from `${seed}:ethnic:deep-cross-border`).
+- `smoothCrossBorderEthnics(...)` — uses local + cross-border neighbor support with `crossBorderBlend` weighting.
 
 Both use weighted support from local and cross-border neighborhoods.
 
@@ -137,6 +144,20 @@ Switch condition:
 
 - `if best candidate score > current score`: switch
 - else keep current ethnic id
+
+Detailed parameters:
+
+- `expandCrossBorderEthnics`: iterations = `max(2, floor(3 + crossBorderBlend * 4))`, max depth = `max(2, floor(3 + crossBorderBlend * 3))`.
+- `smoothCrossBorderEthnics`: iterations = `max(2, floor(2 + crossBorderBlend * 3))`.
+
+### Spread Ethnics Across Nations
+
+`spreadEthnicsAcrossNations(...)`:
+
+- For each ethnic group that only exists in 1 nation:
+  - Find border cells of neighboring nations adjacent to the group.
+  - BFS paint up to 18 cells into the group's ethnic to spread across borders.
+  - Stays within same nation during BFS.
 
 ### Unclaimed and Minimum Population
 
@@ -147,10 +168,11 @@ Switch condition:
 
 `enforceEthnicMinPop(...)`:
 
-- Iterate up to fixed max iterations.
-- Find under-threshold ethnic groups.
-- Merge/reassign toward strongest border-vote targets.
-- Stop early if no changes in pass.
+- Iterate up to `maxIterations = 12`.
+- Find under-threshold ethnic groups (population < `T_MIN_ETHNIC_POPULATION` = 1000).
+- Merge/reassign toward strongest border-vote targets, or nearest ethnic if no border votes.
+- Fallback: if no groups survive, keep the largest group and reassign all land cells to it.
+- Final pass: clean up cells belonging to eliminated ethnic groups.
 
 ## Determinism Requirements
 

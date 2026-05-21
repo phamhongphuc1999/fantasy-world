@@ -1,7 +1,5 @@
 import { TOPOGRAPHY_CONFIG } from 'src/configs/map/topography';
-import { createSeededRandom, clamp } from 'src/services/utils/math';
-
-// ─── Types ─────────────────────────────────────────────────────────────────────
+import { clamp, createSeededRandom } from 'src/services/utils/math';
 
 export interface TErosionResult {
   elevations: Float32Array;
@@ -9,45 +7,16 @@ export interface TErosionResult {
   depositionMap: Float32Array;
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
-/**
- * Simple slope calculation between two cells given their elevation difference
- * and the spatial distance between their sites.
- */
 function slopeBetween(elevA: number, elevB: number, dx: number, dy: number): number {
   const dist = Math.hypot(dx, dy);
   if (dist < 0.0001) return 0;
   return (elevA - elevB) / dist;
 }
 
-// ─── Erosion simulation ──────────────────────────────────────────────────────
-
-/**
- * Run a simplified hydraulic erosion simulation on the elevation map.
- *
- * Uses a particle-based approach:
- * 1. Drop water particles at random positions
- * 2. Move each particle downhill collecting sediment
- * 3. Erode when sediment capacity exceeded, deposit when below capacity
- * 4. Evaporate water over time
- *
- * This modifies elevations in-place and returns erosion/deposition intensity maps.
- *
- * @param elevations   Input/output elevation array (normalised [0, 1])
- * @param cellSites    Array of [x, y] cell site positions
- * @param neighborMap  For each cell, array of neighbour cell indices
- * @param width        Map width in pixels
- * @param height       Map height in pixels
- * @param seed         Deterministic seed
- * @param seaLevel     Sea level threshold (cells below this are not eroded)
- */
 export function simulateHydraulicErosion(
   elevations: Float32Array,
   cellSites: ReadonlyArray<[number, number]>,
   neighborMap: ReadonlyArray<ReadonlyArray<number>>,
-  width: number,
-  height: number,
   seed: string,
   seaLevel: number
 ): TErosionResult {
@@ -149,7 +118,6 @@ export function simulateHydraulicErosion(
     }
   }
 
-  // Normalise erosion/deposition maps for diagnostic use
   let maxErosion = 0;
   let maxDeposition = 0;
   for (let i = 0; i < cellCount; i += 1) {

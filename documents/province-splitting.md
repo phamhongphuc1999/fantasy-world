@@ -1,8 +1,15 @@
-# Province Splitting Reimplementation Spec (Updated)
+# Province Splitting Reimplementation Spec (Updated v2)
 
 ## Main File
 
 `src/services/geopolitics/provinces.ts`
+
+## Key Exports
+
+- `buildNationProvinces(cells, owner, seed)` — builds provinces for all nations, returns `provinceOwner: Int32Array`.
+- `enforceProvinceConnect({ cells, owner, provinceOwner })` — fixes disconnected province fragments.
+- `minProvinceArea({ cells, owner, provinceOwner })` — enforces minimum province area/population rules.
+- `limitProvincePopulation({ cells, owner, provinceOwner })` — ensures no province falls below 3% hard floor.
 
 ## Constants That Affect Exact Output
 
@@ -14,23 +21,26 @@
 - `SMALL_NATION_POPULATION_THRESHOLD = 1_000`
 - `SMALL_NATION_MIN_PROVINCE_POPULATION = 200`
 - `DEFAULT_MIN_PROVINCE_POPULATION = 1_000`
-- `PROVINCE_TUNING` object (all subfields must stay identical)
+- `PROVINCE_TUNING` object (all subfields must stay identical — see code for exact values)
 
 ## Exact High-Level Flow
 
-Per nation:
+### Per-Nation Province Building (`buildNationProvinces`)
 
-1. Gather nation cells.
-2. Compute planning metrics via `getProvincePlanMetrics(...)`.
-3. Select seeds and run province expansion.
-4. Build aggregates and evaluate split/merge pressure.
-5. Rebalance within iteration limits.
+1. Gather nation cells. Compute `nationSize` (terrain-weighted), `nationPopulation`.
+2. Determine small-nation split flag: `isNationSplit(nationPop, cellCount, nationSize)`.
+3. Determine ignore flag: `isIgnorePopulationRules(nationPop, cellCount, nationSize)`.
+4. Compute planning metrics via `getProvincePlanMetrics(...)`.
+5. Select seeds via scored candidates with distance constraints.
+6. Run province expansion via `assignProvincesBySeeds(...)` (calls `runMultiSourceExpansion`).
+7. Evaluate split/merge pressure — add seeds for over-cap provinces (up to `maxIterations=20`).
+8. Ensures at least `requiredMinProvince` provinces via `enforceMinProvince(...)`.
 
-Global post-process later in geopolitics stage:
+### Global Post-Process in `postProcessProvinces` (called from `src/services/geopolitics/index.ts`)
 
-1. `limitMountainSplit(...)`
-2. Two rounds of `enforceProvinceConnect(...)` + `minProvinceArea(...)`
-3. `limitProvincePopulation(...)`
+1. `limitMountainSplit(cells, provinceOwner, 'province', owner)`
+2. Two rounds of `enforceProvinceConnect({ cells, owner, provinceOwner })` + `minProvinceArea({ cells, owner, provinceOwner })`
+3. `limitProvincePopulation({ cells, owner, provinceOwner })`
 
 ## Detailed Branching Rules
 
@@ -40,84 +50,94 @@ Global post-process later in geopolitics stage:
 
 - nation population
 - nation cell count
-- effective nation size
+- effective nation size (terrain-weighted sum)
 - flags: `isNationSplit`, `isIgnore`
 
-Branches:
+Population-based baseline province count:
 
 - `if nationPopulation > 1_000_000`: baseline by `ceil(pop / IDEAL_PROVINCE_POP)`.
 - `if 500_000 < nationPopulation <= 1_000_000`: baseline is `3`.
 - `if 300_000 <= nationPopulation <= 500_000`: baseline is `2`.
 - else baseline is `1`.
 
-Minimum province population:
+Metric outputs:
 
-- `max(getNationMinProvincePop(nationPopulation), floor(targetPopulation * 0.7))`
-
-Required minimum province count uses:
-
-- population-driven count
-- cell-driven count
-- configured floors/caps
-- small-nation special cap
+- `minProvinceSize` — terrain-adaptive minimum province size.
+- `baselineTarget` — clamped initial target.
+- `minProvincePopulation` — `max(getNationMinProvincePop(nationPopulation), floor(targetPopulation * 0.7))`.
+- `requiredMinProvince` — combined from pop-driven, cell-driven, configuration floors/caps, small-nation cap.
+- `maxProvinceCount` — upper bound from cells, population, and small-nation rules.
 
 ### Seed Selection
 
-- Score uses suitability + province seed policy.
+- Score uses `getProvinceSeedScore(cell)` from `./cost`.
 - Distance rule:
-  - plains/valley use shorter seed spacing than rugged terrains.
-- `if candidate violates min seed distance`: reject.
+  - plains/valley: `PROVINCE_TUNING.seedDistance.plainOrValley = 42`.
+  - other terrain: `PROVINCE_TUNING.seedDistance.other = 72`.
+  - Minimum between seeds: `PROVINCE_TUNING.seedDistance.minBetweenSeeds = 26`.
+- If scored candidates produce fewer seeds than `requiredMinProvince`, remaining seeds are added from top candidates regardless of distance.
 
 ### Expansion
 
-Ownership update condition:
+`assignProvincesBySeeds(...)`:
 
-- Candidate cell must belong to same nation.
-- Compute transition cost (terrain-aware, distance-aware).
-- `if nextCost < existingCost[cell]`: adopt new owner and enqueue.
+- Uses `runMultiSourceExpansion` internally.
+- Step cost: `getBoundaryStepCost(...)` \* terrainMismatchMultiplier (3x if neighbor landform ≠ seed landform).
+- Min floor: `max(0.25, step * terrainMismatchMultiplier)`.
+- Candidate cells must belong to same nation.
+- Territory is reassigned each split iteration (resets all cells to -1 then re-expands).
 
-### Split Trigger
+### Split Trigger (within buildNationProvinces)
 
-A province is split candidate when one or more hold:
+In each split iteration, for each province (sorted by population descending):
 
-- population above dynamic hard/soft max,
-- effective area above tuned factor,
-- density pressure indicates oversized region.
+- Check if population exceeds `dynamicPopulationBounds.max` (hard cap).
+- Check if population share > `maxProvincePopulationShare` AND population > `basePopulationBounds.target * 1.05`.
+- Check if cell count > `cellCapByDensity` (density-aware cap).
+- Check if effective size > `minProvinceSize * maxProvinceAreaFactor (3.4)`.
+- Metropolis exception: `isMetropolis(...)` may keep tiny high-pop province unsplit.
 
 Guard:
 
-- `if splitting would exceed feasible province bounds`: skip/defer split.
+- If adding a new seed violates `minBetweenSeeds` distance, skip.
 
-### Merge Trigger
+### Merge Trigger (within `minProvinceArea`)
 
 A province is merge candidate when one or more hold:
 
-- below mandatory minimum population,
-- below minimum effective size,
-- connectivity/shape anomalies after previous operations.
+- below terrain-adjusted `minProvincePopulation`.
+- effective size below `minProvinceSize`.
+- below mandatory minimum population (if `enforceMandatoryPopulationFloor`).
+- below 3% hard floor (`underPopulatedByHardFloor`).
+
+But NOT merge candidates when:
+
+- dense urban province (population > `populationBounds.target * 1.2`).
+- above population max cap.
+- special economy province (economy per cell > `nationAverage * economySpecialFactor(1.45)`).
+- large sparse province (size >= `minProvinceSize * largeSparseFactor(1.35)`) with only population deficiency.
 
 Merge target rules:
 
-1. Prefer same-terrain neighbors.
-2. Reject target if merged pop exceeds `MERGE_POP_CAP` unless exception path allows.
-3. Reject if merge breaks connectivity.
-4. If all rejected, fallback to best valid mixed-terrain neighbor by score.
+1. Prefer same-terrain neighbors (prioritized in underpopulated cases).
+2. Reject target if merged pop exceeds `MERGE_POP_CAP = 800_000`.
+3. If all rejected, fallback to nearest valid province.
+4. After initial merge, runs soft rebalance (2 passes) then strict floor enforcement (12 passes) with scoring: `reachesFloor * 1_000_000 + terrainMatch * 10_000 + touch * 100 - overshoot * 0.001`.
 
 ### Metropolis Exception
 
-`isMetropolis(...)` may keep tiny-cell but very high-pop province unsplit under constrained cases.
+`isMetropolis(cells, population, maxPopulation, minSize, cellsWeight)`:
+
+- If `cells.length > 2`: false.
+- If `population <= maxPopulation`: false.
+- If `effectiveSize > minSize`: false.
+- Otherwise: true (preserves tiny but dense province).
 
 ### Loop Termination
 
-- Rebalance loops stop when:
+- Split loop stops when:
+  - `maxIterations = 20` reached, OR
+  - no new seeds added in a pass.
+- Rebalance loops (soft + strict) stop when:
   - iteration cap reached, OR
   - no ownership changes in pass.
-
-This is required to avoid infinite loops and keep deterministic stopping points.
-
-## Exactness Requirements
-
-- Keep all integer rounding (`Math.floor/ceil/round`) exactly as in source.
-- Keep pass counts and loop limits exactly.
-- Keep stable sorting behavior where used.
-- Keep typed containers (`Map`, typed arrays) and insertion/traversal order semantics.

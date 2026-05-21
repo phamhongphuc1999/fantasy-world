@@ -109,10 +109,8 @@ export default function MapCanvasPanel() {
         )}
 
         {isGenerating && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/55 backdrop-blur-[1px]">
-            <div className="rounded-xl border border-white/15 bg-slate-900/85 px-4 py-2 text-sm text-slate-100">
-              Generating map...
-            </div>
+          <div className="fantasy-glass-strong absolute inset-0 z-20 flex items-center justify-center">
+            <div className="fantasy-panel px-4 py-2 text-sm">Generating map...</div>
           </div>
         )}
       </div>

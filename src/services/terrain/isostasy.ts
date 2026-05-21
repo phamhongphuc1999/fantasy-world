@@ -1,6 +1,4 @@
-import { TPlate, TPlateBoundaryInfo } from './tectonics';
-
-// ─── Config ────────────────────────────────────────────────────────────────────
+import { TPlateBoundaryInfo } from './tectonics';
 
 interface TIsostasyConfig {
   /** Mantle density (g/cm³) */
@@ -32,8 +30,6 @@ const ISOSTASY_CONFIG: TIsostasyConfig = {
   maxAge: 10,
 };
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
 /**
  * Seeded age approximation for oceanic crust based on distance from ridge.
  * Simulates plate cooling: young near divergent boundaries, old far from them.
@@ -43,10 +39,7 @@ function estimateOceanCrustAge(
   cellSeed: number,
   maxAge: number
 ): number {
-  // Distance to nearest divergent boundary drives age
-  // Close to ridge = young; far from ridge = old, up to maxAge
   const spread = Math.min(distanceToDivergent * 35, 1);
-  // Add some noise for variation
   const noise = ((cellSeed % 1000) / 1000) * 0.2 - 0.1;
   return Math.max(0.1, spread + noise) * maxAge;
 }
@@ -71,9 +64,6 @@ function continentalRiftThinning(distanceToBoundary: number, divergenceRate: num
   const influence = Math.exp(-(distanceToBoundary * distanceToBoundary) / 0.01);
   return 1 - influence * divergenceRate * 12;
 }
-
-// ─── Isostatic elevation ──────────────────────────────────────────────────────
-
 /**
  * Compute isostatic elevation adjustment for a cell based on crust type,
  * boundary proximity, and thermal subsidence.
@@ -94,7 +84,6 @@ export function computeIsostaticElevation(
   boundaryInfo: TPlateBoundaryInfo,
   distanceToAnyBoundary: number,
   cellIndex: number,
-  plates: ReadonlyArray<TPlate>,
   myPlateId: number
 ): number {
   const cfg = ISOSTASY_CONFIG;

@@ -1,4 +1,4 @@
-# River Generation Reimplementation Spec (Updated)
+# River Generation Reimplementation Spec (Updated v2)
 
 ## Scope
 
@@ -6,17 +6,17 @@ This document is an implementation-level specification for reproducing the curre
 
 Primary sources:
 
-- `src/services/hydrology/index.ts`
-- `src/services/hydrology/river.ts`
-- `src/services/hydrology/lakes.ts`
-- `src/configs/MapConfig/hydrology.config.ts`
-- `src/configs/MapConfig/index.ts` (`RIVER_CONFIG`)
+- `src/services/hydrology/river.ts` (main river generation — `runRiverGeneration()`)
+- `src/services/hydrology/index.ts` (orchestration — `buildHydrology()`)
+- `src/services/hydrology/lakes.ts` (lake expansion/filtering)
+- `src/configs/map/hydrology.ts` (`HYDROLOGY_CONFIG`, `RIVER_CONFIG`, `LAKE_CONFIG`)
+- `src/types/map.types.ts` (`TRiver`, `TRiverEndType`, `TRiverKind` types)
 
 ## Required Constants and Sentinels
 
 You must keep these exactly:
 
-- Coast outlet sentinel: `T_COAST_OUTLET = CORE.coastOutletId` (currently `-2`).
+- Coast outlet sentinel: `T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId` (currently `-2`).
 - Land mask threshold: `RIVER_CONFIG.landWaterThreshold`.
 - Depression settings: `RIVER_CONFIG.depression.{maxIterations, epsilon, coastLift}`.
 - Candidate flux threshold: `RIVER_CONFIG.minFluxToFormRiver * pow(cells.length / 10000, RIVER_CONFIG.cellsNumberModifierExp)`.
@@ -24,17 +24,20 @@ You must keep these exactly:
 
 ## Global Order (Must Not Change)
 
-Within `buildHydrology(...)` in `src/services/hydrology/index.ts`:
+Within `buildHydrology(...)` in `src/services/hydrology/index.ts`, the internal function `runHydrologyInternal(...)` runs:
 
-1. `expandLakes(cells, flow, downstream)`
-2. `filterAndLimitLakes(cells, flow)`
-3. `classifyInlandWater(cells, width, height, seaLevel, downstream)`
-4. `runRiverGeneration(cells, seaLevel, precipitation, seed)`
-5. Write `result` back to cells:
+1. Initial elevation copy + basic flow calculation + downstream assignment.
+2. Erosion simulation: compute `erosion` = `min(maxAmount, slope * slopeWeight + log2(flow+1) * flowWeight)`, with `deposit` forwarded downstream.
+3. Lake detection: cells with `downstream == -1 && !cell.isWater && flow > sinkFlowMin` are marked as `isLake=1`.
+4. `expandLakes(cells, flow, downstream)`
+5. `filterAndLimitLakes(cells, flow)`
+6. `classifyInlandWater(cells, width, height, seaLevel, downstream)`
+7. Climate/terrain classification (temperature, precipitation, landforms, biomes).
+8. `runRiverGeneration(cells, seaLevel, precipitation, seed)` — internally calls `prepareTerrain`, `fillDepressions`, `accumulateFlow`, `buildRiverGraph`.
+9. Write `result` back to cells:
    - `flow`, `effectiveFlow`, `downstreamId`, `riverId`, `isRiver`, `riverWidth`
-6. Build `isRiverSource` / `isRiverMouth` from final `result.rivers`
-
-Any order changes will produce different maps.
+10. Build `isRiverSource` / `isRiverMouth` from final `result.rivers`
+11. Compute `suitability` via `getSuitabilityByLandformBiome(...)`.
 
 ## Stage A: `prepareTerrain(...)`
 
@@ -214,71 +217,25 @@ Else build `TRiver`:
   - `lake` if downstream water cell is lake
   - `sea` if downstream water cell is non-lake water
   - otherwise `inland-sink`
-- Width profile and geometry are deterministic and use:
-  - meander insertion (`minSegmentLength`, `base`)
-  - width growth by index progress + flux + downstream boost
-  - two smoothing passes over `channelOffsets`
-  - monotonic non-decreasing offset enforcement
+- River kind from `riverKindByPeakFlow(peakFlow)`:
+  - `peakFlow >= 150` → `'river'`
+  - `peakFlow >= 80` → `'fork'`
+  - `peakFlow >= 45` → `'branch'`
+  - otherwise → `'creek'`
+- River name from `createRiverName(random, id, kind)` with prefix/suffix lists.
+- Width profile:
+  - Starting width: `min(maxFluxWidth, pow(max(0, startFlow), 0.7) / fluxFactor) + minWidth * 0.2`
+  - Per-cell width: `fluxWidth + lengthWidth` where lengthWidth = `linearGrow + earlyProgression(ln2) + downstreamBoost(pow(t, 1.65)*1.55)`
+  - `widthFactor = 1.12` for parent rivers, `0.78` for tributaries.
+  - Two smoothing passes over `pointOffsets` (0.25/0.5/0.25 averaging).
+  - Monotonic non-decreasing offset enforcement.
+  - Final riverWidth: `min(maxWidth, max(0.45, pow(offset/1.5, 1.8)))`
+- Bank geometry: `leftBank`/`rightBank` polyline with normal offset.
+- Polygon: `[...leftBank, ...rightBank.reverse()]`.
 
-## Stage E: `validateRivers(...)` (legacy note)
+## Stage E: `validateRivers(...)` (removed)
 
-Current codebase consolidates river logic in `src/services/hydrology/river.ts`.
-If a `validateRivers(...)` pass is reintroduced, keep ordering and deterministic rules unchanged.
-
-This is a second selection layer that can disable river flags if chains are not good enough.
-
-### E1. Build candidates from current `isRiver` mask
-
-For each potential chain source:
-
-- must have `upstreamCount == 0` in current mask
-- must meet minimum flow
-- tracing stops on outlet/water/join conditions
-
-A candidate is valid iff:
-
-- Source validity:
-  - elevation condition OR
-  - large-lake source OR
-  - plains/tundra source with dedicated min-flow overrides
-- End validity:
-  - sea OR large-lake OR accepted plain-sink case
-- Length validity:
-  - `chain.length >= minLength`
-
-### E2. Relaxed fallback
-
-- If strict candidates `< riverMinCount`, create relaxed mask using relaxed thresholds and re-run candidate extraction.
-
-### E3. Scoring and selection
-
-Score:
-
-- `peakFlow`
-- `+ plainCoverage * largeRiverPlainBonus`
-- `+ vLargePlainCoverage * vLargePlainRiverBonus`
-- `+ vLargePlainSeaBonus` if sea-ending and very-large-plain coverage > 0
-- `+ chain.length * riverLenPriorityW`
-- `+ tribJoinBonus` if it joins an existing river
-
-Selection order:
-
-1. Required very-large-plain sea rivers (up to `vLargePlainMinRivers`)
-2. Forced large-river quota (`minLarge`)
-3. Additional large rivers up to `targetLarge`
-4. Preferred small rivers by length and overlap limit
-5. Short small rivers if quota still not met
-6. If still below global minimum count, append best remaining
-
-Overlap rules:
-
-- General max overlap ratio: `0.8`
-- Tributary-join candidates: `tribMaxOverlap` (currently `1`)
-
-### E4. Final write-back
-
-- `validRiver[cell] = 1` for selected chains
-- Set `cells[cell].isRiver = validRiver[cell] == 1`
+**Note**: The `validateRivers()` pass described in older specs has been **removed** from the current codebase. River selection and filtering now happens entirely within `buildRiverGraph()` in `src/services/hydrology/river.ts`. There is no second selection layer.
 
 ## Determinism Requirements
 

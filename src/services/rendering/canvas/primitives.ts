@@ -117,6 +117,5 @@ export function getRiverSegmentEndPoint(from: TCell, to: TCell): TPoint {
       bestPoint = [startX + dx * t, startY + dy * t];
     }
   }
-
   return bestPoint ?? [to.site[0], to.site[1]];
 }

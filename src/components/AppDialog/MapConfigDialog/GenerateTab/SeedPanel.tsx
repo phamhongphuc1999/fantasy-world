@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import { Button } from 'src/components/ui/button';
 import { Input } from 'src/components/ui/input';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
 
 export default function SeedPanel() {
-  const { seed, setSeed } = useMapExplorerStore();
+  const { seed, setSeed, resetCounter } = useMapExplorerStore();
   const [seedDraft, setSeedDraft] = useState(seed);
+
+  useEffect(() => {
+    setSeedDraft(seed);
+  }, [resetCounter, seed]);
 
   function applySeed() {
     const normalizedSeed = seedDraft.trim() || 'world000';
@@ -36,7 +40,6 @@ export default function SeedPanel() {
       <Input
         value={seedDraft}
         onChange={(event) => setSeedDraft(event.target.value)}
-        className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500"
         placeholder="world000"
       />
       <div className="mt-2 flex gap-2">

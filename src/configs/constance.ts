@@ -22,4 +22,6 @@ export const TOPOGRAPHY_OPTIONS: TTopographyOption[] = [
   { label: 'Archipelago', value: 'archipelago' },
   { label: 'Ranges', value: 'ranges' },
   { label: 'Rifted', value: 'rifted' },
+  { label: 'Volcanic', value: 'volcanic' },
+  { label: 'Continental', value: 'continental' },
 ];

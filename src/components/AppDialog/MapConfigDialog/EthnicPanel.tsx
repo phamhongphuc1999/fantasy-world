@@ -33,24 +33,23 @@ export default function EthnicPanel(_props: TProps) {
   return (
     <div className="max-h-[46vh] space-y-2 overflow-y-auto pr-1">
       {rows.map((row) => (
-        <div
-          key={row.id}
-          className="rounded-xl border border-white/10 bg-slate-950/55 px-3 py-2 text-xs text-slate-200"
-        >
+        <div key={row.id} className="fantasy-glass rounded-xl px-3 py-2 text-xs">
           <div className="flex items-center justify-between gap-2">
             <span className="font-bold" style={{ color: getNationColor(row.id) }}>
               {row.name}
             </span>
-            <span className="text-slate-400">#{row.id}</span>
+            <span className="fantasy-text-muted">#{row.id}</span>
           </div>
 
-          <div className="mt-1 text-[11px] text-slate-200">
+          <div className="mt-1 text-[11px]">
             <span className="font-medium">Ethnic Population:</span>{' '}
             {formatPopulation(row.totalPopulation)}
           </div>
         </div>
       ))}
-      {rows.length === 0 && <p className="text-xs text-slate-400">No ethnic groups generated.</p>}
+      {rows.length === 0 && (
+        <p className="fantasy-text-muted text-xs">No ethnic groups generated.</p>
+      )}
     </div>
   );
 }

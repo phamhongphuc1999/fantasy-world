@@ -1,11 +1,8 @@
 import { createSeededRandom } from 'src/services/utils/math';
 import { TPoint } from 'src/types/map.types';
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
-export type TPlateKind = 'continental' | 'oceanic';
-
-export type TBoundaryKind = 'divergent' | 'convergent' | 'transform' | 'none';
+type TPlateKind = 'continental' | 'oceanic';
+type TBoundaryKind = 'divergent' | 'convergent' | 'transform' | 'none';
 
 export interface TPlate {
   id: number;

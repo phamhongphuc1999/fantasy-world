@@ -1,7 +1,7 @@
 import { LANDFORM_CLASSIFIER_CONFIG, LANDFORM_ELEVATION_BANDS } from 'src/configs/map/terrain';
 import { classifyLandformWater } from 'src/services/utils/cell';
-import { TCell, TLandform, TTerrain } from 'src/types/map.types';
 import { clamp } from 'src/services/utils/math';
+import { TCell, TLandform, TTerrain } from 'src/types/map.types';
 
 type TClassifyLandformsParams = {
   cells: TCell[];
@@ -11,10 +11,7 @@ type TClassifyLandformsParams = {
   terrains: TTerrain[];
 };
 
-const TERRAIN_CODE = {
-  COAST: 1,
-  VOLCANIC: 2,
-} as const;
+const TERRAIN_CODE = { COAST: 1, VOLCANIC: 2 };
 
 function toTerrainCode(terrain: TTerrain) {
   if (terrain === 'coast') return TERRAIN_CODE.COAST;

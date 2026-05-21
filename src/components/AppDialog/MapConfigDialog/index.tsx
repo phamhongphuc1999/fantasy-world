@@ -56,24 +56,24 @@ export default function MapConfigDialog() {
         <Button
           type="button"
           variant="secondary"
-          className="pointer-events-auto h-10 border border-white/20 bg-slate-900/85 px-3 text-slate-100 shadow-lg backdrop-blur"
+          className="fantasy-glass-strong pointer-events-auto h-10 px-3 shadow-lg"
         >
           <Settings2 className="size-4" />
         </Button>
       </DialogTrigger>
       <DialogContent
-        overlayClassName="supports-backdrop-filter:backdrop-blur-none"
-        className="flex h-dvh max-w-none translate-y-0 flex-col rounded-none border-none bg-slate-900/55 p-4 text-white sm:max-w-none md:top-auto md:right-4 md:bottom-4 md:left-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-95 md:translate-y-0 md:rounded-xl md:border md:border-white/15 md:bg-slate-950/45 md:p-5"
+        overlayClassName="backdrop-blur-none"
+        className="fantasy-glass-strong fixed inset-0 z-50 flex w-full translate-x-0 translate-y-0 flex-col rounded-none border-none p-4 sm:max-w-none md:inset-auto md:top-auto md:right-4 md:bottom-4 md:left-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-95 md:translate-x-0 md:translate-y-0 md:rounded-xl md:p-5"
       >
         <DialogHeader>
           <DialogTitle>Map Configuration</DialogTitle>
         </DialogHeader>
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <Select value={activePanel} onValueChange={setActivePanel}>
-            <SelectTrigger className="mt-1 w-full border-white/15 bg-slate-950/70 text-slate-100">
+            <SelectTrigger className="fantasy-glass mt-1 w-full">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="border border-white/15 bg-slate-950 text-slate-100">
+            <SelectContent className="fantasy-glass-strong">
               <SelectItem value="generation">Generation</SelectItem>
               <SelectItem value="display">Display</SelectItem>
               <SelectItem value="nations">Nations</SelectItem>
@@ -85,7 +85,7 @@ export default function MapConfigDialog() {
           <Button
             type="button"
             onClick={resetToDefaults}
-            className="mt-1 w-full rounded-xl border border-rose-300/30 bg-rose-400/15 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-400/25"
+            className="mt-1 w-full shrink-0 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/20"
           >
             Reset to Default Config
           </Button>

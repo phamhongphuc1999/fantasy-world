@@ -99,13 +99,8 @@ export default function ExportTab() {
         </Button>
       </BlurCard>
       <BlurCard title="Import Data">
-        <label className="block text-xs text-slate-300">Import JSON Schema</label>
-        <Input
-          type="file"
-          accept="application/json,.json"
-          onChange={handleImportJson}
-          className="mt-2 block w-full rounded-md border border-white/20 bg-slate-900/60 px-2 py-1 text-xs text-slate-100"
-        />
+        <label className="fantasy-text-muted block text-xs">Import JSON Schema</label>
+        <Input type="file" accept="application/json,.json" onChange={handleImportJson} />
       </BlurCard>
     </div>
   );

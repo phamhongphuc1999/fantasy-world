@@ -70,11 +70,9 @@ export function floodFromSeeds(
 ) {
   const { visitedStamp, stack, stamp } = prepareWorkspace(cells.length, workspace);
   const visited = new Uint8Array(cells.length);
-  stack.length = 0;
 
   for (const seedId of seeds) {
     if (seedId < 0 || seedId >= cells.length) continue;
-    if (visitedStamp[seedId] === stamp) continue;
     visitedStamp[seedId] = stamp;
     stack.push(seedId);
   }
@@ -85,8 +83,7 @@ export function floodFromSeeds(
     const current = cells[currentId];
     for (const neighborId of current.neighbors) {
       if (visitedStamp[neighborId] === stamp) continue;
-      const neighbor = cells[neighborId];
-      if (!canTraverse(current, neighbor)) continue;
+      if (!canTraverse(current, cells[neighborId])) continue;
       visitedStamp[neighborId] = stamp;
       stack.push(neighborId);
     }

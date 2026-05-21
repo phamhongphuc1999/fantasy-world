@@ -37,43 +37,7 @@ function applyPrecipitationControl(value: number, offset: number, scale: number)
 
 // ─── Lightweight typed cell clone ──────────────────────────────────────────────
 // Avoids spread-operator overhead by direct property assignment.
-function cloneCellWithHydrology(
-  cell: TCell,
-  overrides: {
-    elevation: number;
-    isWater: boolean;
-    flow: number;
-    effectiveFlow: number;
-    riverWidth: number;
-    downstreamId: number | null;
-    erosion: number;
-    isRiver: boolean;
-    riverId: number | null;
-    riverOrder: number;
-    isRiverSource: boolean;
-    isRiverMouth: boolean;
-    isLake: boolean;
-    landform: string;
-    temperature: number;
-    precipitation: number;
-    rainShadow: number;
-    petProxy: number;
-    aridityIndex: number;
-    temperatureSeasonality: number;
-    precipitationSeasonality: number;
-    biome: string;
-    suitability: number;
-    population: number;
-    economy: number;
-    waterAccessScore: number;
-    nationId: number | null;
-    provinceId: number | null;
-    ethnicId: number | null;
-    zoneType: string;
-    isCapital: boolean;
-    isEconomicHub: boolean;
-  }
-): TCell {
+function cloneCellWithHydrology(cell: TCell, overrides: Partial<TCell>): TCell {
   return {
     id: cell.id,
     site: cell.site,
