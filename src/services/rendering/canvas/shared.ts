@@ -1,4 +1,4 @@
-import { TPoint } from 'src/types/map.types';
+import { TPoint } from 'src/global';
 
 export type TRgbColor = { r: number; g: number; b: number };
 

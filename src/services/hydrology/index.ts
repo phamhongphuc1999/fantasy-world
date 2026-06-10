@@ -1,8 +1,9 @@
 import { EROSION_CONFIG, HYDROLOGY_CONFIG, LAKE_CONFIG } from 'src/configs/map/hydrology';
+import { TCell, TDelaunayMesh, THydrologyParams, TTerrain } from 'src/global';
 import {
   buildWaterInfluence,
+  classifyTerrain,
   getSuitabilityByLandformBiome,
-  getTerrain,
 } from 'src/services/hydrology/climate';
 import {
   classifyInlandWater,
@@ -10,22 +11,15 @@ import {
   filterAndLimitLakes,
 } from 'src/services/hydrology/lakes';
 import { computePrecipitation } from 'src/services/hydrology/precipitation';
-import { runRiverGeneration } from 'src/services/hydrology/river';
+import { generateRivers, sortIndicesByElevation } from 'src/services/hydrology/river';
 import { computeTemperature } from 'src/services/hydrology/temperature';
 import { buildWindField } from 'src/services/hydrology/wind';
-import { TCell, TDelaunayMesh, THydrologyParams, TTerrain } from 'src/types/map.types';
+import { getAvgNeighbor } from 'src/services/utils/cell';
+import { clamp } from 'src/services/utils/math';
 import { classifyBiomes } from '../terrain/biomeClassifier';
 import { classifyLandforms } from '../terrain/landformClassifier';
-import { clamp } from 'src/services/utils/math';
-import { getAvgNeighbor } from 'src/services/utils/cell';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
-
-function sortIndicesByElevation(elevations: Float32Array) {
-  const indices = Array.from({ length: elevations.length }, (_, index) => index);
-  indices.sort((left, right) => elevations[right] - elevations[left]);
-  return indices;
-}
 
 function applyTemperatureControl(value: number, offset: number, contrast: number) {
   return clamp((value - 0.5) * contrast + 0.5 + offset, 0, 1);
@@ -246,7 +240,14 @@ function runHydrologyInternal({
     );
 
     const relief = reliefByCell[cellIndex];
-    const terrainTag = getTerrain(cell, seaLevel, temperature, precipitation, rainShadow, relief);
+    const terrainTag = classifyTerrain(
+      cell,
+      seaLevel,
+      temperature,
+      precipitation,
+      rainShadow,
+      relief
+    );
     terrains[cellIndex] = terrainTag;
     const petProxy = clamp(
       0.22 + temperature * 0.78 + Math.max(0, 1 - waterInfluence[cellIndex]) * 0.1,
@@ -329,7 +330,7 @@ function runHydrologyInternal({
     precipitation[cellIndex] = cells[cellIndex].precipitation;
   }
 
-  const result = runRiverGeneration(cells, seaLevel, precipitation, seed);
+  const result = generateRivers(cells, seaLevel, precipitation, seed);
 
   for (let cellIndex = 0; cellIndex < cells.length; cellIndex += 1) {
     flow[cellIndex] = result.flow[cellIndex];

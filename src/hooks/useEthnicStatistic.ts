@@ -1,14 +1,30 @@
 'use client';
 
 import { useMemo } from 'react';
+import { TCell, TDelaunayMesh, TEthnic, TTerranStatisticData } from 'src/global';
 import { toPercent } from 'src/services/utils';
-import { TDelaunayMesh } from 'src/types/map.types';
 
-export default function useEthnicStatistic(ethnicId: number | null, mesh: TDelaunayMesh) {
+export type TEthnicData = {
+  ethnics: TEthnic;
+  ethnicCells: TCell[];
+  totalPopulation: number;
+  nations: { id: number; name: string; population: number }[];
+  landforms: TTerranStatisticData[];
+  biomes: TTerranStatisticData[];
+};
+
+export type TEthnicReturnData = {
+  data?: TEthnicData;
+};
+
+export default function useEthnicStatistic(
+  ethnicId: number | null,
+  mesh: TDelaunayMesh
+): TEthnicReturnData {
   const data = useMemo(() => {
-    if (ethnicId === null) return null;
+    if (ethnicId === null) return undefined;
     const ethnics = mesh.ethnics.find((group) => group.id === ethnicId);
-    if (!ethnics) return null;
+    if (!ethnics) return undefined;
 
     const ethnicCells = mesh.cells.filter((cell) => !cell.isWater && cell.ethnicId === ethnicId);
     const totalPopulation = ethnicCells.reduce((sum, cell) => sum + cell.population, 0);
@@ -30,9 +46,9 @@ export default function useEthnicStatistic(ethnicId: number | null, mesh: TDelau
     }
 
     const nations = Array.from(populationByNation.entries())
-      .map(([nationId, population]) => ({
-        nationId,
-        nationName: nationNameById.get(nationId) || `Nation #${nationId}`,
+      .map(([id, population]) => ({
+        id,
+        name: nationNameById.get(id) || `Nation #${id}`,
         population,
       }))
       .sort((a, b) => b.population - a.population);

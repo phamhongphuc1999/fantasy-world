@@ -1,4 +1,4 @@
-import { TBiome, TLandform } from 'src/types/map.types';
+import { TBiome, TLandform } from 'src/global';
 
 type TBaseConfig = {
   label: string;

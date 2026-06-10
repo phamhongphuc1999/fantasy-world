@@ -4,7 +4,7 @@ import { RefObject, useEffect, useMemo } from 'react';
 import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
 import { drawPolygon } from 'src/services/rendering/canvas/shared';
 import { getNationColor } from 'src/services/utils';
-import { TCell, TDelaunayMesh, TDisplaySettings, TEthnicMiniMapDisplay } from 'src/types/map.types';
+import { TCell, TDelaunayMesh, TDisplaySettings, TEthnicMiniMapDisplay } from 'src/global';
 
 const DISPLAY_MAP: Record<TEthnicMiniMapDisplay, TDisplaySettings> = {
   terrain: {

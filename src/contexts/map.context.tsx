@@ -14,7 +14,7 @@ import {
 import { DEFAULT_CONFIG } from 'src/configs/map/common';
 import { MapGenerator } from 'src/services/pipeline/MapGenerator';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TDelaunayMesh, TExportSnapshot } from 'src/types/map.types';
+import { TDelaunayMesh, TExportSnapshot } from 'src/global';
 
 interface TMapContextType {
   mesh: TDelaunayMesh;

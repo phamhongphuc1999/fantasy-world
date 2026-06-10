@@ -7,21 +7,12 @@ import BarChart from 'src/components/charts/BarChart';
 import PieChart from 'src/components/charts/PieChart';
 import { Button } from 'src/components/ui/button';
 import { ButtonGroup } from 'src/components/ui/button-group';
+import { TBarChartData, TPieChartData } from 'src/global';
+import { TNationEthnicData } from 'src/hooks/useNationStatistic';
 import { formatPopulation, getNationColor } from 'src/services/utils';
-import { TBarChartData, TPieChartData } from 'src/types/global';
-
-type TEthnicStatistic = {
-  ethnicId: number;
-  name: string;
-  count: number;
-  percent: number;
-  population: number;
-  economy: number;
-  populationPercent: number;
-};
 
 type TProps = {
-  ethnics: TEthnicStatistic[];
+  ethnics: TNationEthnicData[];
 };
 
 type TChartOption = 'cells' | 'population' | 'economy' | 'pop-per-cell' | 'eco-per-person';
@@ -57,7 +48,7 @@ export default function EthnicGroups({ ethnics }: TProps) {
     () =>
       ethnics.map((item) => ({
         label: item.name,
-        color: getNationColor(item.ethnicId),
+        color: getNationColor(item.id),
       })),
     [ethnics]
   );
@@ -70,7 +61,7 @@ export default function EthnicGroups({ ethnics }: TProps) {
     const epp: TBarChartData[] = [];
 
     ethnics.forEach((item) => {
-      const color = getNationColor(item.ethnicId);
+      const color = getNationColor(item.id);
       cPie.push({
         label: item.name,
         value: item.count,

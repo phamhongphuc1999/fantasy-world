@@ -1,5 +1,33 @@
 import type { Delaunay } from 'd3-delaunay';
 
+export interface TSiteMetadata {
+  title: string;
+  description: string;
+  url: string;
+  siteName: string;
+  twitterHandle: string;
+  icon: string;
+  image: string;
+  keywords: string;
+}
+
+export type TBaseChartData = {
+  width?: number;
+  height?: number;
+};
+
+export type TPieChartData = {
+  label: string;
+  value: number;
+  color: string;
+};
+
+export type TBarChartData = {
+  label: string;
+  value: number;
+  color: string;
+};
+
 export type TPoint = [number, number];
 
 export interface TVertex {
@@ -308,4 +336,10 @@ export type TCellStats = {
   maxTemperature: number;
   minEconomy: number;
   maxEconomy: number;
+};
+
+export type TTerranStatisticData = {
+  terrain: string;
+  count: number;
+  percent: number;
 };

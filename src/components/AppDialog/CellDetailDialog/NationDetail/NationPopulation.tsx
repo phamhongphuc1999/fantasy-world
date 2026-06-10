@@ -7,18 +7,12 @@ import BarChart from 'src/components/charts/BarChart';
 import PieChart from 'src/components/charts/PieChart';
 import { Button } from 'src/components/ui/button';
 import { ButtonGroup } from 'src/components/ui/button-group';
+import { TBarChartData, TPieChartData } from 'src/global';
+import { TNationProvinceData } from 'src/hooks/useNationStatistic';
 import { formatPopulation } from 'src/services/utils';
-import { TBarChartData, TPieChartData } from 'src/types/global';
-
-type TProvinceStatistic = {
-  provinceId: number;
-  population: number;
-  economy: number;
-  cellCount: number;
-};
 
 type TProps = {
-  provinces: TProvinceStatistic[];
+  provinces: TNationProvinceData[];
 };
 
 type TChartOption = 'population' | 'economy' | 'cells' | 'pop-per-cell' | 'eco-per-cell';
@@ -57,11 +51,7 @@ export default function NationPopulation({ provinces }: TProps) {
   const [showData, setShowData] = useState(false);
 
   const legend = useMemo(
-    () =>
-      provinces.map((p, i) => ({
-        label: `P#${p.provinceId}`,
-        color: provinceColor(i),
-      })),
+    () => provinces.map((p, i) => ({ label: `P#${p.id}`, color: provinceColor(i) })),
     [provinces]
   );
 
@@ -75,23 +65,15 @@ export default function NationPopulation({ provinces }: TProps) {
     provinces.forEach((p, i) => {
       const c = provinceColor(i);
       pp.push({
-        label: `P#${p.provinceId}`,
+        label: `P#${p.id}`,
         value: p.population,
         color: c,
         cellCount: p.cellCount,
       });
-      ep.push({ label: `P#${p.provinceId}`, value: p.economy, color: c, cellCount: p.cellCount });
-      cp.push({ label: `P#${p.provinceId}`, value: p.cellCount, color: c, cellCount: p.cellCount });
-      pb.push({
-        label: `P#${p.provinceId}`,
-        value: p.population / Math.max(1, p.cellCount),
-        color: c,
-      });
-      eb.push({
-        label: `P#${p.provinceId}`,
-        value: p.economy / Math.max(1, p.cellCount),
-        color: c,
-      });
+      ep.push({ label: `P#${p.id}`, value: p.economy, color: c, cellCount: p.cellCount });
+      cp.push({ label: `P#${p.id}`, value: p.cellCount, color: c, cellCount: p.cellCount });
+      pb.push({ label: `P#${p.id}`, value: p.population / Math.max(1, p.cellCount), color: c });
+      eb.push({ label: `P#${p.id}`, value: p.economy / Math.max(1, p.cellCount), color: c });
     });
 
     return { populationPie: pp, economyPie: ep, cellPie: cp, popBar: pb, ecoBar: eb };

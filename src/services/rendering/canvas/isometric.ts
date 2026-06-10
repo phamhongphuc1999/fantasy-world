@@ -1,4 +1,4 @@
-import { TCell, TPoint } from 'src/types/map.types';
+import { TCell, TPoint } from 'src/global';
 
 export const DEFAULT_ELEV_SCALE = 3.5;
 

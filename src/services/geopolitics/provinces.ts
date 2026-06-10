@@ -2,7 +2,7 @@ import { sortDescStable } from 'src/services/utils';
 import { findNearestCell } from 'src/services/utils/geometry';
 import { runMultiSourceExpansion } from 'src/services/utils/graph';
 import { clamp, hashSeed } from 'src/services/utils/math';
-import { TCell, TCellOwnerParams } from 'src/types/map.types';
+import { TCell, TCellOwnerParams } from 'src/global';
 import { getProvinceSeedScore } from './cost';
 import { getBoundaryStepCost, isLand } from './shared';
 

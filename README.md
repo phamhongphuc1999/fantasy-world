@@ -58,7 +58,7 @@ Elevation outputs classified into **15 terrain types** (`TTerrain`), then resolv
 - **Temperature**: Latitude cooling + elevation lapse rate + maritime moderation (water influence)
 - **Wind**: 3-zone global circulation model (trade winds, westerlies, polar easterlies) with cell-based directional field
 - **Precipitation**: Moisture advection from wind + orographic uplift (mountain barriers) + rain shadow effect on lee side
-- **Rivers**: `runRiverGeneration()` pipeline:
+- **Rivers**: `generateRivers()` pipeline:
   1. `prepareTerrain()` — adjust coastal elevations, build land mask
   2. `fillDepressions()` — iterative depression filling with epsilon
   3. `accumulateFlow()` — flow direction + accumulation from precipitation

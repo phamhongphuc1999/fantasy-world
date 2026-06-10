@@ -1,7 +1,7 @@
-import { TCell } from 'src/types/map.types';
+import { TCell } from 'src/global';
 
-export type TTerrainWaterClass = 'lake' | 'deep-water' | 'shallow-water';
-export type TLandformWaterClass = 'lake' | 'marine_deep' | 'marine_shallow';
+type TTerrainWaterClass = 'lake' | 'deep-water' | 'shallow-water';
+type TLandformWaterClass = 'lake' | 'marine_deep' | 'marine_shallow';
 
 export function isWaterOrRiverCell(cell: Pick<TCell, 'isWater' | 'isRiver' | 'isLake'>) {
   return cell.isWater || cell.isRiver || cell.isLake;

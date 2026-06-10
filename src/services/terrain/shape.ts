@@ -1,4 +1,4 @@
-import { TMesh } from 'src/types/map.types';
+import { TMesh } from 'src/global';
 import { distanceToSegment } from 'src/services/utils/geometry';
 import { clamp, smoothStep } from 'src/services/utils/math';
 
@@ -221,7 +221,7 @@ function buildIslandSeeds(random: () => number, options: TArchipelagoOptions): T
   return seeds;
 }
 
-export function applyArchipelagoSeeds(
+export function applyArchipelago(
   mesh: TMesh,
   random: () => number,
   elevations: Float32Array,
@@ -338,7 +338,7 @@ export function applyPlateaus(
 }
 
 // Localised shield-volcano domes with optional caldera.
-export function applyVolcanicHotspots(mesh: TMesh, random: () => number, elevations: Float32Array) {
+export function applyHotspots(mesh: TMesh, random: () => number, elevations: Float32Array) {
   const hotspotCount = 1 + Math.floor(random() * 3);
   const diagNorm = Math.hypot(mesh.width, mesh.height);
 

@@ -1,6 +1,6 @@
 import { HYDROLOGY_CONFIG, RIVER_CONFIG } from 'src/configs/map/hydrology';
 import { createSeededRandom } from 'src/services/utils/math';
-import { TCell, TPoint, TRiver, TRiverEndType, TRiverKind } from 'src/types/map.types';
+import { TCell, TPoint, TRiver, TRiverEndType, TRiverKind } from 'src/global';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 
@@ -21,7 +21,7 @@ type TConfluenceEvent = {
   tributaryRiverId: number;
 };
 
-function sortIndicesByElevation(elevation: Float32Array) {
+export function sortIndicesByElevation(elevation: Float32Array) {
   const indices = Array.from({ length: elevation.length }, (_, index) => index);
   indices.sort((left, right) => {
     if (elevation[right] !== elevation[left]) return elevation[right] - elevation[left];
@@ -164,7 +164,7 @@ function accumulateFlow(
   return { downstream, flow, effectiveFlow };
 }
 
-function riverKindByPeakFlow(peakFlow: number): TRiverKind {
+function riverKind(peakFlow: number): TRiverKind {
   if (peakFlow >= 150) return 'river';
   if (peakFlow >= 80) return 'fork';
   if (peakFlow >= 45) return 'branch';
@@ -381,7 +381,7 @@ function buildRiverGraph(
         }
       }
     }
-    const kind = riverKindByPeakFlow(peakFlow);
+    const kind = riverKind(peakFlow);
     const widthFactor = (riverParent.get(riverId) ?? null) === null ? 1.12 : 0.78;
     const startFlow = flow[sourceCellId];
     const startingWidth =
@@ -475,7 +475,7 @@ function buildRiverGraph(
   return { riverByCell, riverWidthByCell, rivers, confluences };
 }
 
-export function runRiverGeneration(
+export function generateRivers(
   cells: TCell[],
   seaLevel: number,
   precipitation: Float32Array,

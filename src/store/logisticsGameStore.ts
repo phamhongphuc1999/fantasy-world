@@ -1,7 +1,7 @@
 'use client';
 
 import { buildRoadEdgeKey, findLogisticsRoute } from 'src/services/logistics/routeFinder';
-import { TDelaunayMesh } from 'src/types/map.types';
+import { TDelaunayMesh } from 'src/global';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 

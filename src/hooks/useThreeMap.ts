@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
 import { useMapContext } from 'src/contexts/map.context';
-import { TCell, TLandform } from 'src/types/map.types';
+import { TCell, TLandform } from 'src/global';
 
 type TProps = {
   containerRef: RefObject<HTMLDivElement | null>;

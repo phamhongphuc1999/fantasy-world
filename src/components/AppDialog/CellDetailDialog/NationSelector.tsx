@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from 'src/components/ui/select';
 import { getNationColor } from 'src/services/utils';
-import { TNation } from 'src/types/map.types';
+import { TNation } from 'src/global';
 
 type TProps = {
   nations: TNation[];

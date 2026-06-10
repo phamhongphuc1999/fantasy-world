@@ -2,33 +2,68 @@
 
 import { useMemo } from 'react';
 import { toPercent } from 'src/services/utils';
-import { TDelaunayMesh } from 'src/types/map.types';
+import { TCell, TDelaunayMesh, TNation, TTerranStatisticData } from 'src/global';
 
-export default function useNationStatistic(nationId: number | null, mesh: TDelaunayMesh) {
+export type TNationEthnicData = {
+  id: number;
+  name: string;
+  count: number;
+  percent: number;
+  population: number;
+  economy: number;
+  populationPercent: number;
+};
+
+export type TNationProvinceData = {
+  id: number;
+  population: number;
+  economy: number;
+  cellCount: number;
+};
+
+export type TNationData = {
+  cells: TCell[];
+  population: number;
+  economy: number;
+  landforms: TTerranStatisticData[];
+  biomes: TTerranStatisticData[];
+  ethnics: TNationEthnicData[];
+  provinces: TNationProvinceData[];
+};
+
+export type TNationReturnData = {
+  nation?: TNation;
+  data?: TNationData;
+};
+
+export default function useNationStatistic(
+  nationId: number | null,
+  mesh: TDelaunayMesh
+): TNationReturnData {
   const nation = useMemo(() => {
     return nationId !== null ? mesh.nations.find((item) => item.id === nationId) : undefined;
   }, [mesh.nations, nationId]);
 
   const data = useMemo(() => {
     if (nation) {
-      const nationCells = mesh.cells.filter((cell) => !cell.isWater && cell.nationId === nation.id);
+      const cells = mesh.cells.filter((cell) => !cell.isWater && cell.nationId === nation.id);
       const landformCounts = new Map<string, number>();
       const biomeCounts = new Map<string, number>();
       const ethnicCounts = new Map<number, number>();
       const ethnicPopulation = new Map<number, number>();
       const ethnicEconomy = new Map<number, number>();
-      let totalPopulation = 0;
-      let totalEconomy = 0;
+      let population = 0;
+      let economy = 0;
 
       const provincePopulationMap = new Map<number, number>();
       const provinceEconomyMap = new Map<number, number>();
       const provinceCellCountMap = new Map<number, number>();
 
-      for (const cell of nationCells) {
+      for (const cell of cells) {
         landformCounts.set(cell.landform, (landformCounts.get(cell.landform) || 0) + 1);
         biomeCounts.set(cell.biome, (biomeCounts.get(cell.biome) || 0) + 1);
-        totalPopulation += cell.population;
-        totalEconomy += cell.economy;
+        population += cell.population;
+        economy += cell.economy;
         if (cell.ethnicId !== null) {
           ethnicCounts.set(cell.ethnicId, (ethnicCounts.get(cell.ethnicId) || 0) + 1);
           ethnicPopulation.set(
@@ -57,7 +92,7 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
         .map(([terrain, count]) => ({
           terrain,
           count,
-          percent: toPercent(count, nationCells.length),
+          percent: toPercent(count, cells.length),
         }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
@@ -65,7 +100,7 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
         .map(([terrain, count]) => ({
           terrain,
           count,
-          percent: toPercent(count, nationCells.length),
+          percent: toPercent(count, cells.length),
         }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
@@ -74,28 +109,28 @@ export default function useNationStatistic(nationId: number | null, mesh: TDelau
         mesh.ethnics.map((group) => [String(group.id), group.name] as const)
       );
       const ethnics = Array.from(ethnicCounts.entries())
-        .map(([ethnicId, count]) => ({
-          ethnicId,
-          name: ethnicNameById.get(String(ethnicId)) || `Ethnic #${ethnicId}`,
+        .map(([id, count]) => ({
+          id,
+          name: ethnicNameById.get(String(id)) || `Ethnic #${id}`,
           count,
-          percent: toPercent(count, nationCells.length),
-          population: ethnicPopulation.get(ethnicId) || 0,
-          economy: ethnicEconomy.get(ethnicId) || 0,
-          populationPercent: toPercent(ethnicPopulation.get(ethnicId) || 0, totalPopulation),
+          percent: toPercent(count, cells.length),
+          population: ethnicPopulation.get(id) || 0,
+          economy: ethnicEconomy.get(id) || 0,
+          populationPercent: toPercent(ethnicPopulation.get(id) || 0, population),
         }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
 
       const provinces = Array.from(provincePopulationMap.entries())
-        .map(([provinceId, population]) => ({
-          provinceId,
+        .map(([id, population]) => ({
+          id,
           population,
-          economy: provinceEconomyMap.get(provinceId) || 0,
-          cellCount: provinceCellCountMap.get(provinceId) || 0,
+          economy: provinceEconomyMap.get(id) || 0,
+          cellCount: provinceCellCountMap.get(id) || 0,
         }))
-        .sort((a, b) => a.provinceId - b.provinceId);
+        .sort((a, b) => a.id - b.id);
 
-      return { nationCells, totalPopulation, totalEconomy, landforms, biomes, ethnics, provinces };
+      return { cells, population, economy, landforms, biomes, ethnics, provinces };
     }
   }, [mesh.cells, mesh.ethnics, nation]);
 

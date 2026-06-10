@@ -1,5 +1,5 @@
 import { PRECIPITATION_CONFIG } from 'src/configs/map/hydrology';
-import { TCell } from 'src/types/map.types';
+import { TCell } from 'src/global';
 import { clamp, dot } from 'src/services/utils/math';
 import { TWindVector } from './wind';
 

@@ -1,7 +1,7 @@
 import { LANDFORM_CLASSIFIER_CONFIG, LANDFORM_ELEVATION_BANDS } from 'src/configs/map/terrain';
 import { classifyLandformWater } from 'src/services/utils/cell';
 import { clamp } from 'src/services/utils/math';
-import { TCell, TLandform, TTerrain } from 'src/types/map.types';
+import { TCell, TLandform, TTerrain } from 'src/global';
 
 type TClassifyLandformsParams = {
   cells: TCell[];
@@ -73,7 +73,7 @@ function isValleyContext(
   return higherNeighbors / validNeighbors >= model.valleyEnclosureMinRatio;
 }
 
-function classifyLandformForCell(
+function classifyLandform(
   cell: TCell,
   relief: number,
   flowSignal: number,
@@ -180,7 +180,7 @@ export function classifyLandforms(params: TClassifyLandformsParams): TLandform[]
   }
 
   return cells.map((cell, cellIndex) =>
-    classifyLandformForCell(
+    classifyLandform(
       cell,
       reliefByCell[cellIndex] as number,
       flowSignalByCell[cellIndex] as number,

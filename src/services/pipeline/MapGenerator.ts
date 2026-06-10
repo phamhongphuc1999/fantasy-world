@@ -3,7 +3,7 @@ import { buildPopulation } from 'src/services/geopolitics/population';
 import { buildHydrology } from 'src/services/hydrology';
 import { buildTopography } from 'src/services/terrain/buildTopography';
 import { buildMesh } from 'src/services/terrain/mesh';
-import { TDelaunayMesh, TGenerationConfig, TGenerationStages } from 'src/types/map.types';
+import { TDelaunayMesh, TGenerationConfig, TGenerationStages } from 'src/global';
 import { CacheManager } from './CacheManager';
 
 // ─── Shared cache instance ─────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { HYDROLOGY_CONFIG, LAKE_CONFIG } from 'src/configs/map/hydrology';
-import { collectConnectedComponents, floodFromSeeds } from 'src/services/utils/graph';
 import { TFifoQueue } from 'src/services/utils/collections';
-import { TCell } from 'src/types/map.types';
+import { collectConnectedComponents, floodFromSeeds } from 'src/services/utils/graph';
+import { TCell } from 'src/global';
 
 const T_COAST_OUTLET = HYDROLOGY_CONFIG.coastOutletId;
 const traversalWorkspace = {};
@@ -233,50 +233,4 @@ function filterAndLimitLakes(cells: TCell[], flow: Float32Array) {
   }
 }
 
-function buildPlainsRegionSizeMap(cells: TCell[]) {
-  const regionSizeByCell = new Int32Array(cells.length);
-  const plainsRegions = collectConnectedComponents(
-    cells,
-    (cell) => cell.landform === 'plain',
-    (_current, neighbor) => neighbor.landform === 'plain',
-    false,
-    traversalWorkspace
-  );
-
-  for (const region of plainsRegions) {
-    for (const id of region) regionSizeByCell[id] = region.length;
-  }
-  return regionSizeByCell;
-}
-
-type THydrologyRegionMaps = {
-  lakeSizeByCell: Int32Array;
-  plainRegionSizeByCell: Int32Array;
-  hasLargePlains: boolean;
-  hasVeryLargePlains: boolean;
-};
-
-function buildHydrologyRegionMaps(cells: TCell[]): THydrologyRegionMaps {
-  const lakeSizeByCell = new Int32Array(cells.length);
-  const lakeRegions = buildLakeRegions(cells);
-
-  for (const region of lakeRegions) {
-    const size = region.length;
-    for (const cellId of region) lakeSizeByCell[cellId] = size;
-  }
-
-  const plainRegionSizeByCell = buildPlainsRegionSizeMap(cells);
-  let hasLargePlains = false;
-  let hasVeryLargePlains = false;
-
-  for (let cellId = 0; cellId < plainRegionSizeByCell.length; cellId += 1) {
-    const size = plainRegionSizeByCell[cellId];
-    if (size >= LAKE_CONFIG.plains.largePlainMin) hasLargePlains = true;
-    if (size >= LAKE_CONFIG.plains.veryLargePlainMin) hasVeryLargePlains = true;
-    if (hasLargePlains && hasVeryLargePlains) break;
-  }
-
-  return { lakeSizeByCell, plainRegionSizeByCell, hasLargePlains, hasVeryLargePlains };
-}
-
-export { buildHydrologyRegionMaps, classifyInlandWater, expandLakes, filterAndLimitLakes };
+export { classifyInlandWater, expandLakes, filterAndLimitLakes };

@@ -11,7 +11,7 @@ import {
   exportTextFile,
 } from 'src/services/rendering/pipeline/exportPipeline';
 import { useMapExplorerStore } from 'src/store/mapExplorerStore';
-import { TExportSnapshot } from 'src/types/map.types';
+import { TExportSnapshot } from 'src/global';
 
 function makeTimestamp() {
   return new Date().toISOString().replace(/[:.]/g, '-');

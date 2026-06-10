@@ -1,5 +1,5 @@
 import Cost from 'src/services/geopolitics/cost';
-import { TCell } from 'src/types/map.types';
+import { TCell } from 'src/global';
 
 type TLogisticsRouteResult = {
   pathCellIds: number[];

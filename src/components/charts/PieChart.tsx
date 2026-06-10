@@ -4,7 +4,7 @@ import { Group } from '@visx/group';
 import { Pie } from '@visx/shape';
 import { type ReactNode, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { TBaseChartData, TPieChartData } from 'src/types/global';
+import { TBaseChartData, TPieChartData } from 'src/global';
 
 type TPieTooltipData<T extends TPieChartData> = {
   datum: T;
@@ -80,7 +80,7 @@ export default function PieChart<T extends TPieChartData>(params: TProps<T>) {
       {tooltip &&
         createPortal(
           <div
-            className="pointer-events-none fixed z-[100] rounded-xl bg-black px-3 py-2 text-sm text-white shadow-lg"
+            className="pointer-events-none fixed z-100 rounded-xl bg-black px-3 py-2 text-sm text-white shadow-lg"
             style={{ top: tooltip.y + 12, left: tooltip.x + 12 }}
           >
             {renderTooltip ? (

@@ -2,7 +2,7 @@ import { BIOME_CONFIG } from 'src/configs/map/landform-biome';
 import { isWaterOrRiverCell } from 'src/services/utils/cell';
 import { buildDistanceMap } from 'src/services/utils/graph';
 import { clamp, createSeededRandom } from 'src/services/utils/math';
-import { TCell, TDelaunayMesh } from 'src/types/map.types';
+import { TCell, TDelaunayMesh } from 'src/global';
 
 interface TPopulationParams {
   mesh: TDelaunayMesh;

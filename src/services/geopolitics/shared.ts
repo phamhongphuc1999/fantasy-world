@@ -1,7 +1,7 @@
 import { BORDER_CONFIG } from 'src/configs/map/geopolitics';
 import { collectConnectedComponents } from 'src/services/utils/graph';
 import { createSeededRandom, hashSeed } from 'src/services/utils/math';
-import { TBorderType, TCell, TLandform, TZoneType } from 'src/types/map.types';
+import { TBorderType, TCell, TLandform, TZoneType } from 'src/global';
 import Cost from './cost';
 
 export const CAPITAL_VIEWPORT_MARGIN = 14;

@@ -6,7 +6,7 @@ This document is an implementation-level specification for reproducing the curre
 
 Primary sources:
 
-- `src/services/hydrology/river.ts` (main river generation — `runRiverGeneration()`)
+- `src/services/hydrology/river.ts` (main river generation — `generateRivers()`)
 - `src/services/hydrology/index.ts` (orchestration — `buildHydrology()`)
 - `src/services/hydrology/lakes.ts` (lake expansion/filtering)
 - `src/configs/map/hydrology.ts` (`HYDROLOGY_CONFIG`, `RIVER_CONFIG`, `LAKE_CONFIG`)
@@ -33,7 +33,7 @@ Within `buildHydrology(...)` in `src/services/hydrology/index.ts`, the internal 
 5. `filterAndLimitLakes(cells, flow)`
 6. `classifyInlandWater(cells, width, height, seaLevel, downstream)`
 7. Climate/terrain classification (temperature, precipitation, landforms, biomes).
-8. `runRiverGeneration(cells, seaLevel, precipitation, seed)` — internally calls `prepareTerrain`, `fillDepressions`, `accumulateFlow`, `buildRiverGraph`.
+8. `generateRivers(cells, seaLevel, precipitation, seed)` — internally calls `prepareTerrain`, `fillDepressions`, `accumulateFlow`, `buildRiverGraph`.
 9. Write `result` back to cells:
    - `flow`, `effectiveFlow`, `downstreamId`, `riverId`, `isRiver`, `riverWidth`
 10. Build `isRiverSource` / `isRiverMouth` from final `result.rivers`
@@ -217,7 +217,7 @@ Else build `TRiver`:
   - `lake` if downstream water cell is lake
   - `sea` if downstream water cell is non-lake water
   - otherwise `inland-sink`
-- River kind from `riverKindByPeakFlow(peakFlow)`:
+- River kind from `riverKind(peakFlow)`:
   - `peakFlow >= 150` → `'river'`
   - `peakFlow >= 80` → `'fork'`
   - `peakFlow >= 45` → `'branch'`

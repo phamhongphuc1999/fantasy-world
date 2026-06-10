@@ -5,12 +5,12 @@ import { useMemo, useState } from 'react';
 import BlurCard from 'src/components/BlurCard';
 import PieChart from 'src/components/charts/PieChart';
 import { Button } from 'src/components/ui/button';
+import { TPieChartData } from 'src/global';
 import { formatPopulation, getNationColor } from 'src/services/utils';
-import { TPieChartData } from 'src/types/global';
 
 type TNationPopulation = {
-  nationId: number;
-  nationName: string;
+  id: number;
+  name: string;
   population: number;
 };
 
@@ -21,13 +21,13 @@ type TProps = {
 export default function EthnicNations({ nations }: TProps) {
   const [showData, setShowData] = useState(false);
 
-  const pieData: Array<TPieChartData & { nationName: string }> = useMemo(
+  const pieData: Array<TPieChartData & { name: string }> = useMemo(
     () =>
       nations.map((n) => ({
-        label: n.nationName,
+        label: n.name,
         value: n.population,
-        color: getNationColor(n.nationId),
-        nationName: n.nationName,
+        color: getNationColor(n.id),
+        name: n.name,
       })),
     [nations]
   );
@@ -92,7 +92,7 @@ export default function EthnicNations({ nations }: TProps) {
           data={pieData}
           renderTooltip={(t) => (
             <>
-              <div className="font-semibold">{t.datum.nationName}</div>
+              <div className="font-semibold">{t.datum.name}</div>
               <div className="text-slate-200">Population: {formatPopulation(t.value)}</div>
               <div className="text-slate-200">Share: {t.percent}%</div>
             </>

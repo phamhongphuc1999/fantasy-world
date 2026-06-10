@@ -1,0 +1,6 @@
+{
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "continue.enableTabAutocomplete": false,
+  "editor.inlineSuggest.enabled": false
+}

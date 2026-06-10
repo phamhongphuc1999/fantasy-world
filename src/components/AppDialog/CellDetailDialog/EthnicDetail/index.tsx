@@ -2,13 +2,11 @@
 
 import BlurCard from 'src/components/BlurCard';
 import TerrainStatistic from 'src/components/TerrainStatistic';
-import useEthnicStatistic from 'src/hooks/useEthnicStatistic';
+import { TDelaunayMesh } from 'src/global';
+import { TEthnicData } from 'src/hooks/useEthnicStatistic';
 import { formatPopulation } from 'src/services/utils';
-import { TDelaunayMesh } from 'src/types/map.types';
 import EthnicMiniMap from './EthnicMiniMap';
 import EthnicNations from './EthnicNations';
-
-type TEthnicData = NonNullable<ReturnType<typeof useEthnicStatistic>['data']>;
 
 type TProps = {
   data: TEthnicData;
@@ -43,9 +41,7 @@ export default function EthnicDetail({ data, mesh }: TProps) {
           </p>
         </BlurCard>
       </div>
-
       <EthnicNations nations={data.nations} />
-
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <TerrainStatistic title="Landform" data={data.landforms} />
         <TerrainStatistic title="Biome" data={data.biomes} />

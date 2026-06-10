@@ -1,4 +1,4 @@
-import { TCell } from 'src/types/map.types';
+import { TCell } from 'src/global';
 import { TDeterministicMinHeap, TFifoQueue } from './collections';
 
 type TTraversalWorkspace = {

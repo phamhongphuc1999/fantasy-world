@@ -1,4 +1,4 @@
-import { TGenerationConfig, TGenerationStages } from 'src/types/map.types';
+import { TGenerationConfig, TGenerationStages } from 'src/global';
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 

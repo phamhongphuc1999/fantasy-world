@@ -1,7 +1,7 @@
 import { HYDROLOGY_CONFIG } from 'src/configs/map/hydrology';
 import { LANDFORM_ELEVATION_BANDS, TERRAIN_CLASSIFICATION_RULES } from 'src/configs/map/terrain';
 import { classifyTerrainWater } from 'src/services/utils/cell';
-import { TBiome, TCell, TLandform, TTerrain } from 'src/types/map.types';
+import { TBiome, TCell, TLandform, TTerrain } from 'src/global';
 import { clamp } from 'src/services/utils/math';
 
 export function buildWaterInfluence(cells: TCell[]): Float32Array {
@@ -39,7 +39,7 @@ const RELIEF = TERRAIN_CLASSIFICATION_RULES.relief;
 const AIRD = TERRAIN_CLASSIFICATION_RULES.arid;
 const SEA = TERRAIN_CLASSIFICATION_RULES.sea;
 const WET = TERRAIN_CLASSIFICATION_RULES.wet;
-export function getTerrain(
+export function classifyTerrain(
   cell: TCell,
   seaLevel: number,
   temperature: number,

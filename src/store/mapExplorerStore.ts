@@ -1,7 +1,7 @@
 'use client';
 
 import { DEFAULT_CONFIG } from 'src/configs/map/common';
-import { TClimateControl, TDisplaySettings, TTopography } from 'src/types/map.types';
+import { TClimateControl, TDisplaySettings, TTopography } from 'src/global';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 

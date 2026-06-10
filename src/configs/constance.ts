@@ -1,5 +1,4 @@
-import type { TSiteMetadata } from 'src/types/global';
-import type { TTopographyOption } from 'src/types/map.types';
+import type { TSiteMetadata, TTopographyOption } from 'src/global';
 import { ImageAsset } from './ImageAssets';
 
 export const APP_NAME = 'Fantasy World';

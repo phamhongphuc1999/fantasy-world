@@ -1,6 +1,5 @@
 import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
-import { TPieChartData } from 'src/types/global';
-import { TBiome, TLandform } from 'src/types/map.types';
+import { TBiome, TLandform, TPieChartData } from 'src/global';
 import BlurCard from './BlurCard';
 import PieChart from './charts/PieChart';
 

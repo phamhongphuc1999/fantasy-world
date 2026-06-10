@@ -1,6 +1,6 @@
 import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
 import { getRiverStrokeWidth } from 'src/services/utils';
-import { TCell, TCellStats, TDisplaySettings } from 'src/types/map.types';
+import { TCell, TCellStats, TDisplaySettings } from 'src/global';
 import {
   getEconomyColor,
   getPopulationColor,

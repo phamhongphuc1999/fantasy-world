@@ -3,7 +3,7 @@ import { sortDescStable } from 'src/services/utils';
 import { findNearestCell } from 'src/services/utils/geometry';
 import { runMultiSourceExpansion } from 'src/services/utils/graph';
 import { clamp, createSeededRandom } from 'src/services/utils/math';
-import { TBorderType, TCell } from 'src/types/map.types';
+import { TBorderType, TCell } from 'src/global';
 import { getNationSeedSuitability } from './cost';
 import {
   getBoundaryStepCost,

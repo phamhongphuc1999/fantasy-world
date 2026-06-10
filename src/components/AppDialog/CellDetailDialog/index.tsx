@@ -7,7 +7,7 @@ import { ButtonGroup } from 'src/components/ui/button-group';
 import useEthnicStatistic from 'src/hooks/useEthnicStatistic';
 import useNationStatistic from 'src/hooks/useNationStatistic';
 import { formatPopulation } from 'src/services/utils';
-import { TDelaunayMesh } from 'src/types/map.types';
+import { TDelaunayMesh } from 'src/global';
 import EthnicDetail from './EthnicDetail';
 import EthnicSelector from './EthnicSelector';
 import NationDetail from './NationDetail';
@@ -17,13 +17,13 @@ type TView = 'nation' | 'ethnic';
 
 type TProps = {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenAction: (open: boolean) => void;
   nationId: number | null;
   ethnicId: number | null;
   mesh: TDelaunayMesh;
 };
 
-export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicId, mesh }: TProps) {
+export default function CellDetailDialog({ open, onOpenAction, nationId, ethnicId, mesh }: TProps) {
   const [selectedNationId, setSelectedNationId] = useState(nationId);
   const [selectedEthnicId, setSelectedEthnicId] = useState(ethnicId);
   const { nation, data: nationData } = useNationStatistic(selectedNationId, mesh);
@@ -60,7 +60,7 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
             variant="ghost"
             className="absolute top-2 right-2"
             size="icon-sm"
-            onClick={() => onOpenChange(false)}
+            onClick={() => onOpenAction(false)}
           >
             <XIcon />
             <span className="sr-only">Close</span>
@@ -93,8 +93,8 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
                   onSelect={setSelectedNationId}
                 />
                 <p className="text-sm text-white">
-                  Nation #{nation.id} · {nationData.nationCells.length.toLocaleString()} cells ·{' '}
-                  {formatPopulation(nationData.totalPopulation)} people
+                  Nation #{nation.id} · {nationData.cells.length.toLocaleString()} cells ·{' '}
+                  {formatPopulation(nationData.population)} people
                 </p>
               </>
             )}
@@ -131,7 +131,7 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
               type="button"
               variant="ghost"
               size="icon-sm"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenAction(false)}
             >
               <XIcon />
               <span className="sr-only">Close</span>
@@ -139,7 +139,6 @@ export default function CellDetailDialog({ open, onOpenChange, nationId, ethnicI
           </div>
         </div>
 
-        {/* Scrollable content */}
         <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm md:p-6">
           {view === 'nation' && nationData && nation && (
             <NationDetail nation={nation} data={nationData} mesh={mesh} />

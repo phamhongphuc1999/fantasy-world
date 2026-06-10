@@ -116,7 +116,7 @@ export default function MapCanvasPanel() {
       </div>
       <CellDetailDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenAction={setDialogOpen}
         nationId={selectedNationId}
         ethnicId={selectedEthnicId}
         mesh={mesh}

@@ -5,7 +5,7 @@ import { BIOME_CONFIG, LANDFORM_CONFIG } from 'src/configs/map/landform-biome';
 import { NATION_COLORS } from 'src/configs/map/common';
 import { drawPolygon } from 'src/services/rendering/canvas/shared';
 import { getNationColor } from 'src/services/utils';
-import { TCell, TDelaunayMesh, TDisplaySettings } from 'src/types/map.types';
+import { TCell, TDelaunayMesh, TDisplaySettings } from 'src/global';
 
 type TNationMiniMapDisplay = 'terrain' | 'biome' | 'nation' | 'ethnic';
 

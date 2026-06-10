@@ -1,8 +1,8 @@
 import { TOPOGRAPHY_PRESET_CONFIG } from 'src/configs/map/topography';
 import { clamp, createSeededRandom, hashSeed } from 'src/services/utils/math';
-import { TMesh, TTopography } from 'src/types/map.types';
+import { TMesh, TTopography } from 'src/global';
 import {
-  applyArchipelagoSeeds,
+  applyArchipelago,
   applyEdgeShelf,
   applyEscarpments,
   applyHillBands,
@@ -10,7 +10,7 @@ import {
   applyRangeBands,
   applyRangeChains,
   applyValleyBands,
-  applyVolcanicHotspots,
+  applyHotspots,
   smoothElevations,
 } from './shape';
 
@@ -119,7 +119,7 @@ export function applyTopography({ mesh, seed, topography, elevations }: TApplyTo
   // ── Archipelago ────────────────────────────────────────────────────────────
   // Island chains with varied sizes.
   if (topography === 'archipelago') {
-    applyArchipelagoSeeds(mesh, random, nextElevations, {
+    applyArchipelago(mesh, random, nextElevations, {
       majorIslandCount:
         archipelago.majorIslandMin +
         Math.floor(random() * (archipelago.majorIslandMax - archipelago.majorIslandMin + 1)),
@@ -143,7 +143,7 @@ export function applyTopography({ mesh, seed, topography, elevations }: TApplyTo
   // Rugged terrain driven by hotspot volcanoes and lava plateaus.
   if (topography === 'volcanic') {
     // Hotspot volcanoes
-    applyVolcanicHotspots(mesh, random, nextElevations);
+    applyHotspots(mesh, random, nextElevations);
     // Volcanic ridges (range bands)
     applyRangeBands(mesh, random, nextElevations, volcanic.rangeBands);
     // Small-scale hill clusters for rough lava terrain
